@@ -23,15 +23,17 @@ class GamepadDeck extends StatefulWidget {
   State<GamepadDeck> createState() => _GamepadDeckState();
 }
 
-class _GamepadDeckState extends State<GamepadDeck> {
+class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
   static const MethodChannel _projectionChannel = MethodChannel('com.retromesh.console/projection');
   
-  bool _isCasting = true; // Track if cast dialog presentation is active (starts as true since P1 auto-starts it)
+  bool _isCasting = false; // Track if cast dialog presentation is active
   bool _isConnectingTV = true; // Track if we are waiting for TV handshake
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    
     // 1. Lock screen orientation to Landscape
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.landscapeLeft,
@@ -41,16 +43,37 @@ class _GamepadDeckState extends State<GamepadDeck> {
     // 2. Prevent mobile OS from sleeping or throttling priority threads
     WakelockPlus.enable();
 
-    // 3. P1 Host: Initialize native wireless presentation SDK hooks with a handshake grace period
+    // 3. P1 Host: Check if already connected (in case TV is pre-connected via HDMI/AirPlay)
     if (widget.isHost) {
       _isConnectingTV = true;
-      _waitForDisplayConnection().then((connected) {
-        if (mounted) {
+      _checkPreConnectedDisplay();
+    } else {
+      _isConnectingTV = false;
+    }
+  }
+
+  void _checkPreConnectedDisplay() {
+    // Give a brief delay for UI initialization
+    Future.delayed(const Duration(seconds: 1), () {
+      if (!mounted) return;
+      _startNativeTVProjection().then((connected) {
+        if (connected && mounted) {
           setState(() {
             _isConnectingTV = false;
+            _isCasting = true;
           });
         }
+      });
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // When user returns from system Cast settings activity, app resumes
+    if (state == AppLifecycleState.resumed && widget.isHost && _isConnectingTV) {
+      _startNativeTVProjection().then((connected) {
         if (!connected) {
+          // Exited or escaped system cast overlay without connecting
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               backgroundColor: Color(0xFFEF4444),
@@ -62,30 +85,18 @@ class _GamepadDeckState extends State<GamepadDeck> {
           );
           _exitGame(context);
         } else {
-          if (mounted) {
-            setState(() {
-              _isCasting = true;
-            });
-          }
+          setState(() {
+            _isConnectingTV = false;
+            _isCasting = true;
+          });
         }
       });
-    } else {
-      _isConnectingTV = false;
     }
-  }
-
-  Future<bool> _waitForDisplayConnection() async {
-    // Try up to 8 times with a 1-second delay (8 seconds total) to allow Miracast / Cast handshaking to complete
-    for (int i = 0; i < 8; i++) {
-      final connected = await _startNativeTVProjection();
-      if (connected) return true;
-      await Future.delayed(const Duration(seconds: 1));
-    }
-    return false;
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     // Restore orientation settings
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
