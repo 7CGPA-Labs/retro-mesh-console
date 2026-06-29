@@ -660,7 +660,7 @@ class _GamepadDeckState extends State<GamepadDeck> {
 
   Widget _buildABXYCluster() {
     const double size = 64;
-    const double spacing = 96;
+    const double spacing = 128;
     return SizedBox(
       width: size + spacing,
       height: size + spacing,
