@@ -1,5 +1,6 @@
 import Flutter
 import UIKit
+import AVKit
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
@@ -15,7 +16,30 @@ import UIKit
     
     channel.setMethodCallHandler { [weak self] (call, result) in
       guard let self = self else { return }
-      if call.method == "startTVProjection" {
+      if call.method == "openSystemCastMenu" {
+        if #available(iOS 11.0, *) {
+          DispatchQueue.main.async {
+            let routePicker = AVRoutePickerView()
+            routePicker.isHidden = true
+            if let window = UIApplication.shared.windows.first(where: { $0.isKeyWindow }) {
+              window.addSubview(routePicker)
+              for subview in routePicker.subviews {
+                if let button = subview as? UIButton {
+                  button.sendActions(for: .touchUpInside)
+                  break
+                }
+              }
+              // Clean up after it presents
+              DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                routePicker.removeFromSuperview()
+              }
+            }
+          }
+          result(true)
+        } else {
+          result(false)
+        }
+      } else if call.method == "startTVProjection" {
         self.setupExternalScreen()
         result(true)
       } else if call.method == "stopTVProjection" {

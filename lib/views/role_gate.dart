@@ -62,6 +62,13 @@ class RoleGate extends StatelessWidget {
         // Initialize Host Mesh WebSocket server & mDNS advertiser
         await HostServer.instance.start();
 
+        // Request system screen cast options menu (wireless display / Smart TV)
+        try {
+          const MethodChannel('com.retromesh.console/projection').invokeMethod('openSystemCastMenu');
+        } catch (e) {
+          debugPrint('[DEBUG] Failed to launch system cast settings: $e');
+        }
+
         // Boot FFI Libretro emulation engine
         final engine = LibretroEngine();
         engine.initializeCore(corePath);
