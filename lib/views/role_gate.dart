@@ -64,7 +64,8 @@ class RoleGate extends StatelessWidget {
 
         // Request system screen cast options menu (wireless display / Smart TV)
         try {
-          const MethodChannel('com.retromesh.console/projection').invokeMethod('openSystemCastMenu');
+          const channel = MethodChannel('com.retromesh.console/projection');
+          channel.invokeMethod('openSystemCastMenu');
         } catch (e) {
           debugPrint('[DEBUG] Failed to launch system cast settings: $e');
         }
