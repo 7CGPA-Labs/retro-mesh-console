@@ -23,16 +23,14 @@ class GamepadDeck extends StatefulWidget {
   State<GamepadDeck> createState() => _GamepadDeckState();
 }
 
-class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
+class _GamepadDeckState extends State<GamepadDeck> {
   static const MethodChannel _projectionChannel = MethodChannel('com.retromesh.console/projection');
   
   bool _isCasting = false; // Track if cast dialog presentation is active
-  bool _isConnectingTV = true; // Track if we are waiting for TV handshake
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     
     // 1. Lock screen orientation to Landscape
     SystemChrome.setPreferredOrientations([
@@ -43,60 +41,15 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
     // 2. Prevent mobile OS from sleeping or throttling priority threads
     WakelockPlus.enable();
 
-    // 3. P1 Host: Check if already connected (in case TV is pre-connected via HDMI/AirPlay)
+    // 3. P1 Host: Start native presentation instantly on selected display
     if (widget.isHost) {
-      _isConnectingTV = true;
-      _checkPreConnectedDisplay();
-    } else {
-      _isConnectingTV = false;
-    }
-  }
-
-  void _checkPreConnectedDisplay() {
-    // Give a brief delay for UI initialization
-    Future.delayed(const Duration(seconds: 1), () {
-      if (!mounted) return;
-      _startNativeTVProjection().then((connected) {
-        if (connected && mounted) {
-          setState(() {
-            _isConnectingTV = false;
-            _isCasting = true;
-          });
-        }
-      });
-    });
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    // When user returns from system Cast settings activity, app resumes
-    if (state == AppLifecycleState.resumed && widget.isHost && _isConnectingTV) {
-      _startNativeTVProjection().then((connected) {
-        if (!connected) {
-          // Exited or escaped system cast overlay without connecting
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              backgroundColor: Color(0xFFEF4444),
-              content: Text(
-                'No wireless display selected. Emulation exited.',
-                style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, color: Colors.white),
-              ),
-            ),
-          );
-          _exitGame(context);
-        } else {
-          setState(() {
-            _isConnectingTV = false;
-            _isCasting = true;
-          });
-        }
-      });
+      UniversalCasterBridge().projectGameplayCanvas();
+      _isCasting = true;
     }
   }
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     // Restore orientation settings
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
@@ -105,7 +58,7 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
     WakelockPlus.disable();
 
     if (widget.isHost) {
-      _stopNativeTVProjection();
+      UniversalCasterBridge().disconnect();
       widget.engine?.shutdown();
       HostServer.instance.stop();
     } else {
@@ -116,23 +69,6 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
 
   /// Triggers Platform-specific dual-screen window allocations.
   /// Detailed Native implementations for iOS and Android are documented below the widget.
-  Future<bool> _startNativeTVProjection() async {
-    try {
-      final bool? success = await _projectionChannel.invokeMethod<bool>('startTVProjection');
-      return success ?? false;
-    } on PlatformException catch (e) {
-      debugPrint('Native projection initialization warning: $e');
-      return false;
-    }
-  }
-
-  Future<void> _stopNativeTVProjection() async {
-    try {
-      await _projectionChannel.invokeMethod('stopTVProjection');
-    } on PlatformException catch (e) {
-      debugPrint('Native projection termination warning: $e');
-    }
-  }
 
   void _handleButtonEvent(int buttonId, bool pressed) {
     if (buttonId == 11) { // MENU
@@ -231,7 +167,7 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
 
   void _exitGame(BuildContext context) {
     if (widget.isHost) {
-      _stopNativeTVProjection();
+      UniversalCasterBridge().disconnect();
       widget.engine?.shutdown();
       HostServer.instance.stop();
     } else {
@@ -242,56 +178,6 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.isHost && _isConnectingTV) {
-      return Scaffold(
-        backgroundColor: const Color(0xFF070714),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFFFF2E93).withOpacity(0.08),
-                  border: Border.all(color: const Color(0xFFFF2E93).withOpacity(0.3), width: 1.5),
-                ),
-                child: const SizedBox(
-                  width: 56,
-                  height: 56,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 3.5,
-                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF2E93)),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 32),
-              const Text(
-                'WAITING FOR TELEVISION...',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 2.0,
-                  fontFamily: 'Outfit',
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Please select your wireless display or Smart TV in the system cast overlay.',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.5),
-                  fontSize: 13,
-                  fontFamily: 'Outfit',
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
     return Scaffold(
       backgroundColor: const Color(0xFF070714),
       body: widget.isHost ? _buildHostLayout() : _buildClientLayout(),

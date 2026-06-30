@@ -5,6 +5,8 @@ import 'package:file_picker/file_picker.dart';
 import '../network/host_server.dart';
 import '../network/client_socket.dart';
 import '../emulation/libretro.dart';
+import '../casting/universal_caster_interface.dart';
+import '../casting/universal_caster_bridge.dart';
 import 'gamepad_deck.dart';
 
 class RoleGate extends StatelessWidget {
@@ -63,22 +65,124 @@ class RoleGate extends StatelessWidget {
         // Initialize Host Mesh WebSocket server & mDNS advertiser
         await HostServer.instance.start();
 
-        // Request system screen cast options menu (wireless display / Smart TV)
-        try {
-          final channel = MethodChannel('com.retromesh.console/projection');
-          channel.invokeMethod('openSystemCastMenu');
-        } catch (e) {
-          debugPrint('[DEBUG] Failed to launch system cast settings: $e');
+        // Show custom display picker overlay
+        final caster = UniversalCasterBridge();
+        await caster.startScanning();
+
+        final UniversalTVTarget? selectedTarget = await showModalBottomSheet<UniversalTVTarget>(
+          context: context,
+          backgroundColor: const Color(0xFF0F0F28),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          builder: (ctx) {
+            return SafeArea(
+              child: SizedBox(
+                height: 350,
+                child: Column(
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Text(
+                        'SELECT WIRELESS DISPLAY',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Outfit',
+                          letterSpacing: 1.5,
+                        ),
+                      ),
+                    ),
+                    const Divider(color: Colors.white12, height: 1),
+                    Expanded(
+                      child: StreamBuilder<List<UniversalTVTarget>>(
+                        stream: caster.discoveredDevicesStream,
+                        builder: (context, snapshot) {
+                          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                            return const Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  CircularProgressIndicator(color: Color(0xFFFF2E93)),
+                                  SizedBox(height: 16),
+                                  Text(
+                                    'Scanning for devices...',
+                                    style: TextStyle(color: Colors.white70, fontFamily: 'Outfit'),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+
+                          final devices = snapshot.data!;
+                          return ListView.separated(
+                            itemCount: devices.length,
+                            separatorBuilder: (_, __) => const Divider(color: Colors.white12, height: 1),
+                            itemBuilder: (context, index) {
+                              final device = devices[index];
+                              return ListTile(
+                                leading: Icon(
+                                  device.protocolType == CastingProtocol.googleCast ? Icons.cast : Icons.tv,
+                                  color: const Color(0xFFFF2E93),
+                                ),
+                                title: Text(
+                                  device.name,
+                                  style: const TextStyle(color: Colors.white, fontFamily: 'Outfit'),
+                                ),
+                                subtitle: Text(
+                                  device.protocolType == CastingProtocol.googleCast ? 'Google Cast' : 'Miracast / AirPlay',
+                                  style: const TextStyle(color: Colors.white54, fontSize: 12, fontFamily: 'Outfit'),
+                                ),
+                                onTap: () {
+                                  Navigator.pop(ctx, device);
+                                },
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text(
+                          'CANCEL',
+                          style: TextStyle(color: Colors.white54, fontFamily: 'Outfit', fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    )
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+
+        await caster.stopScanning();
+
+        if (selectedTarget == null) {
+          // User cancelled display selection, exit game
+          engine.shutdown();
+          HostServer.instance.stop();
+          return;
         }
+
+        // Connect to selected device
+        if (!context.mounted) return;
+        _showLoading(context, 'Connecting to ${selectedTarget.name}...');
+        loadingShown = true;
+        await caster.connectToDevice(selectedTarget);
+        
+        if (!context.mounted) return;
+        Navigator.pop(context); // Dismiss connecting dialog
+        loadingShown = false;
 
         // Boot FFI Libretro emulation engine
         final engine = LibretroEngine();
         engine.initializeCore(corePath);
         engine.loadGame(romPath);
-
-        if (!context.mounted) return;
-        Navigator.pop(context); // Dismiss loading dialog
-        loadingShown = false;
 
         // Navigate to Dual-Screen Gamepad Deck (Host Mode)
         Navigator.push(
