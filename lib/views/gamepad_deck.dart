@@ -43,6 +43,8 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
     // 2. Prevent mobile OS from sleeping or throttling priority threads
     WakelockPlus.enable();
 
+    HardwareKeyboard.instance.addHandler(_onKeyEvent);
+
     if (widget.isHost) {
       _isConnectingTV = true;
       _checkPreConnectedDisplay();
@@ -102,6 +104,7 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    HardwareKeyboard.instance.removeHandler(_onKeyEvent);
     if (widget.isHost) {
       widget.engine?.currentFrameNotifier.removeListener(_onFrameGenerated);
     }
@@ -145,7 +148,10 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
   void _handleButtonEvent(int buttonId, bool pressed) {
     if (buttonId == 11) { // MENU
       if (pressed && widget.isHost) {
-        _showMenuOverlay();
+        _togglePause();
+        if (widget.engine!.isPaused) {
+          _showMenuOverlay();
+        }
       }
       return;
     }
@@ -157,6 +163,32 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
       // Client maps to Port 2 (index 1) by sending over WebSocket
       ClientSocket.instance.sendButtonInput(buttonId, pressed);
     }
+  }
+
+  bool _onKeyEvent(KeyEvent event) {
+    if (event is KeyDownEvent || event is KeyUpEvent) {
+      final pressed = event is KeyDownEvent;
+      final key = event.logicalKey;
+      int? buttonId;
+      
+      if (key == LogicalKeyboardKey.arrowUp) buttonId = 1;
+      else if (key == LogicalKeyboardKey.arrowDown) buttonId = 2;
+      else if (key == LogicalKeyboardKey.arrowLeft) buttonId = 3;
+      else if (key == LogicalKeyboardKey.arrowRight) buttonId = 4;
+      else if (key == LogicalKeyboardKey.gameButtonA || key == LogicalKeyboardKey.keyX) buttonId = 5;
+      else if (key == LogicalKeyboardKey.gameButtonB || key == LogicalKeyboardKey.keyZ) buttonId = 6;
+      else if (key == LogicalKeyboardKey.gameButtonX || key == LogicalKeyboardKey.keyS) buttonId = 7;
+      else if (key == LogicalKeyboardKey.gameButtonY || key == LogicalKeyboardKey.keyA) buttonId = 8;
+      else if (key == LogicalKeyboardKey.gameButtonStart || key == LogicalKeyboardKey.enter) buttonId = 9;
+      else if (key == LogicalKeyboardKey.gameButtonSelect || key == LogicalKeyboardKey.space) buttonId = 10;
+      else if (key == LogicalKeyboardKey.gameButtonMode || key == LogicalKeyboardKey.escape) buttonId = 11;
+      
+      if (buttonId != null) {
+        _handleButtonEvent(buttonId, pressed);
+        return true;
+      }
+    }
+    return false;
   }
 
   void _togglePause() {

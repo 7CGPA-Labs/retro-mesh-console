@@ -120,6 +120,7 @@ class LibretroEngine {
   int _mockDY = 2;
   static const int _mockWidth = 256;
   static const int _mockHeight = 224;
+  bool isPaused = false;
 
   LibretroEngine() {
     activeInstance = this;
@@ -268,10 +269,11 @@ class LibretroEngine {
     stopGameLoop();
     _gameLoopTimer = Timer.periodic(const Duration(microseconds: 16667), (timer) {
       if (!_isGameLoaded || !_isCoreInitialized) return;
-      if (isPaused) return;
+      
       if (isMockMode) {
         _renderMockFrame();
       } else {
+        if (isPaused) return;
         try {
           _retroRun();
         } catch (e) {
@@ -296,6 +298,10 @@ class LibretroEngine {
   }
 
   /// Shutdown emulator and release resources
+  void togglePause() {
+    isPaused = !isPaused;
+  }
+
   void shutdown() {
     stopGameLoop();
     _log('Shutting down engine');
@@ -436,10 +442,18 @@ class LibretroEngine {
       for (int x = 0; x < _mockWidth; x++) {
         final idx = (y * _mockWidth + x) * 4;
         final isGrid = (x % 32 == 0 || y % 32 == 0);
-        rgbaData[idx] = isGrid ? 35 : 18;      // R
-        rgbaData[idx + 1] = isGrid ? 35 : 18;  // G
-        rgbaData[idx + 2] = isGrid ? 50 : 22;  // B
-        rgbaData[idx + 3] = 255;               // A
+        if (isPaused) {
+          // Dim the background if paused
+          rgbaData[idx] = isGrid ? 15 : 8;
+          rgbaData[idx + 1] = isGrid ? 15 : 8;
+          rgbaData[idx + 2] = isGrid ? 20 : 10;
+          rgbaData[idx + 3] = 255;
+        } else {
+          rgbaData[idx] = isGrid ? 35 : 18;      // R
+          rgbaData[idx + 1] = isGrid ? 35 : 18;  // G
+          rgbaData[idx + 2] = isGrid ? 50 : 22;  // B
+          rgbaData[idx + 3] = 255;               // A
+        }
       }
     }
 
@@ -471,10 +485,12 @@ class LibretroEngine {
     if (p2ButtonStates[10] ?? false) _drawMockSquare(rgbaData, 170, 180, 255, 0, 255); // P2 SELECT
 
     // Bouncing Ball
-    _mockX += _mockDX;
-    _mockY += _mockDY;
-    if (_mockX <= 5 || _mockX >= _mockWidth - 20) _mockDX = -_mockDX;
-    if (_mockY <= 5 || _mockY >= _mockHeight - 20) _mockDY = -_mockDY;
+    if (!isPaused) {
+      _mockX += _mockDX;
+      _mockY += _mockDY;
+      if (_mockX <= 5 || _mockX >= _mockWidth - 20) _mockDX = -_mockDX;
+      if (_mockY <= 5 || _mockY >= _mockHeight - 20) _mockDY = -_mockDY;
+    }
 
     // Draw active bouncing box
     for (int y = _mockY; y < _mockY + 12; y++) {
@@ -482,10 +498,20 @@ class LibretroEngine {
         if (x >= 0 && x < _mockWidth && y >= 0 && y < _mockHeight) {
           final idx = (y * _mockWidth + x) * 4;
           rgbaData[idx] = 0;
-          rgbaData[idx + 1] = 230;
-          rgbaData[idx + 2] = 255;
+          rgbaData[idx + 1] = isPaused ? 100 : 255;
+          rgbaData[idx + 2] = 0;
           rgbaData[idx + 3] = 255;
         }
+      }
+    }
+
+    if (isPaused) {
+      // Draw PAUSED in red blocks in the center
+      _drawMockSquare(rgbaData, 120, 110, 255, 0, 0);
+      _drawMockSquare(rgbaData, 135, 110, 255, 0, 0);
+      // P A U S E D indicator
+      for(int i = 0; i < 60; i++) {
+         _drawMockSquare(rgbaData, 100 + i, 100, 255, 255, 255);
       }
     }
 

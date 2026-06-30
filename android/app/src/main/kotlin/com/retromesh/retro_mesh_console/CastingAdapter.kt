@@ -161,8 +161,9 @@ class CastingAdapter(
             frameBitmap?.let { bitmap ->
                 bitmap.copyPixelsFromBuffer(ByteBuffer.wrap(bytes))
                 handler.post {
-                    presentationImageView?.setImageBitmap(bitmap)
-                    // Invalidate forces a redraw
+                    val drawable = android.graphics.drawable.BitmapDrawable(activity.resources, bitmap)
+                    drawable.isFilterBitmap = true // Bilinear filtering for smooth upscaling
+                    presentationImageView?.setImageDrawable(drawable)
                     presentationImageView?.invalidate()
                 }
             }
