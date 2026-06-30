@@ -108,11 +108,12 @@ class CastingAdapter(
                         override fun onCreate(savedInstanceState: Bundle?) {
                             super.onCreate(savedInstanceState)
                             
-                            presentationImageView = ImageView(context).apply {
+                            val imageView = ImageView(context).apply {
                                 scaleType = ImageView.ScaleType.FIT_CENTER
                                 setBackgroundColor(android.graphics.Color.BLACK)
                             }
-                            setContentView(presentationImageView)
+                            presentationImageView = imageView
+                            setContentView(imageView)
                         }
                     }
                     presentationDialog?.show()
