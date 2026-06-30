@@ -225,7 +225,7 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
 
   void _exitGame(BuildContext context) {
     if (widget.isHost) {
-      UniversalCasterBridge().disconnect();
+      _stopNativeTVProjection();
       widget.engine?.shutdown();
       HostServer.instance.stop();
     } else {
