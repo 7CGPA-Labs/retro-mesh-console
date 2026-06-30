@@ -6,6 +6,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import '../network/host_server.dart';
 import '../network/client_socket.dart';
 import '../emulation/libretro.dart';
+import '../casting/universal_caster_bridge.dart';
 
 class GamepadDeck extends StatefulWidget {
   final bool isHost;
