@@ -171,6 +171,13 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
       // Client maps to Port 2 (index 1) by sending over WebSocket
       ClientSocket.instance.sendButtonInput(buttonId, pressed);
     }
+    
+    if (pressed) {
+      final queue = List<int>.from(_buttonQueueNotifier.value);
+      queue.add(buttonId);
+      if (queue.length > 8) queue.removeAt(0);
+      _buttonQueueNotifier.value = queue;
+    }
   }
 
   bool _onKeyEvent(KeyEvent event) {
@@ -868,23 +875,16 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
 
           const SizedBox(width: 8),
 
-          // Core Name / Engine Mode Info
+          // Button Press Queue
           Expanded(
-            child: const Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'RETRO MESH CONSOLE',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-              ],
+            child: ValueListenableBuilder<List<int>>(
+              valueListenable: _buttonQueueNotifier,
+              builder: (context, queue, _) {
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: queue.map((id) => _buildButtonQueueIcon(id)).toList(),
+                );
+              },
             ),
           ),
 
@@ -939,6 +939,39 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildButtonQueueIcon(int buttonId) {
+    String text;
+    switch (buttonId) {
+      case 1: text = '▲'; break;
+      case 2: text = '▼'; break;
+      case 3: text = '◀'; break;
+      case 4: text = '▶'; break;
+      case 5: text = 'A'; break;
+      case 6: text = 'B'; break;
+      case 7: text = 'X'; break;
+      case 8: text = 'Y'; break;
+      case 9: text = 'ST'; break;
+      case 10: text = 'SE'; break;
+      case 12: text = 'L1'; break;
+      case 13: text = 'R1'; break;
+      case 14: text = 'L2'; break;
+      case 15: text = 'R2'; break;
+      default: text = '?'; break;
+    }
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.white10,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
       ),
     );
   }

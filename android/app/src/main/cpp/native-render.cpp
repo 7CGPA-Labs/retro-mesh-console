@@ -44,18 +44,30 @@ extern "C" void render_to_window(const uint8_t* pixels, int width, int height) {
     auto drawToWindow = [&](ANativeWindow* window) {
         if (!window) return;
         
-        ANativeWindow_setBuffersGeometry(window, width, height, WINDOW_FORMAT_RGBA_8888);
+        const int scale = 4;
+        int scaledWidth = width * scale;
+        int scaledHeight = height * scale;
+        
+        ANativeWindow_setBuffersGeometry(window, scaledWidth, scaledHeight, WINDOW_FORMAT_RGBA_8888);
         
         ANativeWindow_Buffer buffer;
         if (ANativeWindow_lock(window, &buffer, nullptr) == 0) {
-            uint8_t* dst = static_cast<uint8_t*>(buffer.bits);
-            const uint8_t* src = pixels;
+            uint32_t* dst = static_cast<uint32_t*>(buffer.bits);
+            const uint32_t* src = reinterpret_cast<const uint32_t*>(pixels);
             
-            int srcStride = width * 4;
-            int dstStride = buffer.stride * 4;
+            int dstStride = buffer.stride;
             
             for (int y = 0; y < height; ++y) {
-                std::memcpy(dst + y * dstStride, src + y * srcStride, srcStride);
+                for (int sy = 0; sy < scale; ++sy) {
+                    uint32_t* dstRow = dst + (y * scale + sy) * dstStride;
+                    const uint32_t* srcRow = src + y * width;
+                    for (int x = 0; x < width; ++x) {
+                        uint32_t pixel = srcRow[x];
+                        for (int sx = 0; sx < scale; ++sx) {
+                            *dstRow++ = pixel;
+                        }
+                    }
+                }
             }
             
             ANativeWindow_unlockAndPost(window);
