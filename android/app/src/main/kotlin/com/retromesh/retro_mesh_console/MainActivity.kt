@@ -15,5 +15,6 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: io.flutter.embedding.engine.FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         CastingAdapter(this, flutterEngine.dartExecutor.binaryMessenger)
+        AudioAdapter(flutterEngine.dartExecutor.binaryMessenger)
     }
 }

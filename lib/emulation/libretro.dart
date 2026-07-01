@@ -80,6 +80,8 @@ int _inputStateCallback(int port, int device, int index, int id) {
 
 class LibretroEngine {
   static LibretroEngine? activeInstance;
+  
+  static const MethodChannel _audioChannel = MethodChannel('com.retromesh.console/audio');
 
   // Emulation State Notifiers
   // For local UI rendering
@@ -397,6 +399,11 @@ class LibretroEngine {
   }
 
   int _handleAudioSampleBatch(Pointer<Int16> data, int frames) {
+    if (frames > 0) {
+      final int bytesCount = frames * 4; // 2 channels * 16-bit (2 bytes) = 4 bytes per frame
+      final Uint8List audioBytes = data.cast<Uint8>().asTypedList(bytesCount);
+      _audioChannel.invokeMethod('pushAudio', audioBytes);
+    }
     return frames;
   }
 
