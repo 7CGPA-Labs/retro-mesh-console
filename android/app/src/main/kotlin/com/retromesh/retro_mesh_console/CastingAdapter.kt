@@ -166,7 +166,6 @@ class CastingAdapter(
             try {
                 presentationDialog?.dismiss()
                 presentationDialog = null
-                presentationImageView = null
             } catch (e: Exception) {
                 e.printStackTrace()
             }
