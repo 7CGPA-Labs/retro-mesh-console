@@ -121,6 +121,9 @@ class LibretroEngine {
   late bool Function(Pointer<retro_game_info>) _retroLoadGame;
   late void Function() _retroRun;
   late void Function() _retroUnloadGame;
+  late void Function(Pointer<retro_system_info>) _retroGetSystemInfo;
+
+  String coreName = 'Unknown Core';
 
   // Mock Engine Rendering Variables
   int _mockX = 120;
@@ -174,6 +177,13 @@ class LibretroEngine {
       _setupCallbacks();
       _retroInit();
       
+      final info = calloc<retro_system_info>();
+      _retroGetSystemInfo(info);
+      if (info.ref.library_name != nullptr) {
+        coreName = info.ref.library_name.toDartString();
+      }
+      calloc.free(info);
+
       _isCoreInitialized = true;
       isMockMode = false;
       _log('Libretro Dynamic Core loaded successfully. API Version: ${_retroApiVersion()}');
@@ -210,6 +220,10 @@ class LibretroEngine {
     _retroSetInputState = dylib.lookupFunction<
         Void Function(Pointer<NativeFunction<retro_input_state_t>>),
         void Function(Pointer<NativeFunction<retro_input_state_t>>)>('retro_set_input_state');
+
+    _retroGetSystemInfo = dylib.lookupFunction<
+        Void Function(Pointer<retro_system_info>),
+        void Function(Pointer<retro_system_info>)>('retro_get_system_info');
 
     _retroInit = dylib.lookupFunction<Void Function(), void Function()>('retro_init');
     _retroDeinit = dylib.lookupFunction<Void Function(), void Function()>('retro_deinit');

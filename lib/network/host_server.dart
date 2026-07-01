@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:battery_plus/battery_plus.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:nsd/nsd.dart' as nsd;
 import '../emulation/libretro.dart';
 
@@ -227,7 +228,12 @@ class HostServer {
       final results = await _connectivity.checkConnectivity();
       String wifiStr = 'Disconnected';
       if (results.contains(ConnectivityResult.wifi)) {
-        wifiStr = 'Wi-Fi';
+        try {
+          final rssi = await const MethodChannel('com.retromesh.console/wifi').invokeMethod<int>('getWifiRssi');
+          wifiStr = rssi != null ? '$rssi dBm' : 'Wi-Fi';
+        } catch (e) {
+          wifiStr = 'Wi-Fi';
+        }
       } else if (results.contains(ConnectivityResult.mobile)) {
         wifiStr = 'Mobile';
       } else if (results.isNotEmpty && results.first != ConnectivityResult.none) {

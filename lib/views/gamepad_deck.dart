@@ -871,31 +871,26 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  widget.engine!.isMockMode ? 'SIMULATOR MODE' : 'HARDWARE FFI MODE',
+                  widget.romName.split('/').last.split('.').first.toUpperCase(),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    color: Color(0xFF00E5FF),
-                    fontSize: 9,
+                    color: Colors.white,
+                    fontSize: 11,
                     fontWeight: FontWeight.bold,
-                    letterSpacing: 1.5,
+                    letterSpacing: 1.2,
                   ),
                 ),
                 const SizedBox(height: 3),
-                ValueListenableBuilder<String>(
-                  valueListenable: widget.engine!.logNotifier,
-                  builder: (context, log, child) {
-                    return Text(
-                      log,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.35),
-                        fontSize: 8,
-                        fontFamily: 'monospace',
-                      ),
-                    );
-                  },
+                Text(
+                  widget.engine?.coreName.toUpperCase() ?? 'UNKNOWN CORE',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.5),
+                    fontSize: 8,
+                    letterSpacing: 1.0,
+                  ),
                 ),
               ],
             ),

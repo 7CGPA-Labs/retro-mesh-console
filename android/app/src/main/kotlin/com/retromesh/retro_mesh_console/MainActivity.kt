@@ -16,5 +16,23 @@ class MainActivity : FlutterActivity() {
         super.configureFlutterEngine(flutterEngine)
         CastingAdapter(this, flutterEngine.dartExecutor.binaryMessenger)
         AudioAdapter(flutterEngine.dartExecutor.binaryMessenger)
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.retromesh.console/wifi").setMethodCallHandler { call, result ->
+            if (call.method == "getWifiRssi") {
+                try {
+                    val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
+                    val info = wifiManager.connectionInfo
+                    if (info != null && info.rssi != -127) {
+                        result.success(info.rssi)
+                    } else {
+                        result.success(null)
+                    }
+                } catch (e: Exception) {
+                    result.success(null)
+                }
+            } else {
+                result.notImplemented()
+            }
+        }
     }
 }
