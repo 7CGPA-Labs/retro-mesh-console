@@ -4,7 +4,6 @@ import android.app.Activity
 import android.app.Presentation
 import android.content.Context
 import android.content.Intent
-import android.graphics.Bitmap
 import android.hardware.display.DisplayManager
 import android.os.Bundle
 import android.os.Handler
@@ -13,7 +12,6 @@ import android.view.Display
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
-import java.nio.ByteBuffer
 
 class CastingAdapter(
     private val activity: Activity,

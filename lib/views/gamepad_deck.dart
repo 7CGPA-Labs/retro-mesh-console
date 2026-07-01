@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -904,46 +903,6 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildTVViewport(CombinedTelemetry telemetry) {
-    if (widget.engine == null) {
-      return Container(
-        color: Colors.black,
-        child: const Center(
-          child: Text(
-            'NO ENGINE ASSIGNED',
-            style: TextStyle(color: Colors.white30, fontSize: 12),
-          ),
-        ),
-      );
-    }
-
-    return Container(
-      color: const Color(0xFF030308),
-      child: Column(
-        children: [
-          // Upper frame: Emulator Output
-          Expanded(
-            child: ValueListenableBuilder<int?>(
-              valueListenable: widget.engine!.textureIdNotifier,
-              builder: (context, textureId, child) {
-                if (textureId == null) {
-                  return const Center(child: Text('WAITING FOR GPU TEXTURE...', style: TextStyle(color: Colors.white24)));
-                }
-                return Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Texture(
-                    textureId: textureId,
-                    filterQuality: FilterQuality.none, // CRISP SETUP
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildButtonQueueIcon(int buttonId) {
     String text;
     switch (buttonId) {
@@ -1046,70 +1005,6 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
         )
       ],
     );
-  }
-}
-
-// --- DUAL-SCREEN EMULATION CANVAS PAINTER ---
-
-class EmulationCanvasPainter extends CustomPainter {
-  final ui.Image? image;
-  EmulationCanvasPainter(this.image);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (image == null) {
-      // Paint static grid loading layout
-      final paint = Paint()..color = const Color(0xFF04040A);
-      canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paint);
-      
-      final textPainter = TextPainter(
-        text: const TextSpan(
-          text: 'AWAITING EMULATION OUTPUT...',
-          style: TextStyle(
-            color: Colors.white12,
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 2.0,
-            fontFamily: 'Outfit',
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-      );
-      textPainter.layout();
-      textPainter.paint(
-        canvas,
-        Offset(
-          (size.width - textPainter.width) / 2,
-          (size.height - textPainter.height) / 2,
-        ),
-      );
-      return;
-    }
-
-    final double srcW = image!.width.toDouble();
-    final double srcH = image!.height.toDouble();
-    final double dstW = size.width;
-    final double dstH = size.height;
-
-    // Aspect ratio fitting calculations
-    final double scale = (dstW / srcW < dstH / srcH) ? dstW / srcW : dstH / srcH;
-    final double w = srcW * scale;
-    final double h = srcH * scale;
-    final double x = (dstW - w) / 2;
-    final double y = (dstH - h) / 2;
-
-    // Use FilterQuality.none for crisp non-blurred pixel layouts (NES/SNES/Genesis style)
-    canvas.drawImageRect(
-      image!,
-      Rect.fromLTWH(0, 0, srcW, srcH),
-      Rect.fromLTWH(x, y, w, h),
-      Paint()..filterQuality = ui.FilterQuality.none,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant EmulationCanvasPainter oldDelegate) {
-    return oldDelegate.image != image;
   }
 }
 
