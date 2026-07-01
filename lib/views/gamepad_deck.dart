@@ -28,6 +28,7 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
   
   bool _isCasting = false; // Track if cast dialog presentation is active
   bool _isConnectingTV = false; // Track if waiting for OS Cast dialog to return
+  final ValueNotifier<List<int>> _buttonQueueNotifier = ValueNotifier<List<int>>([]);
 
   @override
   void initState() {
