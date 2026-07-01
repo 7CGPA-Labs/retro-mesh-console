@@ -56,8 +56,8 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
   void _onFrameGenerated() {
     if (_isCasting) {
       final now = DateTime.now();
-      if (_lastFrameTime != null && now.difference(_lastFrameTime!).inMilliseconds < 50) {
-        return; // Throttle TV broadcast to 20 FPS to prevent Miracast stutter
+      if (_lastFrameTime != null && now.difference(_lastFrameTime!).inMilliseconds < 33) {
+        return; // Throttle TV broadcast to 30 FPS to prevent Miracast stutter
       }
       _lastFrameTime = now;
       
