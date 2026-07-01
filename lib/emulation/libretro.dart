@@ -122,6 +122,7 @@ class LibretroEngine {
   late void Function() _retroRun;
   late void Function() _retroUnloadGame;
   late void Function(Pointer<retro_system_info>) _retroGetSystemInfo;
+  late void Function() _retroReset;
 
   String coreName = 'Unknown Core';
 
@@ -239,6 +240,7 @@ class LibretroEngine {
 
     _retroRun = dylib.lookupFunction<Void Function(), void Function()>('retro_run');
     _retroUnloadGame = dylib.lookupFunction<Void Function(), void Function()>('retro_unload_game');
+    _retroReset = dylib.lookupFunction<Void Function(), void Function()>('retro_reset');
   }
 
   void _setupCallbacks() {
@@ -283,6 +285,16 @@ class LibretroEngine {
     } finally {
       calloc.free(gameInfo);
       // Do not free pathPointer immediately as core might access it asynchronously
+    }
+  }
+
+  void resetGame() {
+    _log('Resetting game...');
+    if (isMockMode) {
+      _mockX = 120;
+      _mockY = 100;
+    } else if (_isCoreInitialized) {
+      _retroReset();
     }
   }
 

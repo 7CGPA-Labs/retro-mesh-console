@@ -260,7 +260,10 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
               onTap: () {
                 Navigator.pop(ctx);
                 if (widget.engine != null) {
-                  widget.engine!.initializeCore(''); // Reset
+                  widget.engine!.resetGame();
+                  if (widget.engine!.isPaused) {
+                    _togglePause();
+                  }
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Resetting Game...')),
                   );
