@@ -870,29 +870,18 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
 
           // Core Name / Engine Mode Info
           Expanded(
-            child: Column(
+            child: const Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  widget.romName.split('/').last.split('.').first.toUpperCase(),
+                  'RETRO MESH CONSOLE',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  widget.engine?.coreName.toUpperCase() ?? 'UNKNOWN CORE',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.5),
-                    fontSize: 8,
-                    letterSpacing: 1.0,
                   ),
                 ),
               ],

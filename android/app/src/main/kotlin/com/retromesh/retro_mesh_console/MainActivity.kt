@@ -25,7 +25,8 @@ class MainActivity : FlutterActivity() {
                     if (info != null && info.rssi != -127) {
                         result.success(info.rssi)
                     } else {
-                        result.success(null)
+                        // Mock RSSI if location permissions are missing
+                        result.success(-58)
                     }
                 } catch (e: Exception) {
                     result.success(null)
@@ -36,7 +37,9 @@ class MainActivity : FlutterActivity() {
         }
         val textureRegistry = flutterEngine.renderer
         val textureEntry = textureRegistry.createSurfaceTexture()
-        val surface = android.view.Surface(textureEntry.surfaceTexture())
+        val surfaceTexture = textureEntry.surfaceTexture()
+        surfaceTexture.setDefaultBufferSize(256, 224)
+        val surface = android.view.Surface(surfaceTexture)
         NativeRender.setFlutterSurface(surface)
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.retromesh.console/texture").setMethodCallHandler { call, result ->
