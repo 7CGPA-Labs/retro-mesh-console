@@ -928,7 +928,13 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
                 if (textureId == null) {
                   return const Center(child: Text('WAITING FOR GPU TEXTURE...', style: TextStyle(color: Colors.white24)));
                 }
-                return Texture(textureId: textureId);
+                return Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Texture(
+                    textureId: textureId,
+                    filterQuality: FilterQuality.none, // CRISP SETUP
+                  ),
+                );
               },
             ),
           ),
