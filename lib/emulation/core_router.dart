@@ -17,6 +17,7 @@ class CoreRouter {
     'bin': 'pcsx_rearmed',
     'cue': 'pcsx_rearmed',
     'iso': 'pcsx_rearmed',
+    'img': 'pcsx_rearmed',
   };
 
   /// Returns a list of all ROM file extensions supported by the router.
