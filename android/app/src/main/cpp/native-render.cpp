@@ -104,3 +104,43 @@ extern "C" void render_to_window(const uint16_t* pixels, int width, int height) 
         tvCondVar.notify_one();
     }
 }
+
+// --- Native Input Management ---
+
+std::atomic<bool> button_states[2][16];
+
+extern "C" int16_t native_input_state_cb(unsigned port, unsigned device, unsigned index, unsigned id) {
+    if (device != 1) return 0; // RETRO_DEVICE_JOYPAD = 1
+    
+    int customId = -1;
+    switch (id) {
+        case 0: customId = 6; break; // B
+        case 1: customId = 8; break; // Y
+        case 2: customId = 10; break; // SELECT
+        case 3: customId = 9; break; // START
+        case 4: customId = 1; break; // UP
+        case 5: customId = 2; break; // DOWN
+        case 6: customId = 3; break; // LEFT
+        case 7: customId = 4; break; // RIGHT
+        case 8: customId = 5; break; // A
+        case 9: customId = 7; break; // X
+        case 10: customId = 11; break; // L
+        case 11: customId = 12; break; // R
+    }
+    
+    if (customId == -1 || port > 1) return 0;
+    return button_states[port][customId].load() ? 1 : 0;
+}
+
+extern "C" void set_player1_button(int customButtonId, bool pressed) {
+    if (customButtonId >= 0 && customButtonId < 16) {
+        button_states[0][customButtonId].store(pressed);
+    }
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_retromesh_retro_1mesh_1console_NetworkManager_updatePlayer2Button(JNIEnv* env, jobject thiz, jint buttonId, jboolean pressed) {
+    if (buttonId >= 0 && buttonId < 16) {
+        button_states[1][buttonId].store(pressed);
+    }
+}

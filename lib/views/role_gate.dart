@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
-import '../network/host_server.dart';
-import '../network/client_socket.dart';
+import '../utils/native_bridge.dart';
 import '../emulation/libretro.dart';
 import '../emulation/core_router.dart';
 
@@ -47,8 +46,8 @@ class RoleGate extends StatelessWidget {
           debugPrint('[DEBUG] Core asset missing/failed extraction: $e');
         }
 
-        // Initialize Host Mesh WebSocket server & mDNS advertiser
-        await HostServer.instance.start();
+        // Initialize Host Mesh WebSocket server & mDNS advertiser natively
+        await NativeBridge.startHost();
 
         // Boot FFI Libretro emulation engine
         final engine = LibretroEngine();
@@ -101,8 +100,8 @@ class RoleGate extends StatelessWidget {
   }
 
   void _handleJoinSelection(BuildContext context) {
-    // Client Mode triggers discovery immediately upon routing to GamepadDeck
-    ClientSocket.instance.startDiscovery();
+    // Client Mode triggers discovery immediately upon routing to GamepadDeck natively
+    NativeBridge.startClient();
 
     Navigator.push(
       context,

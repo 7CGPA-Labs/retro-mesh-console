@@ -46,6 +46,35 @@ class MainActivity : FlutterActivity() {
                 result.notImplemented()
             }
         }
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.retromesh/system").setMethodCallHandler { call, result ->
+            when (call.method) {
+                "startHost" -> {
+                    NetworkManager.startHost(applicationContext)
+                    result.success(null)
+                }
+                "startClient" -> {
+                    NetworkManager.startClient(applicationContext)
+                    result.success(null)
+                }
+                "sendInput" -> {
+                    val buttonId = call.argument<Int>("buttonId") ?: 0
+                    val pressed = call.argument<Boolean>("pressed") ?: false
+                    NetworkManager.sendInput(buttonId, pressed)
+                    result.success(null)
+                }
+                "keepScreenOn" -> {
+                    val enable = call.argument<Boolean>("enable") ?: false
+                    if (enable) {
+                        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                    } else {
+                        window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                    }
+                    result.success(null)
+                }
+                else -> result.notImplemented()
+            }
+        }
     }
 }
 

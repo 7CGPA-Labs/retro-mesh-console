@@ -53,6 +53,33 @@ import AVKit
       }
     }
     
+    let systemChannel = FlutterMethodChannel(name: "com.retromesh/system", binaryMessenger: controller.binaryMessenger)
+    systemChannel.setMethodCallHandler { (call, result) in
+      switch call.method {
+      case "startHost":
+        NetworkManager.shared.startHost()
+        result(nil)
+      case "startClient":
+        NetworkManager.shared.startClient()
+        result(nil)
+      case "sendInput":
+        if let args = call.arguments as? [String: Any],
+           let buttonId = args["buttonId"] as? Int,
+           let pressed = args["pressed"] as? Bool {
+            NetworkManager.shared.sendInput(buttonId: buttonId, pressed: pressed)
+        }
+        result(nil)
+      case "keepScreenOn":
+        if let args = call.arguments as? [String: Any],
+           let enable = args["enable"] as? Bool {
+            UIApplication.shared.isIdleTimerDisabled = enable
+        }
+        result(nil)
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
+    
     // Listen for screen connect/disconnect notifications (AirPlay/HDMI plug)
     NotificationCenter.default.addObserver(
         self,

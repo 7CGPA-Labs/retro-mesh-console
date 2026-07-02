@@ -134,6 +134,8 @@ class LibretroEngine {
   late void Function(double) _nativeAudioInit;
   late void Function() _nativeAudioDeinit;
   late Pointer<NativeFunction<retro_audio_sample_batch_t>> _nativeAudioCb;
+  late Pointer<NativeFunction<retro_input_state_t>> _nativeInputCb;
+  late void Function(int, bool) _setPlayer1Button;
 
   // Mock Engine Rendering Variables
   int _mockX = 120;
@@ -181,6 +183,8 @@ class LibretroEngine {
         _nativeAudioInit = nativeRenderLib.lookupFunction<Void Function(Double), void Function(double)>('native_audio_init');
         _nativeAudioDeinit = nativeRenderLib.lookupFunction<Void Function(), void Function()>('native_audio_deinit');
         _nativeAudioCb = nativeRenderLib.lookup<NativeFunction<retro_audio_sample_batch_t>>('native_audio_sample_batch_cb');
+        _nativeInputCb = nativeRenderLib.lookup<NativeFunction<retro_input_state_t>>('native_input_state_cb');
+        _setPlayer1Button = nativeRenderLib.lookupFunction<Void Function(Int32, Bool), void Function(int, bool)>('set_player1_button');
       } else if (Platform.isIOS) {
         // Statically linked or loaded via Framework bundle on iOS
         _lib = DynamicLibrary.process();
@@ -188,6 +192,8 @@ class LibretroEngine {
         _nativeAudioInit = DynamicLibrary.process().lookupFunction<Void Function(Double), void Function(double)>('native_audio_init');
         _nativeAudioDeinit = DynamicLibrary.process().lookupFunction<Void Function(), void Function()>('native_audio_deinit');
         _nativeAudioCb = DynamicLibrary.process().lookup<NativeFunction<retro_audio_sample_batch_t>>('native_audio_sample_batch_cb');
+        _nativeInputCb = DynamicLibrary.process().lookup<NativeFunction<retro_input_state_t>>('native_input_state_cb');
+        _setPlayer1Button = DynamicLibrary.process().lookupFunction<Void Function(Int32, Bool), void Function(int, bool)>('set_player1_button');
       } else {
         _lib = DynamicLibrary.open(corePath);
       }
@@ -279,7 +285,11 @@ class LibretroEngine {
     }
 
     _retroSetInputPoll(Pointer.fromFunction<retro_input_poll_t>(_inputPollCallback));
-    _retroSetInputState(Pointer.fromFunction<retro_input_state_t>(_inputStateCallback, 0));
+    if (isMockMode) {
+      _retroSetInputState(Pointer.fromFunction<retro_input_state_t>(_inputStateCallback, 0));
+    } else {
+      _retroSetInputState(_nativeInputCb);
+    }
   }
 
   /// Load ROM file and boot up core
@@ -406,7 +416,11 @@ class LibretroEngine {
   /// Update input state buffer
   void updateButtonState(int port, int customButtonId, bool pressed) {
     if (port == 0) {
-      p1ButtonStates[customButtonId] = pressed;
+      if (isMockMode) {
+        p1ButtonStates[customButtonId] = pressed;
+      } else {
+        _setPlayer1Button(customButtonId, pressed);
+      }
     } else if (port == 1) {
       p2ButtonStates[customButtonId] = pressed;
     }
