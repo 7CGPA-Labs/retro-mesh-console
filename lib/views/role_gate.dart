@@ -14,7 +14,7 @@ class RoleGate extends StatelessWidget {
   Future<void> _handleHostSelection(BuildContext context) async {
     bool loadingShown = false;
     try {
-      final FilePickerResult? result = await FilePicker.platform.pickFiles(
+      final FilePickerResult? result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: CoreRouter.getSupportedExtensions(),
       );
@@ -24,7 +24,7 @@ class RoleGate extends StatelessWidget {
         debugPrint('[DEBUG] Selected file count: ${result.files.length}');
         for (int i = 0; i < result.files.length; i++) {
           final f = result.files[i];
-          debugPrint('[DEBUG] File [$i] path: ${f.path}, name: ${f.name}, bytes: ${f.bytes?.length}');
+          debugPrint('[DEBUG] File [$i] path: ${f.path}, name: ${f.name}');
         }
       }
 

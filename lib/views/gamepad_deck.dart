@@ -26,7 +26,6 @@ class GamepadDeck extends StatefulWidget {
 class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
   static const MethodChannel _projectionChannel = MethodChannel('com.retromesh.console/projection');
   
-  bool _isCasting = false; // Track if cast dialog presentation is active
   bool _isConnectingTV = false; // Track if waiting for OS Cast dialog to return
 
   @override
@@ -51,22 +50,7 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
     }
   }
 
-  DateTime? _lastFrameTime;
 
-  void _onFrameGenerated() {
-    if (_isCasting) {
-      final now = DateTime.now();
-      if (_lastFrameTime != null && now.difference(_lastFrameTime!).inMilliseconds < 33) {
-        return; // Throttle TV broadcast to 30 FPS to prevent Miracast stutter
-      }
-      _lastFrameTime = now;
-      
-      final frame = widget.engine?.rawFrameNotifier.value;
-      if (frame != null) {
-        _projectionChannel.invokeMethod('sendFrame', frame);
-      }
-    }
-  }
 
   void _checkPreConnectedDisplay() {
     Future.delayed(const Duration(seconds: 1), () {
@@ -75,9 +59,7 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
         if (connected && mounted) {
           setState(() {
             _isConnectingTV = false;
-            _isCasting = true;
           });
-          widget.engine?.currentFrameNotifier.addListener(_onFrameGenerated);
         }
       });
     });
@@ -102,9 +84,7 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
         } else {
           setState(() {
             _isConnectingTV = false;
-            _isCasting = true;
           });
-          widget.engine?.rawFrameNotifier.addListener(_onFrameGenerated);
         }
       });
     }
@@ -115,7 +95,7 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     HardwareKeyboard.instance.removeHandler(_onKeyEvent);
     if (widget.isHost) {
-      widget.engine?.rawFrameNotifier.removeListener(_onFrameGenerated);
+      // Clean up host things
     }
     // Restore orientation settings
     SystemChrome.setPreferredOrientations([
@@ -182,20 +162,21 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
       
       if (key == LogicalKeyboardKey.arrowUp) {
         buttonId = 1;
-      } else if (key == LogicalKeyboardKey.arrowDown) buttonId = 2;
-      else if (key == LogicalKeyboardKey.arrowLeft) buttonId = 3;
-      else if (key == LogicalKeyboardKey.arrowRight) buttonId = 4;
-      else if (key == LogicalKeyboardKey.gameButtonA || key == LogicalKeyboardKey.keyX) buttonId = 5;
-      else if (key == LogicalKeyboardKey.gameButtonB || key == LogicalKeyboardKey.keyZ) buttonId = 6;
-      else if (key == LogicalKeyboardKey.gameButtonX || key == LogicalKeyboardKey.keyS) buttonId = 7;
-      else if (key == LogicalKeyboardKey.gameButtonY || key == LogicalKeyboardKey.keyA) buttonId = 8;
-      else if (key == LogicalKeyboardKey.gameButtonStart || key == LogicalKeyboardKey.enter) buttonId = 9;
-      else if (key == LogicalKeyboardKey.gameButtonSelect || key == LogicalKeyboardKey.space) buttonId = 10;
-      else if (key == LogicalKeyboardKey.gameButtonMode || key == LogicalKeyboardKey.escape) buttonId = 11;
-      else if (key == LogicalKeyboardKey.gameButtonLeft1 || key == LogicalKeyboardKey.keyQ) buttonId = 12;
-      else if (key == LogicalKeyboardKey.gameButtonRight1 || key == LogicalKeyboardKey.keyE) buttonId = 13;
-      else if (key == LogicalKeyboardKey.gameButtonLeft2 || key == LogicalKeyboardKey.digit1) buttonId = 14;
-      else if (key == LogicalKeyboardKey.gameButtonRight2 || key == LogicalKeyboardKey.digit3) buttonId = 15;
+      } else if (key == LogicalKeyboardKey.arrowDown) { buttonId = 2;
+      } else if (key == LogicalKeyboardKey.arrowLeft) { buttonId = 3;
+      } else if (key == LogicalKeyboardKey.arrowRight) { buttonId = 4;
+      } else if (key == LogicalKeyboardKey.gameButtonA || key == LogicalKeyboardKey.keyX) { buttonId = 5;
+      } else if (key == LogicalKeyboardKey.gameButtonB || key == LogicalKeyboardKey.keyZ) { buttonId = 6;
+      } else if (key == LogicalKeyboardKey.gameButtonX || key == LogicalKeyboardKey.keyS) { buttonId = 7;
+      } else if (key == LogicalKeyboardKey.gameButtonY || key == LogicalKeyboardKey.keyA) { buttonId = 8;
+      } else if (key == LogicalKeyboardKey.gameButtonStart || key == LogicalKeyboardKey.enter) { buttonId = 9;
+      } else if (key == LogicalKeyboardKey.gameButtonSelect || key == LogicalKeyboardKey.space) { buttonId = 10;
+      } else if (key == LogicalKeyboardKey.gameButtonMode || key == LogicalKeyboardKey.escape) { buttonId = 11;
+      } else if (key == LogicalKeyboardKey.gameButtonLeft1 || key == LogicalKeyboardKey.keyQ) { buttonId = 12;
+      } else if (key == LogicalKeyboardKey.gameButtonRight1 || key == LogicalKeyboardKey.keyE) { buttonId = 13;
+      } else if (key == LogicalKeyboardKey.gameButtonLeft2 || key == LogicalKeyboardKey.digit1) { buttonId = 14;
+      } else if (key == LogicalKeyboardKey.gameButtonRight2 || key == LogicalKeyboardKey.digit3) { buttonId = 15;
+      }
       
       if (buttonId != null) {
         _handleButtonEvent(buttonId, pressed);

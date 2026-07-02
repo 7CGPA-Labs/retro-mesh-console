@@ -2,7 +2,6 @@
 import 'dart:async';
 import 'dart:ffi';
 import 'dart:io';
-import 'dart:ui' as ui;
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' hide Size;
@@ -91,11 +90,7 @@ class LibretroEngine {
   static const MethodChannel _audioChannel = MethodChannel('com.retromesh.console/audio');
 
   // Emulation State Notifiers
-  // For local UI rendering
-  final ValueNotifier<ui.Image?> currentFrameNotifier = ValueNotifier<ui.Image?>(null);
-  final ValueNotifier<int?> textureIdNotifier = ValueNotifier<int?>(null);
-  // For native dual-screen projection
-  final ValueNotifier<Uint8List?> rawFrameNotifier = ValueNotifier<Uint8List?>(null);
+  // Texture ID notifier removed as we no longer render via Flutter texture
   final ValueNotifier<String> logNotifier = ValueNotifier<String>('Engine Initialized');
 
   // Input states for Port 1 (P1) and Port 2 (P2)
@@ -150,18 +145,6 @@ class LibretroEngine {
 
   LibretroEngine() {
     activeInstance = this;
-    _initTexture();
-  }
-
-  Future<void> _initTexture() async {
-    if (Platform.isAndroid) {
-      try {
-        final id = await const MethodChannel('com.retromesh.console/texture').invokeMethod<int>('getTextureId');
-        textureIdNotifier.value = id;
-      } catch (e) {
-        _log('Failed to fetch GPU texture ID: $e');
-      }
-    }
   }
 
   /// Extracts emulation core binary from Flutter assets to persistent documents folder
@@ -628,18 +611,7 @@ class LibretroEngine {
          _drawMockSquare(rgbaData, 100 + i, 100, 255, 255, 255);
       }
     }
-
-    rawFrameNotifier.value = rgbaData;
-
-    ui.decodeImageFromPixels(
-      rgbaData,
-      _mockWidth,
-      _mockHeight,
-      ui.PixelFormat.rgba8888,
-      (ui.Image img) {
-        currentFrameNotifier.value = img;
-      },
-    );
+    // Since TV renders natively and we don't preview, we just process inputs.
   }
 
   void _drawMockSquare(Uint8List rgba, int sx, int sy, int r, int g, int b) {
