@@ -1,10 +1,10 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import '../network/host_server.dart';
 import '../network/client_socket.dart';
 import '../emulation/libretro.dart';
+import '../emulation/core_router.dart';
 
 import 'gamepad_deck.dart';
 
@@ -16,7 +16,7 @@ class RoleGate extends StatelessWidget {
     try {
       final FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['nes', 'smc', 'sfc', 'md', 'gen', 'bin'],
+        allowedExtensions: CoreRouter.getSupportedExtensions(),
       );
 
       debugPrint('[DEBUG] FilePicker raw result: $result');
@@ -31,23 +31,9 @@ class RoleGate extends StatelessWidget {
       if (result != null && result.files.isNotEmpty && result.files.first.path != null) {
         final romPath = result.files.first.path!;
         final romName = result.files.first.name;
-        final ext = romPath.split('.').last.toLowerCase();
 
         // Map extension to Libretro core binary
-        String coreFilename;
-        if (ext == 'nes') {
-          coreFilename = Platform.isAndroid
-              ? 'fceumm_libretro_android.so'
-              : 'fceumm_libretro_ios.dylib';
-        } else if (ext == 'smc' || ext == 'sfc') {
-          coreFilename = Platform.isAndroid
-              ? 'snes9x_libretro_android.so'
-              : 'snes9x_libretro_ios.dylib';
-        } else {
-          coreFilename = Platform.isAndroid
-              ? 'genesis_plus_gx_libretro_android.so'
-              : 'genesis_plus_gx_libretro_ios.dylib';
-        }
+        String coreFilename = CoreRouter.resolveCore(romPath);
 
         // Show elegant glass loading indicator
         if (!context.mounted) return;

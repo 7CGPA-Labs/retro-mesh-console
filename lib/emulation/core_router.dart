@@ -1,48 +1,42 @@
-import 'package:flutter/foundation.dart';
-import 'package:path/path.dart' as p;
+import 'dart:io';
 
 class CoreRouter {
-  static const Map<String, String> _extensionToCoreMap = {
+  // Maps file extensions to their ideal libretro core prefix
+  static const Map<String, String> _extensionToCore = {
     // NES
-    '.nes': 'fceumm_libretro_android.so',
+    'nes': 'fceumm',
     // SNES
-    '.smc': 'snes9x_libretro_android.so',
-    '.sfc': 'snes9x_libretro_android.so',
+    'smc': 'snes9x',
+    'sfc': 'snes9x',
     // Sega Genesis / Mega Drive
-    '.md': 'picodrive_libretro_android.so',
-    '.gen': 'picodrive_libretro_android.so',
+    'md': 'genesis_plus_gx',
+    'gen': 'genesis_plus_gx',
+    // Game Boy Advance
+    'gba': 'mgba',
     // PlayStation 1
-    '.iso': 'pcsx_rearmed_libretro_android.so',
-    '.bin': 'pcsx_rearmed_libretro_android.so',
-    '.cue': 'pcsx_rearmed_libretro_android.so',
-    '.chd': 'pcsx_rearmed_libretro_android.so',
-    '.img': 'pcsx_rearmed_libretro_android.so',
+    'bin': 'pcsx_rearmed',
+    'cue': 'pcsx_rearmed',
+    'iso': 'pcsx_rearmed',
   };
 
-  // Optional overrides for specific problematic ROMs
-  static const Map<String, String> _romOverrides = {
-    // Example: 'heavy_game.iso': 'pcsx_rearmed_neon_libretro_android.so'
-  };
+  /// Returns a list of all ROM file extensions supported by the router.
+  static List<String> getSupportedExtensions() {
+    return _extensionToCore.keys.toList();
+  }
 
-  /// Returns the appropriate core filename for a given ROM path.
-  /// Throws an exception if the extension is unsupported.
-  static String getCoreForRom(String romPath) {
-    final filename = p.basename(romPath);
+  /// Resolves the correct Libretro core filename for a given ROM path.
+  static String resolveCore(String romPath) {
+    final ext = romPath.split('.').last.toLowerCase();
     
-    // Check specific ROM overrides first
-    if (_romOverrides.containsKey(filename)) {
-      debugPrint('[CoreRouter] Using override core for $filename: ${_romOverrides[filename]}');
-      return _romOverrides[filename]!;
+    final corePrefix = _extensionToCore[ext] ?? 'fceumm'; // Default to NES
+
+    if (Platform.isAndroid) {
+      return '${corePrefix}_libretro_android.so';
+    } else if (Platform.isIOS) {
+      return '${corePrefix}_libretro_ios.dylib';
+    } else {
+      // Fallback for desktop/other
+      return '${corePrefix}_libretro.so';
     }
-
-    final ext = p.extension(romPath).toLowerCase();
-    final core = _extensionToCoreMap[ext];
-
-    if (core != null) {
-      debugPrint('[CoreRouter] Routed extension $ext to core $core');
-      return core;
-    }
-
-    throw UnsupportedError('No core found for ROM extension: $ext');
   }
 }
