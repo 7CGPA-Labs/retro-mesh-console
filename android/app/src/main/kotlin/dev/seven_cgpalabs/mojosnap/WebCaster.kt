@@ -1,4 +1,4 @@
-package com.retromesh.retro_mesh_console
+package dev.seven_cgpalabs.mojosnap
 
 import android.util.Base64
 import android.util.Log

@@ -1,4 +1,4 @@
-package com.retromesh.retro_mesh_console
+package dev.seven_cgpalabs.mojosnap
 
 import android.app.Activity
 import android.app.Presentation

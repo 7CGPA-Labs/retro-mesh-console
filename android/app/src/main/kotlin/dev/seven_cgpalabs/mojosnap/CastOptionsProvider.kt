@@ -1,4 +1,4 @@
-package com.retromesh.retro_mesh_console
+package dev.seven_cgpalabs.mojosnap
 
 import android.content.Context
 import com.google.android.gms.cast.framework.CastOptions

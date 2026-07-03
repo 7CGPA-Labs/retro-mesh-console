@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.retromesh.retro_mesh_console"
+    namespace = "dev.seven_cgpalabs.mojosnap"
     compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
@@ -18,7 +18,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.retromesh.retro_mesh_console"
+        applicationId = "dev.seven_cgpalabs.mojosnap"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
