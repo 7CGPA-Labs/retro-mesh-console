@@ -33,6 +33,13 @@ int physicalWidth = 0;
 int physicalHeight = 0;
 
 std::vector<uint16_t> tvBuffer;
+
+// Web Caster zero-copy bridge
+std::mutex webMutex;
+std::vector<uint16_t> webBuffer(1920 * 1080); // Fixed size to prevent address changes
+std::atomic<int> webWidth{0};
+std::atomic<int> webHeight{0};
+std::atomic<bool> webStreaming{false};
 std::mutex tvMutex;
 std::condition_variable tvCondVar;
 std::atomic<bool> tvThreadRunning{false};
@@ -258,13 +265,6 @@ void TvRenderWorker() {
         }
 
        bool tvFrameReady = false;
-
-// Web Caster zero-copy bridge
-std::mutex webMutex;
-std::vector<uint16_t> webBuffer(1920 * 1080); // Fixed size to prevent address changes
-std::atomic<int> webWidth{0};
-std::atomic<int> webHeight{0};
-std::atomic<bool> webStreaming{false};
     }
     
     if (eglReady) {
