@@ -273,7 +273,7 @@ void TvRenderWorker() {
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_retromesh_retro_1mesh_1console_NativeRender_setFlutterSurface(JNIEnv* env, jclass clazz, jobject surface) {
+Java_dev_seven_1cgpalabs_mojosnap_NativeRender_setFlutterSurface(JNIEnv* env, jclass clazz, jobject surface) {
     std::lock_guard<std::mutex> lock(renderMutex);
     if (flutterWindow) {
         ANativeWindow_release(flutterWindow);
@@ -285,7 +285,7 @@ Java_com_retromesh_retro_1mesh_1console_NativeRender_setFlutterSurface(JNIEnv* e
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_retromesh_retro_1mesh_1console_NativeRender_setTvSurface(JNIEnv* env, jclass clazz, jobject surface) {
+Java_dev_seven_1cgpalabs_mojosnap_NativeRender_setTvSurface(JNIEnv* env, jclass clazz, jobject surface) {
     std::lock_guard<std::mutex> lock(renderMutex);
     if (tvWindow) {
         ANativeWindow_release(tvWindow);
@@ -329,7 +329,7 @@ extern "C" void render_to_window(const uint16_t* pixels, int width, int height) 
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_retromesh_retro_1mesh_1console_ThermalManager_setThermalScale(JNIEnv* env, jobject thiz, jfloat scale) {
+Java_dev_seven_1cgpalabs_mojosnap_ThermalManager_setThermalScale(JNIEnv* env, jobject thiz, jfloat scale) {
     thermalScale.store(scale);
 }
 
@@ -385,7 +385,7 @@ extern "C" void set_player1_button(int customButtonId, bool pressed) {
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_retromesh_retro_1mesh_1console_NetworkManager_updatePlayer2Button(JNIEnv* env, jobject thiz, jint buttonId, jboolean pressed) {
+Java_dev_seven_1cgpalabs_mojosnap_NetworkManager_updatePlayer2Button(JNIEnv* env, jobject thiz, jint buttonId, jboolean pressed) {
     if (buttonId >= 0 && buttonId < 16) {
         button_states[1][buttonId].store(pressed);
     }
@@ -406,17 +406,17 @@ extern "C" void set_player1_pointer(int16_t x, int16_t y, bool pressed) {
 // --- WebCaster JNI ---
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_retromesh_retro_1mesh_1console_WebCaster_setWebStreaming(JNIEnv* env, jobject thiz, jboolean streaming) {
+Java_dev_seven_1cgpalabs_mojosnap_WebCaster_setWebStreaming(JNIEnv* env, jobject thiz, jboolean streaming) {
     webStreaming.store(streaming);
 }
 
 extern "C" JNIEXPORT jobject JNICALL
-Java_com_retromesh_retro_1mesh_1console_WebCaster_getFrameBuffer(JNIEnv* env, jobject thiz) {
+Java_dev_seven_1cgpalabs_mojosnap_WebCaster_getFrameBuffer(JNIEnv* env, jobject thiz) {
     return env->NewDirectByteBuffer(webBuffer.data(), webBuffer.size() * sizeof(uint16_t));
 }
 
 extern "C" JNIEXPORT jintArray JNICALL
-Java_com_retromesh_retro_1mesh_1console_WebCaster_getFrameDimensions(JNIEnv* env, jobject thiz) {
+Java_dev_seven_1cgpalabs_mojosnap_WebCaster_getFrameDimensions(JNIEnv* env, jobject thiz) {
     std::lock_guard<std::mutex> wLock(webMutex);
     jintArray result = env->NewIntArray(2);
     jint dims[2];
