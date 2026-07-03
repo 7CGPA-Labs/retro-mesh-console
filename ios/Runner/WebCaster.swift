@@ -15,7 +15,7 @@ class WebCaster {
     <html>
     <head>
       <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-      <title>Retro Mesh Console</title>
+      <title>Mojo Snap Console</title>
       <style>
         body { background: black; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
         canvas { max-width: 100%; max-height: 100%; object-fit: contain; image-rendering: pixelated; }

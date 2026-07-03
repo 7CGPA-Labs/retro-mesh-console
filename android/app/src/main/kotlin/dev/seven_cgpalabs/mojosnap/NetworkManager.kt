@@ -14,7 +14,7 @@ import java.io.OutputStream
 object NetworkManager {
     private const val TAG = "NetworkManager"
     private const val SERVICE_TYPE = "_retroconsole._tcp."
-    private const val SERVICE_NAME = "RetroMeshConsoleHost"
+    private const val SERVICE_NAME = "MojoSnapConsoleHost"
     private const val PORT = 48293
 
     private var nsdManager: NsdManager? = null

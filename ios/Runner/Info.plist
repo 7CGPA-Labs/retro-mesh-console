@@ -67,7 +67,7 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>Retro Mesh Console uses the local network to discover and connect controllers for multiplayer gameplay.</string>
+	<string>Mojo Snap Console uses the local network to discover and connect controllers for multiplayer gameplay.</string>
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_retroconsole._tcp</string>

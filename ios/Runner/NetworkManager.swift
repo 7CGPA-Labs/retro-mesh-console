@@ -9,7 +9,7 @@ class NetworkManager: NSObject, NetServiceDelegate {
     
     private let serviceType = "_retroconsole._tcp."
     private let serviceDomain = "local."
-    private let serviceName = "RetroMeshConsoleHost"
+    private let serviceName = "MojoSnapConsoleHost"
     private let port: UInt16 = 48293
     
     // Host properties
