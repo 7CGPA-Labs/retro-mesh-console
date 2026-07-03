@@ -1,3 +1,5 @@
+import org.apache.tools.ant.taskdefs.condition.Os
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
@@ -55,7 +57,6 @@ dependencies {
     implementation("com.google.android.gms:play-services-cast-framework:21.4.0")
 }
 
-import org.apache.tools.ant.taskdefs.condition.Os
 
 tasks.register<Exec>("downloadLibretroCores") {
     workingDir = file("../../")
