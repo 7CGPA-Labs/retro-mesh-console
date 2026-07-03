@@ -5,5 +5,7 @@ add_library(native_render SHARED native-render.cpp native-audio.cpp)
 
 find_library(log-lib log)
 find_library(android-lib android)
+find_library(egl-lib EGL)
+find_library(gles-lib GLESv2)
 
-target_link_libraries(native_render ${log-lib} ${android-lib})
+target_link_libraries(native_render ${log-lib} ${android-lib} ${egl-lib} ${gles-lib})

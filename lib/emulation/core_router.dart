@@ -18,6 +18,18 @@ class CoreRouter {
     'cue': 'pcsx_rearmed',
     'iso': 'pcsx_rearmed',
     'img': 'pcsx_rearmed',
+    // MSX / ColecoVision
+    'msx': 'bluemsx',
+    'col': 'bluemsx',
+    'dsk': 'bluemsx',
+    // DOS
+    'exe': 'dosbox_pure',
+    'bat': 'dosbox_pure',
+    'com': 'dosbox_pure',
+    'zip': 'dosbox_pure',
+    // Game Boy / Game Boy Color
+    'gb': 'gambatte',
+    'gbc': 'gambatte',
   };
 
   /// Returns a list of all ROM file extensions supported by the router.

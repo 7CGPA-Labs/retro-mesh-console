@@ -54,12 +54,7 @@ class RoleGate extends StatelessWidget {
         engine.initializeCore(corePath);
         engine.loadGame(romPath);
 
-        // Open native OS cast dialog with fallback intents
-        try {
-          const MethodChannel('com.retromesh.console/projection').invokeMethod('openSystemCastMenu');
-        } catch (e) {
-          debugPrint('Native projection menu error: $e');
-        }
+        // Removed openSystemCastMenu, GamepadDeck now handles checking and opening the cast dialog natively.
 
         if (!context.mounted) return;
         if (loadingShown) {

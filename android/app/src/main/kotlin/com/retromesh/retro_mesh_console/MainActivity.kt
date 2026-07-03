@@ -10,6 +10,14 @@ class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.retromesh.console/projection"
     private var presentationDialog: android.app.Presentation? = null
 
+    private lateinit var thermalManager: ThermalManager
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        thermalManager = ThermalManager(this)
+        thermalManager.startMonitoring()
+    }
+
     override fun configureFlutterEngine(flutterEngine: io.flutter.embedding.engine.FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         CastingAdapter(this, flutterEngine.dartExecutor.binaryMessenger)

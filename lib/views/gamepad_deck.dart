@@ -2,8 +2,8 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import '../utils/logger.dart';
 import 'package:flutter/material.dart';
-import '../utils/native_bridge.dart';
 import '../emulation/libretro.dart';
+import '../utils/native_bridge.dart';
 
 class GamepadDeck extends StatefulWidget {
   final bool isHost;
@@ -51,16 +51,67 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
 
 
   void _checkPreConnectedDisplay() {
-    Future.delayed(const Duration(seconds: 1), () {
+    Future.delayed(const Duration(milliseconds: 500), () {
       if (!mounted) return;
       _startNativeTVProjection().then((connected) {
         if (connected && mounted) {
           setState(() {
             _isConnectingTV = false;
           });
+        } else if (mounted) {
+          // Not pre-connected, show options
+          _showCastDialog();
         }
       });
     });
+  }
+
+  void _showCastDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E38),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Select Casting Method', style: TextStyle(color: Colors.white, fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.tv, color: Color(0xFFFF2E93)),
+              title: const Text('Smart TV (Miracast)', style: TextStyle(color: Colors.white)),
+              subtitle: const Text('Zero latency hardware cast', style: TextStyle(color: Colors.white70)),
+              onTap: () {
+                Navigator.pop(ctx);
+                const MethodChannel('com.retromesh.console/projection').invokeMethod('openSystemCastMenu');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.language, color: Color(0xFF00E5FF)),
+              title: const Text('Web Browser', style: TextStyle(color: Colors.white)),
+              subtitle: const Text('Play on PC/Mac via WiFi', style: TextStyle(color: Colors.white70)),
+              onTap: () async {
+                Navigator.pop(ctx);
+                final String? ip = await const MethodChannel('com.retromesh.console/projection').invokeMethod('startWebServer');
+                if (mounted && ip != null && ip.isNotEmpty) {
+                  setState(() { _isConnectingTV = false; });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      duration: const Duration(days: 1),
+                      backgroundColor: const Color(0xFF00E5FF),
+                      content: Text('Open $ip in any browser to play!', style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                      action: SnackBarAction(label: 'STOP', textColor: Colors.black, onPressed: () {
+                        const MethodChannel('com.retromesh.console/projection').invokeMethod('stopWebServer');
+                      }),
+                    ),
+                  );
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -538,6 +589,11 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
     bool isGenesis = coreName.contains('genesis') || coreName.contains('picodrive') || coreName.contains('megadrive');
     bool isSnes = coreName.contains('snes') || coreName.contains('gba') || coreName.contains('game boy advance') || coreName.contains('vba') || coreName.contains('mgba');
     bool isPs1 = coreName.contains('playstation') || coreName.contains('pcsx') || coreName.contains('ps1');
+    bool isArcade = coreName.contains('arcade') || coreName.contains('fbneo') || coreName.contains('mame');
+    bool isN64 = coreName.contains('n64') || coreName.contains('mupen');
+    bool isDreamcast = coreName.contains('dreamcast') || coreName.contains('flycast');
+    bool isDS = coreName.contains('desmume') || coreName.contains('melon') || coreName.contains('ds');
+    bool hasAnalog = isN64 || isDreamcast;
 
     return Stack(
       children: [
@@ -546,8 +602,14 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
           child: Container(color: Colors.black),
         ),
 
-        // Shoulder buttons for SNES, GBA, PS1
-        if (isSnes || isPs1) ...[
+        // Nintendo DS Touch Overlay
+        if (isDS)
+          Positioned.fill(
+            child: _buildDsOverlay(),
+          ),
+
+        // Shoulder buttons for SNES, GBA, PS1, N64 (L/R), Dreamcast (Triggers)
+        if (isSnes || isPs1 || isN64 || isDreamcast) ...[
           Positioned(
             left: 36,
             top: 24,
@@ -577,8 +639,8 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
         Align(
           alignment: Alignment.centerLeft,
           child: Padding(
-            padding: EdgeInsets.only(left: 36, top: (isSnes || isPs1) ? 48 : 0),
-            child: _buildDPad(),
+            padding: EdgeInsets.only(left: 36, top: (isSnes || isPs1 || hasAnalog) ? 48 : 0),
+            child: hasAnalog ? _buildAnalogStick() : _buildDPad(),
           ),
         ),
 
@@ -586,9 +648,11 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
         Align(
           alignment: Alignment.centerRight,
           child: Padding(
-            padding: EdgeInsets.only(right: 36, top: (isSnes || isPs1) ? 48 : 0),
-            child: isGenesis ? _buildGenesisCluster() :
-                   isPs1 ? _buildPs1Cluster() :
+            padding: EdgeInsets.only(right: 36, top: (isSnes || isPs1 || hasAnalog) ? 48 : 0),
+            child: isArcade ? _buildGenesisCluster() : // Arcade uses Genesis 6-button layout
+                   isGenesis ? _buildGenesisCluster() :
+                   isN64 ? _buildN64Cluster() :
+                   isPs1 || isDreamcast ? _buildPs1Cluster() :
                    isSnes ? _buildSnesCluster() :
                    _buildNesCluster(),
           ),
@@ -926,7 +990,84 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
     );
   }
 
+  Widget _buildN64Cluster() {
+    const double size = 48;
+    const double spacing = 96;
+    return SizedBox(
+      width: size + spacing * 1.5,
+      height: size + spacing,
+      child: Stack(
+        children: [
+          // A and B Buttons (green and blue)
+          Positioned(left: 0, top: spacing, child: _buildGamepadButton(label: 'B', buttonId: 6, color: const Color(0xFF4CAF50), size: size)),
+          Positioned(left: spacing * 0.7, top: spacing * 0.6, child: _buildGamepadButton(label: 'A', buttonId: 5, color: const Color(0xFF2196F3), size: size)),
+          // C-Buttons (yellow) - mapped to X, Y, L2, R2 for simplicity if needed, or right analog
+          Positioned(left: spacing * 0.5, top: 0, child: _buildGamepadButton(label: 'C↑', buttonId: 12, color: const Color(0xFFFFD54F), size: size)),
+          Positioned(left: spacing, top: spacing * 0.5, child: _buildGamepadButton(label: 'C→', buttonId: 13, color: const Color(0xFFFFD54F), size: size)),
+          Positioned(left: spacing * 0.5, top: spacing, child: _buildGamepadButton(label: 'C↓', buttonId: 14, color: const Color(0xFFFFD54F), size: size)),
+          Positioned(left: 0, top: spacing * 0.5, child: _buildGamepadButton(label: 'C←', buttonId: 15, color: const Color(0xFFFFD54F), size: size)),
+        ],
+      ),
+    );
+  }
 
+  Widget _buildAnalogStick() {
+    return GestureDetector(
+      onPanStart: (details) => _updateAnalog(details.localPosition),
+      onPanUpdate: (details) => _updateAnalog(details.localPosition),
+      onPanEnd: (details) => _resetAnalog(),
+      child: Container(
+        width: 120,
+        height: 120,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.1),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white24, width: 2),
+        ),
+        child: Center(
+          child: Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade400,
+              shape: BoxShape.circle,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _updateAnalog(Offset pos) {
+    // Center is 60,60 for a 120x120 stick
+    double dx = pos.dx - 60;
+    double dy = pos.dy - 60;
+    // Normalize to -32767 to +32767
+    int xVal = ((dx / 60.0) * 32767).clamp(-32767, 32767).toInt();
+    int yVal = ((dy / 60.0) * 32767).clamp(-32767, 32767).toInt();
+    widget.engine?.updateAnalogState(0, 0, 0, xVal); // Port 0, Index 0 (Left Stick), X Axis
+    widget.engine?.updateAnalogState(0, 0, 1, yVal); // Port 0, Index 0 (Left Stick), Y Axis
+  }
+
+  void _resetAnalog() {
+    widget.engine?.updateAnalogState(0, 0, 0, 0);
+    widget.engine?.updateAnalogState(0, 0, 1, 0);
+  }
+
+  Widget _buildDsOverlay() {
+    return GestureDetector(
+      onPanStart: (details) => _updatePointer(details.localPosition, true),
+      onPanUpdate: (details) => _updatePointer(details.localPosition, true),
+      onPanEnd: (details) => _updatePointer(Offset.zero, false),
+      child: Container(
+        color: Colors.transparent,
+      ),
+    );
+  }
+
+  void _updatePointer(Offset pos, bool pressed) {
+    widget.engine?.updatePointerState(0, pos.dx.toInt(), pos.dy.toInt(), pressed);
+  }
 }
 
 /*

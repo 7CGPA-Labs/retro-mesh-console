@@ -2,6 +2,8 @@
 import 'dart:async';
 import 'dart:ffi';
 import 'dart:io';
+import 'dart:isolate';
+import 'dart:typed_data';
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' hide Size;
@@ -133,9 +135,11 @@ class LibretroEngine {
   // Native Audio Bridge
   late void Function(double) _nativeAudioInit;
   late void Function() _nativeAudioDeinit;
+  late void Function(int, bool) _setPlayer1Button;
+  late void Function(int, int, int) _setPlayer1Analog;
+  late void Function(int, int, bool) _setPlayer1Pointer;
   late Pointer<NativeFunction<retro_audio_sample_batch_t>> _nativeAudioCb;
   late Pointer<NativeFunction<retro_input_state_t>> _nativeInputCb;
-  late void Function(int, bool) _setPlayer1Button;
 
   // Mock Engine Rendering Variables
   int _mockX = 120;
@@ -185,6 +189,8 @@ class LibretroEngine {
         _nativeAudioCb = nativeRenderLib.lookup<NativeFunction<retro_audio_sample_batch_t>>('native_audio_sample_batch_cb');
         _nativeInputCb = nativeRenderLib.lookup<NativeFunction<retro_input_state_t>>('native_input_state_cb');
         _setPlayer1Button = nativeRenderLib.lookupFunction<Void Function(Int32, Bool), void Function(int, bool)>('set_player1_button');
+        _setPlayer1Analog = nativeRenderLib.lookupFunction<Void Function(Int32, Int32, Int16), void Function(int, int, int)>('set_player1_analog');
+        _setPlayer1Pointer = nativeRenderLib.lookupFunction<Void Function(Int16, Int16, Bool), void Function(int, int, bool)>('set_player1_pointer');
       } else if (Platform.isIOS) {
         // Statically linked or loaded via Framework bundle on iOS
         _lib = DynamicLibrary.process();
@@ -194,6 +200,8 @@ class LibretroEngine {
         _nativeAudioCb = DynamicLibrary.process().lookup<NativeFunction<retro_audio_sample_batch_t>>('native_audio_sample_batch_cb');
         _nativeInputCb = DynamicLibrary.process().lookup<NativeFunction<retro_input_state_t>>('native_input_state_cb');
         _setPlayer1Button = DynamicLibrary.process().lookupFunction<Void Function(Int32, Bool), void Function(int, bool)>('set_player1_button');
+        _setPlayer1Analog = DynamicLibrary.process().lookupFunction<Void Function(Int32, Int32, Int16), void Function(int, int, int)>('set_player1_analog');
+        _setPlayer1Pointer = DynamicLibrary.process().lookupFunction<Void Function(Int16, Int16, Bool), void Function(int, int, bool)>('set_player1_pointer');
       } else {
         _lib = DynamicLibrary.open(corePath);
       }
@@ -423,6 +431,21 @@ class LibretroEngine {
       }
     } else if (port == 1) {
       p2ButtonStates[customButtonId] = pressed;
+    }
+  }
+
+  /// Update analog state buffer (N64, Dreamcast)
+  void updateAnalogState(int port, int index, int id, int value) {
+    if (port == 0 && !isMockMode) {
+      _setPlayer1Analog(index, id, value);
+    }
+    // Note: Player 2 analog over network not fully implemented yet
+  }
+
+  /// Update pointer state buffer (Nintendo DS)
+  void updatePointerState(int port, int x, int y, bool pressed) {
+    if (port == 0 && !isMockMode) {
+      _setPlayer1Pointer(x, y, pressed);
     }
   }
 
