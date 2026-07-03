@@ -1,4 +1,5 @@
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 
 class NativeBridge {
   static const MethodChannel _channel = MethodChannel('com.retromesh/system');
@@ -7,7 +8,7 @@ class NativeBridge {
     try {
       await _channel.invokeMethod('startHost');
     } catch (e) {
-      print('Failed to start host: $e');
+      debugPrint('Failed to start host: $e');
     }
   }
 
@@ -15,7 +16,7 @@ class NativeBridge {
     try {
       await _channel.invokeMethod('startClient');
     } catch (e) {
-      print('Failed to start client: $e');
+      debugPrint('Failed to start client: $e');
     }
   }
 
@@ -26,7 +27,7 @@ class NativeBridge {
         'pressed': pressed,
       });
     } catch (e) {
-      print('Failed to send input: $e');
+      debugPrint('Failed to send input: $e');
     }
   }
 
@@ -34,7 +35,7 @@ class NativeBridge {
     try {
       await _channel.invokeMethod('keepScreenOn', {'enable': enable});
     } catch (e) {
-      print('Failed to set screen keep-on: $e');
+      debugPrint('Failed to set screen keep-on: $e');
     }
   }
 }
