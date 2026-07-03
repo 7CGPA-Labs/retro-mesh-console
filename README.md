@@ -1,4 +1,5 @@
 # Mojo Snap 🎮✨
+*Built by 7CGPA Labs*
 
 A high-performance, self-contained cross-platform mobile application built with **Flutter (Dart)** that transforms your mobile devices into a localized video game emulation console and wireless gamepad controller mesh network.
 
