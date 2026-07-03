@@ -24,7 +24,50 @@ extern "C" {
     }
 }
 
+// Web Caster zero-copy bridge
+#include <mutex>
+#include <vector>
+#include <atomic>
+
+std::mutex webMutex;
+std::vector<uint16_t> webBuffer(1920 * 1080); // Fixed size to prevent address changes
+std::atomic<int> webWidth{0};
+std::atomic<int> webHeight{0};
+std::atomic<bool> webStreaming{false};
+
+extern "C" {
+    __attribute__((visibility("default"))) __attribute__((used))
+    void set_web_streaming(bool streaming) {
+        webStreaming.store(streaming);
+    }
+
+    __attribute__((visibility("default"))) __attribute__((used))
+    const uint16_t* get_web_buffer() {
+        return webBuffer.data();
+    }
+
+    __attribute__((visibility("default"))) __attribute__((used))
+    int get_web_width() {
+        return webWidth.load();
+    }
+
+    __attribute__((visibility("default"))) __attribute__((used))
+    int get_web_height() {
+        return webHeight.load();
+    }
+}
+
 void render_to_window_ios(const uint16_t* pixels, int width, int height) {
+    if (webStreaming.load()) {
+        std::lock_guard<std::mutex> wLock(webMutex);
+        webWidth.store(width);
+        webHeight.store(height);
+        size_t totalPixels = width * height;
+        if (totalPixels <= 1920 * 1080) {
+            memcpy(webBuffer.data(), pixels, totalPixels * sizeof(uint16_t));
+        }
+    }
+
     if (global_tv_layer == nil) {
         return;
     }
