@@ -24,7 +24,7 @@ class CastingAdapter(
     private var presentationDialog: Presentation? = null
 
     init {
-        val channel = MethodChannel(messenger, "com.retromesh.console/projection")
+        val channel = MethodChannel(messenger, "dev.seven_cgpalabs.mojosnap/projection")
         channel.setMethodCallHandler { call, result ->
             when (call.method) {
                 "openSystemCastMenu" -> {

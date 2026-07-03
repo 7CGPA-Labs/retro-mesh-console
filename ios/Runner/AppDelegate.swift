@@ -14,7 +14,7 @@ import AVKit
     if let registrar = self.registrar(forPlugin: "CastingAdapter") {
         CastingAdapter.register(with: registrar)
     }
-    let channel = FlutterMethodChannel(name: "com.retromesh.console/projection",
+    let channel = FlutterMethodChannel(name: "dev.seven_cgpalabs.mojosnap/projection",
                                        binaryMessenger: controller.binaryMessenger)
     
     channel.setMethodCallHandler { [weak self] (call, result) in
@@ -59,7 +59,7 @@ import AVKit
       }
     }
     
-    let systemChannel = FlutterMethodChannel(name: "com.retromesh/system", binaryMessenger: controller.binaryMessenger)
+    let systemChannel = FlutterMethodChannel(name: "dev.seven_cgpalabs.mojosnap/system", binaryMessenger: controller.binaryMessenger)
     systemChannel.setMethodCallHandler { (call, result) in
       switch call.method {
       case "startHost":

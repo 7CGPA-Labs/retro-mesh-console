@@ -7,7 +7,7 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
-    private val CHANNEL = "com.retromesh.console/projection"
+    private val CHANNEL = "dev.seven_cgpalabs.mojosnap/projection"
     private var presentationDialog: android.app.Presentation? = null
 
     private lateinit var thermalManager: ThermalManager
@@ -22,7 +22,7 @@ class MainActivity : FlutterActivity() {
         super.configureFlutterEngine(flutterEngine)
         CastingAdapter(this, flutterEngine.dartExecutor.binaryMessenger)
 
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.retromesh.console/wifi").setMethodCallHandler { call, result ->
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "dev.seven_cgpalabs.mojosnap/wifi").setMethodCallHandler { call, result ->
             if (call.method == "getWifiRssi") {
                 try {
                     val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
@@ -47,7 +47,7 @@ class MainActivity : FlutterActivity() {
         val surface = android.view.Surface(surfaceTexture)
         NativeRender.setFlutterSurface(surface)
 
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.retromesh.console/texture").setMethodCallHandler { call, result ->
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "dev.seven_cgpalabs.mojosnap/texture").setMethodCallHandler { call, result ->
             if (call.method == "getTextureId") {
                 result.success(textureEntry.id())
             } else {
@@ -55,7 +55,7 @@ class MainActivity : FlutterActivity() {
             }
         }
 
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.retromesh/system").setMethodCallHandler { call, result ->
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "dev.seven_cgpalabs.mojosnap/system").setMethodCallHandler { call, result ->
             when (call.method) {
                 "startHost" -> {
                     NetworkManager.startHost(applicationContext)

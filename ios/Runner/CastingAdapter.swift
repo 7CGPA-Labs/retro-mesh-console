@@ -21,9 +21,9 @@ class CastingAdapter: NSObject, FlutterPlugin, FlutterStreamHandler {
     }
     
     private func setupChannels(registrar: FlutterPluginRegistrar) {
-        methodChannel = FlutterMethodChannel(name: "com.retromesh.console/casting",
+        methodChannel = FlutterMethodChannel(name: "dev.seven_cgpalabs.mojosnap/casting",
                                              binaryMessenger: registrar.messenger())
-        eventChannel = FlutterEventChannel(name: "com.retromesh.console/casting_events",
+        eventChannel = FlutterEventChannel(name: "dev.seven_cgpalabs.mojosnap/casting_events",
                                            binaryMessenger: registrar.messenger())
         
         registrar.addMethodCallDelegate(self, channel: methodChannel!)

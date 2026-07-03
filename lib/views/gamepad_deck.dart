@@ -22,7 +22,7 @@ class GamepadDeck extends StatefulWidget {
 }
 
 class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
-  static const MethodChannel _projectionChannel = MethodChannel('com.retromesh.console/projection');
+  static const MethodChannel _projectionChannel = MethodChannel('dev.seven_cgpalabs.mojosnap/projection');
   
   bool _isConnectingTV = false; // Track if waiting for OS Cast dialog to return
 
@@ -83,7 +83,7 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
               subtitle: const Text('Zero latency hardware cast', style: TextStyle(color: Colors.white70)),
               onTap: () {
                 Navigator.pop(ctx);
-                const MethodChannel('com.retromesh.console/projection').invokeMethod('openSystemCastMenu');
+                const MethodChannel('dev.seven_cgpalabs.mojosnap/projection').invokeMethod('openSystemCastMenu');
               },
             ),
             ListTile(
@@ -92,7 +92,7 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
               subtitle: const Text('Play on PC/Mac via WiFi', style: TextStyle(color: Colors.white70)),
               onTap: () async {
                 Navigator.pop(ctx);
-                final String? ip = await const MethodChannel('com.retromesh.console/projection').invokeMethod('startWebServer');
+                final String? ip = await const MethodChannel('dev.seven_cgpalabs.mojosnap/projection').invokeMethod('startWebServer');
                 if (mounted && ip != null && ip.isNotEmpty) {
                   setState(() { _isConnectingTV = false; });
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -101,7 +101,7 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
                       backgroundColor: const Color(0xFF00E5FF),
                       content: Text('Open $ip in any browser to play!', style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
                       action: SnackBarAction(label: 'STOP', textColor: Colors.black, onPressed: () {
-                        const MethodChannel('com.retromesh.console/projection').invokeMethod('stopWebServer');
+                        const MethodChannel('dev.seven_cgpalabs.mojosnap/projection').invokeMethod('stopWebServer');
                       }),
                     ),
                   );
@@ -1058,7 +1058,7 @@ DUAL SCREEN NATIVE PROJECTION GUIDE (FOR IOS & ANDROID INTEGRATIONS)
 In your Android Host Project, locate `android/app/src/main/kotlin/.../MainActivity.kt` and register:
 
 ```kotlin
-package com.retromesh.retro_mesh_console
+package dev.seven_cgpalabs.mojosnap
 
 import android.content.Context
 import android.hardware.display.DisplayManager
@@ -1069,7 +1069,7 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity: FlutterActivity() {
-    private val CHANNEL = "com.retromesh.console/projection"
+    private val CHANNEL = "dev.seven_cgpalabs.mojosnap/projection"
     private var presentationDialog: android.app.Presentation? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -1126,7 +1126,7 @@ import Flutter
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
         let controller = window?.rootViewController as! FlutterViewController
-        let channel = FlutterMethodChannel(name: "com.retromesh.console/projection",
+        let channel = FlutterMethodChannel(name: "dev.seven_cgpalabs.mojosnap/projection",
                                            binaryMessenger: controller.binaryMessenger)
         
         channel.setMethodCallHandler { (call, result) in

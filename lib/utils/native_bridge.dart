@@ -2,7 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 
 class NativeBridge {
-  static const MethodChannel _channel = MethodChannel('com.retromesh/system');
+  static const MethodChannel _channel = MethodChannel('dev.seven_cgpalabs.mojosnap/system');
 
   static Future<void> startHost() async {
     try {

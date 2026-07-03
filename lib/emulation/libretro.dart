@@ -87,7 +87,7 @@ int _inputStateCallback(int port, int device, int index, int id) {
 class LibretroEngine {
   static LibretroEngine? activeInstance;
   
-  static const MethodChannel _audioChannel = MethodChannel('com.retromesh.console/audio');
+  static const MethodChannel _audioChannel = MethodChannel('dev.seven_cgpalabs.mojosnap/audio');
 
   // Emulation State Notifiers
   // Texture ID notifier removed as we no longer render via Flutter texture

@@ -8,7 +8,7 @@ class WebCaster {
     private var listener: NWListener?
     private var activeConnections: [NWConnection] = []
     private var isRunning = false
-    private let streamingQueue = DispatchQueue(label: "com.retromesh.webcaster.streaming", qos: .userInteractive)
+    private let streamingQueue = DispatchQueue(label: "dev.seven_cgpalabs.mojosnap.streaming", qos: .userInteractive)
     
     private let htmlPayload = """
     <!DOCTYPE html>
