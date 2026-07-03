@@ -54,3 +54,28 @@ dependencies {
     implementation("androidx.mediarouter:mediarouter:1.7.0")
     implementation("com.google.android.gms:play-services-cast-framework:21.4.0")
 }
+
+import org.apache.tools.ant.taskdefs.condition.Os
+
+tasks.register<Exec>("downloadLibretroCores") {
+    workingDir = file("../../")
+    if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+        commandLine("cmd", "/c", "dart", "run", "scripts/download_cores.dart", "android")
+    } else {
+        commandLine("dart", "run", "scripts/download_cores.dart", "android")
+    }
+}
+
+tasks.whenTaskAdded {
+    if (name == "generateDebugAssets" || name == "generateReleaseAssets" || name == "preBuild") {
+        dependsOn("downloadLibretroCores")
+    }
+    
+    if (name.startsWith("assemble") || name.startsWith("bundle")) {
+        doLast {
+            fileTree("../../assets/cores").matching { 
+                include("*.so", "*.dylib", "*.zip") 
+            }.forEach { it.delete() }
+        }
+    }
+}
