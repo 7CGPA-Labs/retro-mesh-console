@@ -590,10 +590,9 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
     bool isSnes = coreName.contains('snes') || coreName.contains('gba') || coreName.contains('game boy advance') || coreName.contains('vba') || coreName.contains('mgba');
     bool isPs1 = coreName.contains('playstation') || coreName.contains('pcsx') || coreName.contains('ps1');
     bool isArcade = coreName.contains('arcade') || coreName.contains('fbneo') || coreName.contains('mame');
-    bool isN64 = coreName.contains('n64') || coreName.contains('mupen');
     bool isDreamcast = coreName.contains('dreamcast') || coreName.contains('flycast');
     bool isDS = coreName.contains('desmume') || coreName.contains('melon') || coreName.contains('ds');
-    bool hasAnalog = isN64 || isDreamcast;
+    bool hasAnalog = isDreamcast;
 
     return Stack(
       children: [
@@ -608,8 +607,8 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
             child: _buildDsOverlay(),
           ),
 
-        // Shoulder buttons for SNES, GBA, PS1, N64 (L/R), Dreamcast (Triggers)
-        if (isSnes || isPs1 || isN64 || isDreamcast) ...[
+        // Shoulder buttons for SNES, GBA, PS1, Dreamcast (Triggers)
+        if (isSnes || isPs1 || isDreamcast) ...[
           Positioned(
             left: 36,
             top: 24,
@@ -651,7 +650,6 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
             padding: EdgeInsets.only(right: 36, top: (isSnes || isPs1 || hasAnalog) ? 48 : 0),
             child: isArcade ? _buildGenesisCluster() : // Arcade uses Genesis 6-button layout
                    isGenesis ? _buildGenesisCluster() :
-                   isN64 ? _buildN64Cluster() :
                    isPs1 || isDreamcast ? _buildPs1Cluster() :
                    isSnes ? _buildSnesCluster() :
                    _buildNesCluster(),
@@ -990,26 +988,7 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildN64Cluster() {
-    const double size = 48;
-    const double spacing = 96;
-    return SizedBox(
-      width: size + spacing * 1.5,
-      height: size + spacing,
-      child: Stack(
-        children: [
-          // A and B Buttons (green and blue)
-          Positioned(left: 0, top: spacing, child: _buildGamepadButton(label: 'B', buttonId: 6, color: const Color(0xFF4CAF50), size: size)),
-          Positioned(left: spacing * 0.7, top: spacing * 0.6, child: _buildGamepadButton(label: 'A', buttonId: 5, color: const Color(0xFF2196F3), size: size)),
-          // C-Buttons (yellow) - mapped to X, Y, L2, R2 for simplicity if needed, or right analog
-          Positioned(left: spacing * 0.5, top: 0, child: _buildGamepadButton(label: 'C↑', buttonId: 12, color: const Color(0xFFFFD54F), size: size)),
-          Positioned(left: spacing, top: spacing * 0.5, child: _buildGamepadButton(label: 'C→', buttonId: 13, color: const Color(0xFFFFD54F), size: size)),
-          Positioned(left: spacing * 0.5, top: spacing, child: _buildGamepadButton(label: 'C↓', buttonId: 14, color: const Color(0xFFFFD54F), size: size)),
-          Positioned(left: 0, top: spacing * 0.5, child: _buildGamepadButton(label: 'C←', buttonId: 15, color: const Color(0xFFFFD54F), size: size)),
-        ],
-      ),
-    );
-  }
+
 
   Widget _buildAnalogStick() {
     return GestureDetector(

@@ -434,7 +434,7 @@ class LibretroEngine {
     }
   }
 
-  /// Update analog state buffer (N64, Dreamcast)
+  /// Update analog state buffer (Dreamcast)
   void updateAnalogState(int port, int index, int id, int value) {
     if (port == 0 && !isMockMode) {
       _setPlayer1Analog(index, id, value);
