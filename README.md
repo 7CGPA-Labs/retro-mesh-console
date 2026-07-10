@@ -1,6 +1,10 @@
 # Mojo Snap 🎮✨
 *Built by 7CGPA Labs*
 
+[![Android Build](https://github.com/7CGPA-Labs/retro-mesh-console/actions/workflows/android.yml/badge.svg)](https://github.com/7CGPA-Labs/retro-mesh-console/actions/workflows/android.yml)
+[![iOS Build](https://github.com/7CGPA-Labs/retro-mesh-console/actions/workflows/ios.yml/badge.svg)](https://github.com/7CGPA-Labs/retro-mesh-console/actions/workflows/ios.yml)
+
+🌐 **[Visit the Official Mojo Snap Console Website](https://7cgpa-labs.github.io/retro-mesh-console/)**
 A high-performance, self-contained cross-platform mobile application built with **Flutter (Dart)** that transforms your mobile devices into a localized video game emulation console and wireless gamepad controller mesh network.
 
 It projects an independent gameplay viewport to a television (via native Android Cast SDK / iOS AirPlay UIWindow structures) while transforming the handheld smartphone screen into an ultra-low-latency wireless touch controller.

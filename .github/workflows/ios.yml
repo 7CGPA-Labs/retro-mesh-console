@@ -1,0 +1,31 @@
+name: iOS Build
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build iOS (Beta)
+        run: flutter build ios --release --no-codesign --build-name=beta.1.0.0 --build-number=${{ github.run_number }}
+
+      - name: Upload iOS Build
+        uses: actions/upload-artifact@v3
+        with:
+          name: mojosnap-beta-ios
+          path: build/ios/iphoneos
