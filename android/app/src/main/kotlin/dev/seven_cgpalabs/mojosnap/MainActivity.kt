@@ -40,29 +40,31 @@ class MainActivity : FlutterActivity() {
                 result.notImplemented()
             }
         }
-        val textureRegistry = flutterEngine.renderer
-        val textureEntry = textureRegistry.createSurfaceTexture()
-        val surfaceTexture = textureEntry.surfaceTexture()
-        surfaceTexture.setDefaultBufferSize(256, 224) // Native resolution for crisp rendering
-        val surface = android.view.Surface(surfaceTexture)
-        NativeRender.setFlutterSurface(surface)
-
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "dev.seven_cgpalabs.mojosnap/texture").setMethodCallHandler { call, result ->
-            if (call.method == "getTextureId") {
-                result.success(textureEntry.id())
-            } else {
-                result.notImplemented()
-            }
-        }
+        // No texture rendering on Flutter side anymore
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "dev.seven_cgpalabs.mojosnap/system").setMethodCallHandler { call, result ->
             when (call.method) {
                 "startHost" -> {
-                    NetworkManager.startHost(applicationContext)
+                    val coreName = call.argument<String>("core") ?: "nes"
+                    val playerName = call.argument<String>("playerName") ?: "Player 1"
+                    NetworkManager.startHost(applicationContext, coreName, playerName)
                     result.success(null)
                 }
-                "startClient" -> {
-                    NetworkManager.startClient(applicationContext)
+                "stopHost" -> {
+                    NetworkManager.stop()
+                    result.success(null)
+                }
+                "startDiscovery" -> {
+                    NetworkManager.startDiscovery(applicationContext)
+                    result.success(null)
+                }
+                "stopDiscovery" -> {
+                    NetworkManager.stopDiscovery()
+                    result.success(null)
+                }
+                "connectToHost" -> {
+                    val ip = call.argument<String>("ip") ?: ""
+                    NetworkManager.connectToServer(ip, 48293)
                     result.success(null)
                 }
                 "sendInput" -> {

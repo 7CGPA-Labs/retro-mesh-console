@@ -25,17 +25,22 @@ object NetworkManager {
     private var clientSocket: Socket? = null
     private var outputStream: OutputStream? = null
 
+    var onHostsDiscovered: ((List<Map<String, Any>>) -> Unit)? = null
+    var onHostDisconnected: (() -> Unit)? = null
+    
+    private val discoveredHostsList = mutableListOf<Map<String, Any>>()
+
     // JNI Native Function in native-render.cpp
     external fun updatePlayer2Button(buttonId: Int, pressed: Boolean)
 
-    fun startHost(context: Context) {
+    fun startHost(context: Context, coreName: String, playerName: String) {
         nsdManager = context.getSystemService(Context.NSD_SERVICE) as NsdManager
 
         thread {
             try {
                 serverSocket = ServerSocket(PORT)
                 Log.d(TAG, "Server started on port $PORT")
-                registerService()
+                registerService(coreName, playerName)
 
                 while (!serverSocket!!.isClosed) {
                     val socket = serverSocket!!.accept()
@@ -70,11 +75,13 @@ object NetworkManager {
         }
     }
 
-    private fun registerService() {
+    private fun registerService(coreName: String, playerName: String) {
         val serviceInfo = NsdServiceInfo().apply {
-            serviceName = SERVICE_NAME
+            serviceName = "MojoSnap - $playerName"
             serviceType = SERVICE_TYPE
             port = PORT
+            // Android API 21+ supports attributes
+            setAttribute("core", coreName)
         }
 
         registrationListener = object : NsdManager.RegistrationListener {
@@ -90,24 +97,34 @@ object NetworkManager {
         nsdManager?.registerService(serviceInfo, NsdManager.PROTOCOL_DNS_SD, registrationListener)
     }
 
-    fun startClient(context: Context) {
+    fun startDiscovery(context: Context) {
+        discoveredHostsList.clear()
+        onHostsDiscovered?.invoke(discoveredHostsList)
         nsdManager = context.getSystemService(Context.NSD_SERVICE) as NsdManager
         
         discoveryListener = object : NsdManager.DiscoveryListener {
-            override fun onDiscoveryStarted(regType: String) {
-                Log.d(TAG, "Service discovery started")
-            }
+            override fun onDiscoveryStarted(regType: String) {}
             override fun onServiceFound(service: NsdServiceInfo) {
-                Log.d(TAG, "Service discovery success: $service")
-                if (service.serviceType == SERVICE_TYPE && service.serviceName == SERVICE_NAME) {
+                if (service.serviceType == SERVICE_TYPE && service.serviceName.contains(SERVICE_NAME)) {
                     nsdManager?.resolveService(service, object : NsdManager.ResolveListener {
-                        override fun onResolveFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
-                            Log.e(TAG, "Resolve failed: $errorCode")
-                        }
+                        override fun onResolveFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {}
                         override fun onServiceResolved(serviceInfo: NsdServiceInfo) {
-                            Log.d(TAG, "Resolve Succeeded. ${serviceInfo.host}")
-                            connectToServer(serviceInfo.host, serviceInfo.port)
-                            nsdManager?.stopServiceDiscovery(discoveryListener)
+                            val ip = serviceInfo.host.hostAddress
+                            var core = "nes" // default
+                            // Extract TXT record
+                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+                                val coreBytes = serviceInfo.attributes["core"]
+                                if (coreBytes != null) {
+                                    core = String(coreBytes)
+                                }
+                            }
+                            val hostMap = mapOf<String, Any>(
+                                "ip" to ip,
+                                "name" to serviceInfo.serviceName,
+                                "core" to core
+                            )
+                            discoveredHostsList.add(hostMap)
+                            onHostsDiscovered?.invoke(discoveredHostsList)
                         }
                     })
                 }
@@ -120,14 +137,34 @@ object NetworkManager {
         nsdManager?.discoverServices(SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, discoveryListener)
     }
 
-    private fun connectToServer(host: InetAddress, port: Int) {
+    fun stopDiscovery() {
+        try {
+            discoveryListener?.let { nsdManager?.stopServiceDiscovery(it) }
+            discoveryListener = null
+        } catch (e: Exception) {}
+    }
+
+    fun connectToServer(ip: String, port: Int) {
         thread {
             try {
-                clientSocket = Socket(host, port)
+                clientSocket = Socket(ip, port)
                 outputStream = clientSocket?.getOutputStream()
                 Log.d(TAG, "Connected to server")
+                
+                // Monitor disconnection
+                val input = clientSocket?.getInputStream()
+                val buffer = ByteArray(1)
+                while (true) {
+                    val read = input?.read(buffer)
+                    if (read == -1 || read == null) {
+                        Log.d(TAG, "Disconnected from server")
+                        onHostDisconnected?.invoke()
+                        break
+                    }
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to connect", e)
+                onHostDisconnected?.invoke()
             }
         }
     }
@@ -148,8 +185,9 @@ object NetworkManager {
 
     fun stop() {
         try {
+            stopDiscovery()
             registrationListener?.let { nsdManager?.unregisterService(it) }
-            discoveryListener?.let { nsdManager?.stopServiceDiscovery(it) }
+            registrationListener = null
             serverSocket?.close()
             clientSocket?.close()
         } catch (e: Exception) {}

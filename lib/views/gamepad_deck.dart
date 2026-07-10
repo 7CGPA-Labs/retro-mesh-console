@@ -9,12 +9,14 @@ class GamepadDeck extends StatefulWidget {
   final bool isHost;
   final LibretroEngine? engine;
   final String romName;
+  final String coreName;
 
   const GamepadDeck({
     super.key,
     required this.isHost,
     this.engine,
     required this.romName,
+    this.coreName = 'nes',
   });
 
   @override
@@ -45,6 +47,12 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
     if (widget.isHost) {
       _isConnectingTV = true;
       _checkPreConnectedDisplay();
+    } else {
+      NativeBridge.onDisconnected.listen((_) {
+        if (mounted) {
+          Navigator.of(context).pop();
+        }
+      });
     }
   }
 
@@ -100,8 +108,8 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
                       duration: const Duration(days: 1),
                       backgroundColor: const Color(0xFF00E5FF),
                       content: Text('Open $ip in any browser to play!', style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-                      action: SnackBarAction(label: 'STOP', textColor: Colors.black, onPressed: () {
-                        const MethodChannel('dev.seven_cgpalabs.mojosnap/projection').invokeMethod('stopWebServer');
+                      action: SnackBarAction(label: 'DISMISS', textColor: Colors.black, onPressed: () {
+                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
                       }),
                     ),
                   );
@@ -117,25 +125,36 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && widget.isHost && _isConnectingTV) {
-      _startNativeTVProjection().then((connected) {
-        if (!mounted) return;
-        if (!connected) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              backgroundColor: Color(0xFFEF4444),
-              content: Text(
-                'No wireless display selected. Emulation exited.',
-                style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, color: Colors.white),
-              ),
-            ),
-          );
-          _exitGame(context);
-        } else {
+      _tryConnectTV();
+    }
+  }
+
+  Future<void> _tryConnectTV() async {
+    for (int i = 0; i < 5; i++) {
+      if (!mounted) return;
+      bool connected = await _startNativeTVProjection();
+      if (connected) {
+        if (mounted) {
           setState(() {
             _isConnectingTV = false;
           });
         }
-      });
+        return;
+      }
+      await Future.delayed(const Duration(seconds: 1));
+    }
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Color(0xFFEF4444),
+          content: Text(
+            'No wireless display detected. Emulation exited.',
+            style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+        ),
+      );
+      _exitGame(context);
     }
   }
 
@@ -156,10 +175,8 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
     if (widget.isHost) {
       _stopNativeTVProjection();
       widget.engine?.shutdown();
-      NativeBridge.startHost(); // Keep it alive or handle stop in NativeBridge if needed
-      // Actually we should add stopHost/stopClient to NativeBridge but we didn't. We will just ignore for now since it's native.
-    } else {
-      // ClientSocket.instance.disconnect(); // Native socket gets closed when stop is called, we should just let it be.
+      NativeBridge.stopHost();
+      const MethodChannel('dev.seven_cgpalabs.mojosnap/projection').invokeMethod('stopWebServer');
     }
     super.dispose();
   }
@@ -358,9 +375,9 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
     if (widget.isHost) {
       _stopNativeTVProjection();
       widget.engine?.shutdown();
-      // HostServer.instance.stop();
-    } else {
-      // ClientSocket.instance.disconnect();
+      NativeBridge.stopHost();
+      const MethodChannel('dev.seven_cgpalabs.mojosnap/projection').invokeMethod('stopWebServer');
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
     }
     Navigator.pop(context); // Redirect back to main page (RoleGate)
   }
@@ -585,13 +602,13 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
 
   /// Core gamepad layout split into D-pad, System Panel, and Action cluster
   Widget _buildGamepadControls() {
-    String coreName = widget.engine?.coreName.toLowerCase() ?? '';
-    bool isGenesis = coreName.contains('genesis') || coreName.contains('picodrive') || coreName.contains('megadrive');
-    bool isSnes = coreName.contains('snes') || coreName.contains('gba') || coreName.contains('game boy advance') || coreName.contains('vba') || coreName.contains('mgba');
-    bool isPs1 = coreName.contains('playstation') || coreName.contains('pcsx') || coreName.contains('ps1');
-    bool isArcade = coreName.contains('arcade') || coreName.contains('fbneo') || coreName.contains('mame');
-    bool isDreamcast = coreName.contains('dreamcast') || coreName.contains('flycast');
-    bool isDS = coreName.contains('desmume') || coreName.contains('melon') || coreName.contains('ds');
+    String cName = widget.coreName.toLowerCase();
+    bool isGenesis = cName.contains('genesis') || cName.contains('picodrive') || cName.contains('megadrive');
+    bool isSnes = cName.contains('snes') || cName.contains('gba') || cName.contains('game boy advance') || cName.contains('vba') || cName.contains('mgba');
+    bool isPs1 = cName.contains('playstation') || cName.contains('pcsx') || cName.contains('ps1');
+    bool isArcade = cName.contains('arcade') || cName.contains('fbneo') || cName.contains('mame');
+    bool isDreamcast = cName.contains('dreamcast') || cName.contains('flycast');
+    bool isDS = cName.contains('desmume') || cName.contains('melon') || cName.contains('ds');
     bool hasAnalog = isDreamcast;
 
     return Stack(
@@ -634,25 +651,26 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
           ),
         ],
 
-        // Left Side: D-pad
-        Align(
-          alignment: Alignment.centerLeft,
-          child: Padding(
-            padding: EdgeInsets.only(left: 36, top: (isSnes || isPs1 || hasAnalog) ? 48 : 0),
-            child: hasAnalog ? _buildAnalogStick() : _buildDPad(),
-          ),
-        ),
-
-        // Right Side: Dynamic Action Cluster
-        Align(
-          alignment: Alignment.centerRight,
-          child: Padding(
-            padding: EdgeInsets.only(right: 36, top: (isSnes || isPs1 || hasAnalog) ? 48 : 0),
-            child: isArcade ? _buildGenesisCluster() : // Arcade uses Genesis 6-button layout
-                   isGenesis ? _buildGenesisCluster() :
-                   isPs1 || isDreamcast ? _buildPs1Cluster() :
-                   isSnes ? _buildSnesCluster() :
-                   _buildNesCluster(),
+        // Left & Right Controls
+        Positioned.fill(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Left Side: D-pad
+              Padding(
+                padding: EdgeInsets.only(left: 36, top: (isSnes || isPs1 || hasAnalog) ? 48 : 0),
+                child: hasAnalog ? _buildAnalogStick() : _buildDPad(),
+              ),
+              // Right Side: Dynamic Action Cluster
+              Padding(
+                padding: EdgeInsets.only(right: 36, top: (isSnes || isPs1 || hasAnalog) ? 48 : 0),
+                child: isArcade ? _buildGenesisCluster() : // Arcade uses Genesis 6-button layout
+                       isGenesis ? _buildGenesisCluster() :
+                       isPs1 || isDreamcast ? _buildPs1Cluster() :
+                       isSnes ? _buildSnesCluster() :
+                       _buildNesCluster(),
+              ),
+            ],
           ),
         ),
 

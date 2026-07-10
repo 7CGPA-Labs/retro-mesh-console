@@ -21,7 +21,8 @@ android {
         applicationId = "dev.seven_cgpalabs.mojosnap"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        // AAudio native API requires API 26 minimum. AudioPlaybackCapture requires API 29.
+        minSdk = 29
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -71,12 +72,5 @@ tasks.whenTaskAdded {
     if (name == "generateDebugAssets" || name == "generateReleaseAssets" || name == "preBuild") {
         dependsOn("downloadLibretroCores")
     }
-    
-    if (name.startsWith("assemble") || name.startsWith("bundle")) {
-        doLast {
-            fileTree("../../assets/cores").matching { 
-                include("*.so", "*.dylib", "*.zip") 
-            }.forEach { it.delete() }
-        }
-    }
 }
+

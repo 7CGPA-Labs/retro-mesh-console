@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'views/role_gate.dart';
+import '../utils/native_bridge.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  NativeBridge.init();
   runApp(const MyApp());
 }
 

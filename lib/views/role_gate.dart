@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
+
 import '../utils/native_bridge.dart';
 import '../emulation/libretro.dart';
 import '../emulation/core_router.dart';
@@ -11,6 +14,51 @@ class RoleGate extends StatelessWidget {
   const RoleGate({super.key});
 
   Future<void> _handleHostSelection(BuildContext context) async {
+    String? playerName;
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final file = File('${dir.path}/player_name.txt');
+      if (await file.exists()) {
+        playerName = await file.readAsString();
+      }
+    } catch (_) {}
+
+    if (playerName == null || playerName.isEmpty) {
+      if (!context.mounted) return;
+      playerName = await showDialog<String>(
+        context: context,
+        builder: (ctx) {
+          final ctrl = TextEditingController(text: 'Player 1');
+          return AlertDialog(
+            backgroundColor: const Color(0xFF1E1E38),
+            title: const Text('Enter Player Name', style: TextStyle(color: Colors.white, fontFamily: 'Outfit')),
+            content: TextField(
+              controller: ctrl,
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(
+                hintText: 'e.g. John',
+                hintStyle: TextStyle(color: Colors.white54),
+                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFFF2E93))),
+                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF00E5FF))),
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx, null), child: const Text('CANCEL', style: TextStyle(color: Colors.white54))),
+              TextButton(onPressed: () => Navigator.pop(ctx, ctrl.text.isEmpty ? 'Player 1' : ctrl.text), child: const Text('NEXT', style: TextStyle(color: Color(0xFF00E5FF)))),
+            ],
+          );
+        }
+      );
+
+      if (playerName == null) return;
+      
+      try {
+        final dir = await getApplicationDocumentsDirectory();
+        final file = File('${dir.path}/player_name.txt');
+        await file.writeAsString(playerName);
+      } catch (_) {}
+    }
+
     bool loadingShown = false;
     try {
       final FilePickerResult? result = await FilePicker.pickFiles(
@@ -47,7 +95,8 @@ class RoleGate extends StatelessWidget {
         }
 
         // Initialize Host Mesh WebSocket server & mDNS advertiser natively
-        await NativeBridge.startHost();
+        String coreName = coreFilename.split('_').first;
+        await NativeBridge.startHost(coreName, playerName);
 
         // Boot FFI Libretro emulation engine
         final engine = LibretroEngine();
@@ -70,6 +119,7 @@ class RoleGate extends StatelessWidget {
               isHost: true,
               engine: engine,
               romName: romName,
+              coreName: coreName,
             ),
           ),
         );
@@ -95,18 +145,74 @@ class RoleGate extends StatelessWidget {
   }
 
   void _handleJoinSelection(BuildContext context) {
-    // Client Mode triggers discovery immediately upon routing to GamepadDeck natively
-    NativeBridge.startClient();
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const GamepadDeck(
-          isHost: false,
-          romName: 'Connected to Host Console',
-        ),
-      ),
-    );
+    NativeBridge.startDiscovery();
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1E1E38),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) {
+        return Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Available Consoles', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold, fontFamily: 'Outfit')),
+              const SizedBox(height: 20),
+              StreamBuilder<List<Map<String, dynamic>>>(
+                stream: NativeBridge.discoveredHosts,
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.all(32.0),
+                      child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00E5FF))),
+                    );
+                  }
+                  
+                  return ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: snapshot.data!.length,
+                    itemBuilder: (context, index) {
+                      final host = snapshot.data![index];
+                      return ListTile(
+                        leading: const Icon(Icons.videogame_asset, color: Color(0xFF00E5FF)),
+                        title: Text(host['name'], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        subtitle: Text('IP: ${host['ip']} | System: ${host['core'].toString().toUpperCase()}', style: const TextStyle(color: Colors.white70)),
+                        onTap: () {
+                          NativeBridge.stopDiscovery();
+                          NativeBridge.connectToHost(host['ip']);
+                          Navigator.pop(ctx);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => GamepadDeck(
+                                isHost: false,
+                                romName: 'Connected to ${host['name']}',
+                                coreName: host['core'],
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  );
+                },
+              ),
+              const SizedBox(height: 20),
+              TextButton(
+                onPressed: () {
+                  NativeBridge.stopDiscovery();
+                  Navigator.pop(ctx);
+                },
+                child: const Text('CANCEL', style: TextStyle(color: Colors.white54, fontFamily: 'Outfit')),
+              )
+            ],
+          ),
+        );
+      }
+    ).then((_) {
+      NativeBridge.stopDiscovery();
+    });
   }
 
   void _showLoading(BuildContext context, String message) {
@@ -164,14 +270,19 @@ class RoleGate extends StatelessWidget {
         ),
         child: SafeArea(
           child: Center(
-            child: SingleChildScrollView(
+            child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // App Title Logo Section
-                  _buildHeader(),
-                  const SizedBox(height: 48),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: SizedBox(
+                  width: 400, // Constrain width for scaling
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // App Title Logo Section
+                      _buildHeader(),
+                      const SizedBox(height: 24),
 
                   // Card 1: HOST CONSOLE (Player 1)
                   _buildCard(
@@ -197,11 +308,11 @@ class RoleGate extends StatelessWidget {
                     onTap: () => _handleJoinSelection(context),
                   ),
                   
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 48),
                   
                   // Footer info
                   Text(
-                    'RETRO MESH CONSOLE v1.0.0',
+                    'Made with ♥ by 7CGPA Labs',
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.3),
                       fontSize: 11,
@@ -211,12 +322,14 @@ class RoleGate extends StatelessWidget {
                     ),
                   ),
                 ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
+                  ), // Column
+                ), // SizedBox
+              ), // FittedBox
+            ), // Padding
+          ), // Center
+        ), // SafeArea
+      ), // Container
+    ); // Scaffold
   }
 
   Widget _buildHeader() {
@@ -224,32 +337,45 @@ class RoleGate extends StatelessWidget {
       children: [
         // Glowing Console Icon
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: const Color(0xFF1E1E3F),
+            color: const Color(0xFF070714),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFFFF2E93).withValues(alpha: 0.2),
-                blurRadius: 20,
+                color: const Color(0xFFFF2E93).withValues(alpha: 0.3),
+                blurRadius: 30,
                 spreadRadius: 2,
               ),
               BoxShadow(
-                color: const Color(0xFF00E5FF).withValues(alpha: 0.1),
-                blurRadius: 30,
+                color: const Color(0xFF00E5FF).withValues(alpha: 0.2),
+                blurRadius: 40,
                 spreadRadius: 4,
               ),
             ],
           ),
-          child: const Icon(
-            Icons.grid_view_rounded,
-            size: 48,
-            color: Colors.white,
+          child: ShaderMask(
+            shaderCallback: (Rect bounds) {
+              return RadialGradient(
+                center: Alignment.center,
+                radius: 0.5,
+                colors: [Colors.white, Colors.white.withValues(alpha: 0.0)],
+                stops: const [0.7, 1.0],
+              ).createShader(bounds);
+            },
+            child: ClipOval(
+              child: Image.asset(
+                'assets/icon.png',
+                width: 80,
+                height: 80,
+                fit: BoxFit.cover,
+              ),
+            ),
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 12),
         const Text(
-          'RETRO MESH',
+          'MOJO SNAP',
           style: TextStyle(
             color: Colors.white,
             fontSize: 38,
@@ -267,9 +393,9 @@ class RoleGate extends StatelessWidget {
           'CONSOLE SYSTEM',
           style: TextStyle(
             color: Color(0xFF00E5FF),
-            fontSize: 14,
+            fontSize: 12,
             fontWeight: FontWeight.bold,
-            letterSpacing: 6.0,
+            letterSpacing: 4.0,
           ),
         ),
       ],

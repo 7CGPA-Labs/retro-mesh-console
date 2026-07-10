@@ -1,0 +1,391 @@
+{
+  "Description": "Add JNI and FFI exports for bypassing Dart for Player 2 inputs.",
+  "Instruction": "Append the native input state management array and JNI / FFI functions to the end of the file.",
+  "ReplacementChunks": [
+    {
+      "AllowMultiple": false,
+      "EndLine": 107,
+      "ReplacementContent": "        tvCondVar.notify_one();\n    }\n}\n\n// --- Native Input Management ---\n\nstd::atomic<bool> button_states[2][16];\n\nextern \"C\" int16_t native_input_state_cb(unsigned port, unsigned device, unsigned index, unsigned id) {\n    if (device != 1) return 0; // RETRO_DEVICE_JOYPAD = 1\n    \n    int customId = -1;\n    switch (id) {\n        case 0: customId = 6; break; // B\n        case 1: customId = 8; break; // Y\n        case 2: customId = 10; break; // SELECT\n        case 3: customId = 9; break; // START\n        case 4: customId = 1; break; // UP\n        case 5: customId = 2; break; // DOWN\n        case 6: customId = 3; break; // LEFT\n        case 7: customId = 4; break; // RIGHT\n        case 8: customId = 5; break; // A\n        case 9: customId = 7; break; // X\n        case 10: customId = 11; break; // L\n        case 11: customId = 12; break; // R\n    }\n    \n    if (customId == -1 || port > 1) return 0;\n    return button_states[port][customId].load() ? 1 : 0;\n}\n\nextern \"C\" void set_player1_button(int customButtonId, bool pressed) {\n    if (customButtonId >= 0 && customButtonId < 16) {\n        button_states[0][customButtonId].store(pressed);\n    }\n}\n\nextern \"C\" JNIEXPORT void JNICALL\nJava_com_retromesh_retro_1mesh_1console_NetworkManager_updatePlayer2Button(JNIEnv* env, jobject thiz, jint buttonId, jboolean pressed) {\n    if (buttonId >= 0 && buttonId < 16) {\n        button_states[1][buttonId].store(pressed);\n    }\n}\n",
+      "StartLine": 104,
+      "TargetContent": "        tvCondVar.notify_one();\n    }\n}\n"
+    }
+  ],
+  "TargetFile": "c:\\Users\\gagan\\Projects\\retro-mesh-console\\android\\app\\src\\main\\cpp\\native-render.cpp",
+  "toolAction": "Updating native-render.cpp",
+  "toolSummary": "Update C++ JNI bridge"
+}
+{
+  "Description": "Add Analog and Pointer states to native-render.cpp",
+  "Instruction": "Update C++ input handling",
+  "ReplacementChunks": [
+    {
+      "AllowMultiple": false,
+      "EndLine": 320,
+      "ReplacementContent": "std::atomic<bool> button_states[2][16];\nstd::atomic<int16_t> analog_states[2][2][2]; // [port][index][id (0=X, 1=Y)]\nstd::atomic<int16_t> pointer_x{0};\nstd::atomic<int16_t> pointer_y{0};\nstd::atomic<bool> pointer_pressed{false};",
+      "StartLine": 319,
+      "TargetContent": "std::atomic<bool> button_states[2][16];"
+    },
+    {
+      "AllowMultiple": false,
+      "EndLine": 342,
+      "ReplacementContent": "extern \"C\" int16_t native_input_state_cb(unsigned port, unsigned device, unsigned index, unsigned id) {\n    if (device == 1) { // RETRO_DEVICE_JOYPAD\n        int customId = -1;\n        switch (id) {\n            case 0: customId = 6; break; // B\n            case 1: customId = 8; break; // Y\n            case 2: customId = 10; break; // SELECT\n            case 3: customId = 9; break; // START\n            case 4: customId = 1; break; // UP\n            case 5: customId = 2; break; // DOWN\n            case 6: customId = 3; break; // LEFT\n            case 7: customId = 4; break; // RIGHT\n            case 8: customId = 5; break; // A\n            case 9: customId = 7; break; // X\n            case 10: customId = 11; break; // L\n            case 11: customId = 12; break; // R\n            case 12: customId = 14; break; // L2\n            case 13: customId = 15; break; // R2\n            case 14: customId = 16; break; // L3\n            case 15: customId = 17; break; // R3\n        }\n        if (customId == -1 || port > 1) return 0;\n        return button_states[port][customId].load() ? 1 : 0;\n    } \n    else if (device == 5) { // RETRO_DEVICE_ANALOG\n        if (port > 1 || index > 1 || id > 1) return 0;\n        return analog_states[port][index][id].load();\n    }\n    else if (device == 6) { // RETRO_DEVICE_POINTER\n        if (port > 0) return 0; // Pointer usually only on port 0\n        switch(id) {\n            case 0: return pointer_x.load(); // RETRO_DEVICE_ID_POINTER_X\n            case 1: return pointer_y.load(); // RETRO_DEVICE_ID_POINTER_Y\n            case 2: return pointer_pressed.load() ? 1 : 0; // RETRO_DEVICE_ID_POINTER_PRESSED\n        }\n    }\n    return 0;\n}",
+      "StartLine": 321,
+      "TargetContent": "extern \"C\" int16_t native_input_state_cb(unsigned port, unsigned device, unsigned index, unsigned id) {\n    if (device != 1) return 0; // RETRO_DEVICE_JOYPAD = 1\n    \n    int customId = -1;\n    switch (id) {\n        case 0: customId = 6; break; // B\n        case 1: customId = 8; break; // Y\n        case 2: customId = 10; break; // SELECT\n        case 3: customId = 9; break; // START\n        case 4: customId = 1; break; // UP\n        case 5: customId = 2; break; // DOWN\n        case 6: customId = 3; break; // LEFT\n        case 7: customId = 4; break; // RIGHT\n        case 8: customId = 5; break; // A\n        case 9: customId = 7; break; // X\n        case 10: customId = 11; break; // L\n        case 11: customId = 12; break; // R\n    }\n    \n    if (customId == -1 || port > 1) return 0;\n    return button_states[port][customId].load() ? 1 : 0;\n}"
+    },
+    {
+      "AllowMultiple": false,
+      "EndLine": 355,
+      "ReplacementContent": "extern \"C\" JNIEXPORT void JNICALL\nJava_com_retromesh_retro_1mesh_1console_NetworkManager_updatePlayer2Button(JNIEnv* env, jobject thiz, jint buttonId, jboolean pressed) {\n    if (buttonId >= 0 && buttonId < 16) {\n        button_states[1][buttonId].store(pressed);\n    }\n}\n\nextern \"C\" void set_player1_analog(int index, int id, int16_t value) {\n    if (index >= 0 && index < 2 && id >= 0 && id < 2) {\n        analog_states[0][index][id].store(value);\n    }\n}\n\nextern \"C\" void set_player1_pointer(int16_t x, int16_t y, bool pressed) {\n    pointer_x.store(x);\n    pointer_y.store(y);\n    pointer_pressed.store(pressed);\n}",
+      "StartLine": 350,
+      "TargetContent": "extern \"C\" JNIEXPORT void JNICALL\nJava_com_retromesh_retro_1mesh_1console_NetworkManager_updatePlayer2Button(JNIEnv* env, jobject thiz, jint buttonId, jboolean pressed) {\n    if (buttonId >= 0 && buttonId < 16) {\n        button_states[1][buttonId].store(pressed);\n    }\n}"
+    }
+  ],
+  "TargetFile": "c:\\Users\\gagan\\Projects\\retro-mesh-console\\android\\app\\src\\main\\cpp\\native-render.cpp",
+  "toolAction": "Updating native-render.cpp",
+  "toolSummary": "Update native-render.cpp"
+}
+{
+  "Description": "Add WebCaster JNI bridge",
+  "Instruction": "Add DirectByteBuffer support for web casting",
+  "ReplacementChunks": [
+    {
+      "AllowMultiple": false,
+      "EndLine": 64,
+      "ReplacementContent": "bool tvFrameReady = false;\n\n// Web Caster zero-copy bridge\nstd::mutex webMutex;\nstd::vector<uint16_t> webBuffer(1920 * 1080); // Fixed size to prevent address changes\nstd::atomic<int> webWidth{0};\nstd::atomic<int> webHeight{0};\nstd::atomic<bool> webStreaming{false};",
+      "StartLine": 62,
+      "TargetContent": "bool tvFrameReady = false;"
+    },
+    {
+      "AllowMultiple": false,
+      "EndLine": 303,
+      "ReplacementContent": "        tvWidth = width;\n        tvHeight = height;\n        size_t totalPixels = width * height;\n        if (tvBuffer.size() != totalPixels) {\n            tvBuffer.resize(totalPixels);\n        }\n        memcpy(tvBuffer.data(), pixels, totalPixels * sizeof(uint16_t));\n        tvFrameReady = true;\n        tvCondVar.notify_one();\n    }\n\n    if (webStreaming.load()) {\n        std::lock_guard<std::mutex> wLock(webMutex);\n        webWidth.store(width);\n        webHeight.store(height);\n        size_t totalPixels = width * height;\n        if (totalPixels <= 1920 * 1080) {\n            memcpy(webBuffer.data(), pixels, totalPixels * sizeof(uint16_t));\n        }\n    }\n}",
+      "StartLine": 299,
+      "TargetContent": "        tvWidth = width;\n        tvHeight = height;\n        size_t totalPixels = width * height;\n        if (tvBuffer.size() != totalPixels) {\n            tvBuffer.resize(totalPixels);\n        }\n        memcpy(tvBuffer.data(), pixels, totalPixels * sizeof(uint16_t));\n        tvFrameReady = true;\n        tvCondVar.notify_one();\n    }\n}"
+    },
+    {
+      "AllowMultiple": false,
+      "EndLine": 388,
+      "ReplacementContent": "extern \"C\" void set_player1_pointer(int16_t x, int16_t y, bool pressed) {\n    pointer_x.store(x);\n    pointer_y.store(y);\n    pointer_pressed.store(pressed);\n}\n\n// --- WebCaster JNI ---\n\nextern \"C\" JNIEXPORT void JNICALL\nJava_com_retromesh_retro_1mesh_1console_WebCaster_setWebStreaming(JNIEnv* env, jobject thiz, jboolean streaming) {\n    webStreaming.store(streaming);\n}\n\nextern \"C\" JNIEXPORT jobject JNICALL\nJava_com_retromesh_retro_1mesh_1console_WebCaster_getFrameBuffer(JNIEnv* env, jobject thiz) {\n    return env->NewDirectByteBuffer(webBuffer.data(), webBuffer.size() * sizeof(uint16_t));\n}\n\nextern \"C\" JNIEXPORT jintArray JNICALL\nJava_com_retromesh_retro_1mesh_1console_WebCaster_getFrameDimensions(JNIEnv* env, jobject thiz) {\n    std::lock_guard<std::mutex> wLock(webMutex);\n    jintArray result = env->NewIntArray(2);\n    jint dims[2];\n    dims[0] = webWidth.load();\n    dims[1] = webHeight.load();\n    env->SetIntArrayRegion(result, 0, 2, dims);\n    return result;\n}",
+      "StartLine": 383,
+      "TargetContent": "extern \"C\" void set_player1_pointer(int16_t x, int16_t y, bool pressed) {\n    pointer_x.store(x);\n    pointer_y.store(y);\n    pointer_pressed.store(pressed);\n}"
+    }
+  ],
+  "TargetFile": "c:\\Users\\gagan\\Projects\\retro-mesh-console\\android\\app\\src\\main\\cpp\\native-render.cpp",
+  "toolAction": "Updating C++ WebCaster bindings",
+  "toolSummary": "Update native-render.cpp"
+}
+{
+  "Description": "Fix C++ globals scope for web streaming",
+  "Instruction": "Move WebCaster globals to global scope",
+  "ReplacementChunks": [
+    {
+      "AllowMultiple": false,
+      "EndLine": 37,
+      "ReplacementContent": "std::vector<uint16_t> tvBuffer;\n\n// Web Caster zero-copy bridge\nstd::mutex webMutex;\nstd::vector<uint16_t> webBuffer(1920 * 1080); // Fixed size to prevent address changes\nstd::atomic<int> webWidth{0};\nstd::atomic<int> webHeight{0};\nstd::atomic<bool> webStreaming{false};",
+      "StartLine": 35,
+      "TargetContent": "std::vector<uint16_t> tvBuffer;"
+    },
+    {
+      "AllowMultiple": false,
+      "EndLine": 268,
+      "ReplacementContent": "       bool tvFrameReady = false;\n    }",
+      "StartLine": 260,
+      "TargetContent": "       bool tvFrameReady = false;\n\n// Web Caster zero-copy bridge\nstd::mutex webMutex;\nstd::vector<uint16_t> webBuffer(1920 * 1080); // Fixed size to prevent address changes\nstd::atomic<int> webWidth{0};\nstd::atomic<int> webHeight{0};\nstd::atomic<bool> webStreaming{false};\n    }"
+    }
+  ],
+  "TargetFile": "c:\\Users\\gagan\\Projects\\retro-mesh-console\\android\\app\\src\\main\\cpp\\native-render.cpp",
+  "toolAction": "Fixing C++ compile errors",
+  "toolSummary": "Fix native-render.cpp"
+}
+{
+  "Description": "Update JNI signatures to match new Application ID",
+  "Instruction": "Update JNI method signatures",
+  "ReplacementChunks": [
+    {
+      "AllowMultiple": true,
+      "EndLine": 450,
+      "ReplacementContent": "Java_dev_seven_1cgpalabs_mojosnap_",
+      "StartLine": 1,
+      "TargetContent": "Java_com_retromesh_retro_1mesh_1console_"
+    }
+  ],
+  "TargetFile": "c:\\Users\\gagan\\Projects\\retro-mesh-console\\android\\app\\src\\main\\cpp\\native-render.cpp",
+  "toolAction": "Updating JNI signatures",
+  "toolSummary": "Update native-render.cpp"
+}
+{
+  "Description": "Implement WebCaster audio JNI methods",
+  "Instruction": "Add getAudioBuffer, getAudioSize, and consumeAudioBuffer to native-render.cpp",
+  "ReplacementChunks": [
+    {
+      "AllowMultiple": true,
+      "EndLine": 430,
+      "ReplacementContent": "// --- WebCaster JNI ---\n\nextern \"C\" JNIEXPORT void JNICALL\nJava_dev_seven_1cgpalabs_mojosnap_WebCaster_setWebStreaming(JNIEnv* env, jobject thiz, jboolean streaming) {\n    webStreaming.store(streaming);\n}\n\nextern \"C\" JNIEXPORT jobject JNICALL\nJava_dev_seven_1cgpalabs_mojosnap_WebCaster_getFrameBuffer(JNIEnv* env, jobject thiz) {\n    return env->NewDirectByteBuffer(webBuffer.data(), webBuffer.size() * sizeof(uint16_t));\n}\n\nextern \"C\" JNIEXPORT jintArray JNICALL\nJava_dev_seven_1cgpalabs_mojosnap_WebCaster_getFrameDimensions(JNIEnv* env, jobject thiz) {\n    jintArray result = env->NewIntArray(2);\n    int dims[2] = { webWidth.load(), webHeight.load() };\n    env->SetIntArrayRegion(result, 0, 2, dims);\n    return result;\n}\n\n// Global audio buffer for WebCaster\nstd::mutex webAudioMutex;\nstd::vector<int16_t> webAudioBuffer;\n\nextern \"C\" void web_audio_batch_cb(const int16_t* data, intptr_t frames) {\n    if (!webStreaming.load()) return;\n    std::lock_guard<std::mutex> lock(webAudioMutex);\n    size_t samples = frames * 2;\n    // Prevent unbounded growth if web stream is slow\n    if (webAudioBuffer.size() > 44100 * 2) {\n        webAudioBuffer.clear();\n    }\n    webAudioBuffer.insert(webAudioBuffer.end(), data, data + samples);\n}\n\nextern \"C\" JNIEXPORT jobject JNICALL\nJava_dev_seven_1cgpalabs_mojosnap_WebCaster_getAudioBuffer(JNIEnv* env, jobject thiz) {\n    // Return a direct byte buffer of max possible size just for reference,\n    // actually we will dynamically return a buffer or copy it.\n    // Wait, returning NewDirectByteBuffer for a dynamically resizing vector is dangerous.\n    // Instead, we will use a fixed size web audio buffer.\n    static std::vector<int16_t> fixedWebAudio(44100 * 2);\n    return env->NewDirectByteBuffer(fixedWebAudio.data(), fixedWebAudio.size() * sizeof(int16_t));\n}\n\nextern \"C\" JNIEXPORT jint JNICALL\nJava_dev_seven_1cgpalabs_mojosnap_WebCaster_getAudioSize(JNIEnv* env, jobject thiz) {\n    std::lock_guard<std::mutex> lock(webAudioMutex);\n    return (jint)(webAudioBuffer.size() * sizeof(int16_t));\n}\n\nextern \"C\" JNIEXPORT void JNICALL\nJava_dev_seven_1cgpalabs_mojosnap_WebCaster_consumeAudioBuffer(JNIEnv* env, jobject thiz) {\n    std::lock_guard<std::mutex> lock(webAudioMutex);\n    // Copy to the fixed buffer that Kotlin reads from\n    // We already declared fixedWebAudio inside getAudioBuffer but it's local static, let's move it to global.\n}",
+      "StartLine": 406,
+      "TargetContent": "// --- WebCaster JNI ---\n\nextern \"C\" JNIEXPORT void JNICALL\nJava_dev_seven_1cgpalabs_mojosnap_WebCaster_setWebStreaming(JNIEnv* env, jobject thiz, jboolean streaming) {\n    webStreaming.store(streaming);\n}\n\nextern \"C\" JNIEXPORT jobject JNICALL\nJava_dev_seven_1cgpalabs_mojosnap_WebCaster_getFrameBuffer(JNIEnv* env, jobject thiz) {\n    return env->NewDirectByteBuffer(webBuffer.data(), webBuffer.size() * sizeof(uint16_t));\n}\n\nextern \"C\" JNIEXPORT jintArray JNICALL\nJava_dev_seven_1cgpalabs_mojosnap_WebCaster_getFrameDimensions(JNIEnv* env, jobject thiz) {\n    jintArray result = env->NewIntArray(2);\n    int dims[2] = { webWidth.load(), webHeight.load() };\n    env->SetIntArrayRegion(result, 0, 2, dims);\n    return result;\n}"
+    }
+  ],
+  "TargetFile": "c:\\Users\\gagan\\Projects\\retro-mesh-console\\android\\app\\src\\main\\cpp\\native-render.cpp",
+  "toolAction": "Updating native-render.cpp",
+  "toolSummary": "Update native-render.cpp"
+}
+{
+  "Description": "Update consumeAudioBuffer to return size in native-render.cpp",
+  "Instruction": "Modify consumeAudioBuffer to return jint and handle copying synchronously",
+  "ReplacementChunks": [
+    {
+      "AllowMultiple": true,
+      "EndLine": 452,
+      "ReplacementContent": "extern \"C\" JNIEXPORT jint JNICALL\nJava_dev_seven_1cgpalabs_mojosnap_WebCaster_consumeAudioBuffer(JNIEnv* env, jobject thiz) {\n    std::lock_guard<std::mutex> lock(webAudioMutex);\n    size_t copySize = std::min(webAudioBuffer.size(), fixedWebAudio.size());\n    if (copySize > 0) {\n        memcpy(fixedWebAudio.data(), webAudioBuffer.data(), copySize * sizeof(int16_t));\n        webAudioBuffer.erase(webAudioBuffer.begin(), webAudioBuffer.begin() + copySize);\n    }\n    return (jint)(copySize * sizeof(int16_t));\n}",
+      "StartLine": 447,
+      "TargetContent": "extern \"C\" JNIEXPORT void JNICALL\nJava_dev_seven_1cgpalabs_mojosnap_WebCaster_consumeAudioBuffer(JNIEnv* env, jobject thiz) {\n    std::lock_guard<std::mutex> lock(webAudioMutex);\n    size_t copySize = std::min(webAudioBuffer.size(), fixedWebAudio.size());\n    memcpy(fixedWebAudio.data(), webAudioBuffer.data(), copySize * sizeof(int16_t));\n    webAudioBuffer.clear();\n}"
+    }
+  ],
+  "TargetFile": "c:\\Users\\gagan\\Projects\\retro-mesh-console\\android\\app\\src\\main\\cpp\\native-render.cpp",
+  "toolAction": "Updating native-render.cpp",
+  "toolSummary": "Update native-render.cpp"
+}
+{
+  "Description": "Update render_to_window in native-render.cpp to handle pitch",
+  "Instruction": "Add pitch parameter and use it for row-by-row memory copy",
+  "ReplacementChunks": [
+    {
+      "AllowMultiple": true,
+      "EndLine": 329,
+      "ReplacementContent": "extern \"C\" void render_to_window(const uint8_t* pixels, int width, int height, int pitch) {\n    std::lock_guard<std::mutex> lock(renderMutex);\n    \n    if (!tvThreadRunning) {\n        tvThreadRunning = true;\n        std::thread(TvRenderWorker).detach();\n    }\n    \n    if (tvWindow) {\n        std::lock_guard<std::mutex> tvLock(tvMutex);\n        tvWidth = width;\n        tvHeight = height;\n        size_t totalPixels = width * height;\n        if (tvBuffer.size() != totalPixels) {\n            tvBuffer.resize(totalPixels);\n        }\n        for (int y = 0; y < height; y++) {\n            memcpy(reinterpret_cast<uint8_t*>(tvBuffer.data()) + (y * width * 2), pixels + (y * pitch), width * 2);\n        }\n        tvFrameReady = true;\n        tvCondVar.notify_one();\n    }\n\n    if (webStreaming.load()) {\n        std::lock_guard<std::mutex> wLock(webMutex);\n        webWidth.store(width);\n        webHeight.store(height);\n        size_t totalPixels = width * height;\n        if (totalPixels <= 1920 * 1080) {\n            for (int y = 0; y < height; y++) {\n                memcpy(reinterpret_cast<uint8_t*>(webBuffer.data()) + (y * width * 2), pixels + (y * pitch), width * 2);\n            }\n        }\n    }\n}",
+      "StartLine": 299,
+      "TargetContent": "extern \"C\" void render_to_window(const uint16_t* pixels, int width, int height) {\n    std::lock_guard<std::mutex> lock(renderMutex);\n    \n    if (!tvThreadRunning) {\n        tvThreadRunning = true;\n        std::thread(TvRenderWorker).detach();\n    }\n    \n    if (tvWindow) {\n        std::lock_guard<std::mutex> tvLock(tvMutex);\n        tvWidth = width;\n        tvHeight = height;\n        size_t totalPixels = width * height;\n        if (tvBuffer.size() != totalPixels) {\n            tvBuffer.resize(totalPixels);\n        }\n        memcpy(tvBuffer.data(), pixels, totalPixels * sizeof(uint16_t));\n        tvFrameReady = true;\n        tvCondVar.notify_one();\n    }\n\n    if (webStreaming.load()) {\n        std::lock_guard<std::mutex> wLock(webMutex);\n        webWidth.store(width);\n        webHeight.store(height);\n        size_t totalPixels = width * height;\n        if (totalPixels <= 1920 * 1080) {\n            memcpy(webBuffer.data(), pixels, totalPixels * sizeof(uint16_t));\n        }\n    }\n}"
+    }
+  ],
+  "TargetFile": "c:\\Users\\gagan\\Projects\\retro-mesh-console\\android\\app\\src\\main\\cpp\\native-render.cpp",
+  "toolAction": "Updating native-render.cpp pitch logic",
+  "toolSummary": "Update native-render.cpp"
+}
+{
+  "Description": "Revert signature in native-render.cpp to use uint16_t*",
+  "Instruction": "Change uint8_t* back to uint16_t* in render_to_window",
+  "ReplacementChunks": [
+    {
+      "AllowMultiple": true,
+      "EndLine": 300,
+      "ReplacementContent": "extern \"C\" void render_to_window(const uint16_t* pixels, int width, int height, int pitch) {\n    std::lock_guard<std::mutex> lock(renderMutex);",
+      "StartLine": 299,
+      "TargetContent": "extern \"C\" void render_to_window(const uint8_t* pixels, int width, int height, int pitch) {\n    std::lock_guard<std::mutex> lock(renderMutex);"
+    },
+    {
+      "AllowMultiple": true,
+      "EndLine": 316,
+      "ReplacementContent": "        for (int y = 0; y < height; y++) {\n            memcpy(reinterpret_cast<uint8_t*>(tvBuffer.data()) + (y * width * 2), reinterpret_cast<const uint8_t*>(pixels) + (y * pitch), width * 2);\n        }",
+      "StartLine": 314,
+      "TargetContent": "        for (int y = 0; y < height; y++) {\n            memcpy(reinterpret_cast<uint8_t*>(tvBuffer.data()) + (y * width * 2), pixels + (y * pitch), width * 2);\n        }"
+    },
+    {
+      "AllowMultiple": true,
+      "EndLine": 327,
+      "ReplacementContent": "            for (int y = 0; y < height; y++) {\n                memcpy(reinterpret_cast<uint8_t*>(webBuffer.data()) + (y * width * 2), reinterpret_cast<const uint8_t*>(pixels) + (y * pitch), width * 2);\n            }",
+      "StartLine": 325,
+      "TargetContent": "            for (int y = 0; y < height; y++) {\n                memcpy(reinterpret_cast<uint8_t*>(webBuffer.data()) + (y * width * 2), pixels + (y * pitch), width * 2);\n            }"
+    }
+  ],
+  "TargetFile": "c:\\Users\\gagan\\Projects\\retro-mesh-console\\android\\app\\src\\main\\cpp\\native-render.cpp",
+  "toolAction": "Updating native-render.cpp signature",
+  "toolSummary": "Update native-render.cpp"
+}
+{
+  "Description": "Disable phone rendering when web streaming is active",
+  "Instruction": "Skip copying to tvBuffer if webStreaming is active in native-render.cpp",
+  "ReplacementChunks": [
+    {
+      "AllowMultiple": true,
+      "EndLine": 325,
+      "ReplacementContent": "    if (tvWindow && !webStreaming.load()) {\n        std::lock_guard<std::mutex> tvLock(tvMutex);\n        tvWidth = width;\n        tvHeight = height;\n        size_t totalPixels = width * height;\n        if (tvBuffer.size() != totalPixels) {\n            tvBuffer.resize(totalPixels);\n        }\n        for (int y = 0; y < height; y++) {\n            memcpy(reinterpret_cast<uint8_t*>(tvBuffer.data()) + (y * width * 2), reinterpret_cast<const uint8_t*>(pixels) + (y * pitch), width * 2);\n        }\n        tvFrameReady = true;\n        tvCondVar.notify_one();\n    }",
+      "StartLine": 308,
+      "TargetContent": "    if (tvWindow) {\n        std::lock_guard<std::mutex> tvLock(tvMutex);\n        tvWidth = width;\n        tvHeight = height;\n        size_t totalPixels = width * height;\n        if (tvBuffer.size() != totalPixels) {\n            tvBuffer.resize(totalPixels);\n        }\n        for (int y = 0; y < height; y++) {\n            memcpy(reinterpret_cast<uint8_t*>(tvBuffer.data()) + (y * width * 2), reinterpret_cast<const uint8_t*>(pixels) + (y * pitch), width * 2);\n        }\n        tvFrameReady = true;\n        tvCondVar.notify_one();\n    }"
+    }
+  ],
+  "TargetFile": "c:\\Users\\gagan\\Projects\\retro-mesh-console\\android\\app\\src\\main\\cpp\\native-render.cpp",
+  "toolAction": "Disabling phone rendering for webcast",
+  "toolSummary": "Disable phone render"
+}
+{
+  "Description": "Upgrade Miracast GLES Shader Pipeline",
+  "Instruction": "Change GL_LINEAR to GL_NEAREST for texture filtering to fix blurry pixels, and improve the CRT fragment shader for Miracast.",
+  "ReplacementChunks": [
+    {
+      "AllowMultiple": false,
+      "EndLine": 68,
+      "ReplacementContent": "    \"precision mediump float;\\n\"\n    \"varying vec2 vTexCoord;\\n\"\n    \"uniform sampler2D uTexture;\\n\"\n    \"void main() {\\n\"\n    \"  vec4 color = texture2D(uTexture, vTexCoord);\\n\"\n    \"  float scanline = sin(vTexCoord.y * 800.0) * 0.08;\\n\"\n    \"  color.rgb -= scanline;\\n\"\n    \"  gl_FragColor = vec4(color.rgb, 1.0);\\n\"\n    \"}\\n\";",
+      "StartLine": 60,
+      "TargetContent": "    \"precision mediump float;\\n\"\n    \"varying vec2 vTexCoord;\\n\"\n    \"uniform sampler2D uTexture;\\n\"\n    \"void main() {\\n\"\n    \"  vec4 color = texture2D(uTexture, vTexCoord);\\n\"\n    \"  float scanline = sin(vTexCoord.y * 800.0) * 0.1;\\n\"\n    \"  color.rgb -= scanline;\\n\"\n    \"  gl_FragColor = color;\\n\"\n    \"}\\n\";"
+    },
+    {
+      "AllowMultiple": false,
+      "EndLine": 153,
+      "ReplacementContent": "    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);\n    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);",
+      "StartLine": 152,
+      "TargetContent": "    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);\n    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);"
+    }
+  ],
+  "TargetFile": "c:\\Users\\gagan\\Projects\\retro-mesh-console\\android\\app\\src\\main\\cpp\\native-render.cpp",
+  "toolAction": "Upgrading Miracast Shader Pipeline",
+  "toolSummary": "Upgrade Miracast Shader"
+}
+{
+  "Description": "Implement Z-RLE in C++ for native HW acceleration",
+  "Instruction": "Replace the Android Bitmap JPEG logic with a lightning-fast native C++ Z-RLE compressor directly inside the native render thread.",
+  "ReplacementChunks": [
+    {
+      "AllowMultiple": false,
+      "EndLine": 44,
+      "ReplacementContent": "// Web Caster zero-copy bridge\nstd::mutex webMutex;\nstd::vector<uint16_t> webBuffer(1920 * 1080); // Fixed size to prevent address changes\nstd::vector<uint8_t> webRleBuffer(1920 * 1080 * 2);\nstd::atomic<int> webWidth{0};\nstd::atomic<int> webHeight{0};\nstd::atomic<int> webRleSize{0};\nstd::atomic<bool> webStreaming{false};",
+      "StartLine": 37,
+      "TargetContent": "// Web Caster zero-copy bridge\nstd::mutex webMutex;\nstd::vector<uint16_t> webBuffer(1920 * 1080); // Fixed size to prevent address changes\nstd::atomic<int> webWidth{0};\nstd::atomic<int> webHeight{0};\nstd::atomic<bool> webStreaming{false};"
+    },
+    {
+      "AllowMultiple": false,
+      "EndLine": 333,
+      "ReplacementContent": "    if (webStreaming.load()) {\n        std::lock_guard<std::mutex> wLock(webMutex);\n        webWidth.store(width);\n        webHeight.store(height);\n        size_t totalPixels = width * height;\n        if (totalPixels <= 1920 * 1080) {\n            uint16_t* dst = webBuffer.data();\n            for (int y = 0; y < height; y++) {\n                memcpy(reinterpret_cast<uint8_t*>(dst) + (y * width * 2), reinterpret_cast<const uint8_t*>(pixels) + (y * pitch), width * 2);\n            }\n            \n            // Z-RLE Compression in Native C++ (Instantaneous)\n            int outIdx = 0;\n            int i = 0;\n            uint8_t* out = webRleBuffer.data();\n            uint8_t* in = reinterpret_cast<uint8_t*>(dst);\n            int byteCount = totalPixels * 2;\n            \n            while (i < byteCount) {\n                int runLength = 1;\n                int maxRun = 129;\n                while (runLength < maxRun && i + (runLength * 2) < byteCount) {\n                    int nextIdx = i + (runLength * 2);\n                    if (in[nextIdx] == in[i] && in[nextIdx+1] == in[i+1]) {\n                        runLength++;\n                    } else {\n                        break;\n                    }\n                }\n                \n                if (runLength >= 2) {\n                    out[outIdx++] = (runLength - 2) + 128;\n                    out[outIdx++] = in[i];\n                    out[outIdx++] = in[i+1];\n                    i += runLength * 2;\n                } else {\n                    int rawLength = 1;\n                    int maxRaw = 128;\n                    while (rawLength < maxRaw && i + (rawLength * 2) < byteCount) {\n                        int currIdx = i + (rawLength * 2);\n                        int nextIdx = currIdx + 2;\n                        if (nextIdx < byteCount && in[currIdx] == in[nextIdx] && in[currIdx+1] == in[nextIdx+1]) {\n                            break;\n                        }\n                        rawLength++;\n                    }\n                    out[outIdx++] = rawLength - 1;\n                    memcpy(out + outIdx, in + i, rawLength * 2);\n                    outIdx += rawLength * 2;\n                    i += rawLength * 2;\n                }\n            }\n            webRleSize.store(outIdx);\n        }\n    }",
+      "StartLine": 322,
+      "TargetContent": "    if (webStreaming.load()) {\n        std::lock_guard<std::mutex> wLock(webMutex);\n        webWidth.store(width);\n        webHeight.store(height);\n        size_t totalPixels = width * height;\n        if (totalPixels <= 1920 * 1080) {\n            for (int y = 0; y < height; y++) {\n                memcpy(reinterpret_cast<uint8_t*>(webBuffer.data()) + (y * width * 2), reinterpret_cast<const uint8_t*>(pixels) + (y * pitch), width * 2);\n            }\n        }\n    }"
+    },
+    {
+      "AllowMultiple": false,
+      "EndLine": 430,
+      "ReplacementContent": "extern \"C\" JNIEXPORT jobject JNICALL\nJava_dev_seven_1cgpalabs_mojosnap_WebCaster_getRleBuffer(JNIEnv* env, jobject thiz) {\n    return env->NewDirectByteBuffer(webRleBuffer.data(), webRleBuffer.size());\n}\n\nextern \"C\" JNIEXPORT jint JNICALL\nJava_dev_seven_1cgpalabs_mojosnap_WebCaster_getRleSize(JNIEnv* env, jobject thiz) {\n    return webRleSize.load();\n}\n\n// Global audio buffer for WebCaster",
+      "StartLine": 430,
+      "TargetContent": "// Global audio buffer for WebCaster"
+    }
+  ],
+  "TargetFile": "c:\\Users\\gagan\\Projects\\retro-mesh-console\\android\\app\\src\\main\\cpp\\native-render.cpp",
+  "toolAction": "Editing native-render.cpp",
+  "toolSummary": "Edit native-render.cpp"
+}
+{
+  "Description": "Add frame synchronization for WebCaster",
+  "Instruction": "Add a condition variable in native-render.cpp to perfectly sync the WebCaster Kotlin thread with the libretro render tick, preventing network bursts and audio gaps.",
+  "ReplacementChunks": [
+    {
+      "AllowMultiple": false,
+      "EndLine": 43,
+      "ReplacementContent": "std::vector<uint8_t> webRleBuffer(1920 * 1080 * 2);\nstd::atomic<int> webWidth{0};\nstd::atomic<int> webHeight{0};\nstd::atomic<int> webRleSize{0};\nstd::atomic<bool> webStreaming{false};\n\nstd::mutex webSyncMutex;\nstd::condition_variable webCondVar;\nbool webFrameReady = false;\n\nstd::mutex tvMutex;",
+      "StartLine": 38,
+      "TargetContent": "std::vector<uint8_t> webRleBuffer(1920 * 1080 * 2);\nstd::atomic<int> webWidth{0};\nstd::atomic<int> webHeight{0};\nstd::atomic<int> webRleSize{0};\nstd::atomic<bool> webStreaming{false};\nstd::mutex tvMutex;"
+    },
+    {
+      "AllowMultiple": false,
+      "EndLine": 373,
+      "ReplacementContent": "                    i += rawLength * 2;\n                }\n            }\n            webRleSize.store(outIdx);\n        }\n        \n        {\n            std::lock_guard<std::mutex> syncLock(webSyncMutex);\n            webFrameReady = true;\n        }\n        webCondVar.notify_all();\n    }\n}",
+      "StartLine": 366,
+      "TargetContent": "                    i += rawLength * 2;\n                }\n            }\n            webRleSize.store(outIdx);\n        }\n    }\n}"
+    },
+    {
+      "AllowMultiple": false,
+      "EndLine": 442,
+      "ReplacementContent": "extern \"C\" JNIEXPORT jint JNICALL\nJava_dev_seven_1cgpalabs_mojosnap_WebCaster_getRleSize(JNIEnv* env, jobject thiz) {\n    return webRleSize.load();\n}\n\nextern \"C\" JNIEXPORT void JNICALL\nJava_dev_seven_1cgpalabs_mojosnap_WebCaster_waitForNextFrame(JNIEnv* env, jobject thiz) {\n    std::unique_lock<std::mutex> lock(webSyncMutex);\n    webCondVar.wait(lock, []{ return webFrameReady; });\n    webFrameReady = false;\n}\n\n// Global audio buffer for WebCaster",
+      "StartLine": 434,
+      "TargetContent": "extern \"C\" JNIEXPORT jint JNICALL\nJava_dev_seven_1cgpalabs_mojosnap_WebCaster_getRleSize(JNIEnv* env, jobject thiz) {\n    return webRleSize.load();\n}\n\n// Global audio buffer for WebCaster"
+    }
+  ],
+  "TargetFile": "c:\\Users\\gagan\\Projects\\retro-mesh-console\\android\\app\\src\\main\\cpp\\native-render.cpp",
+  "toolAction": "Editing native-render",
+  "toolSummary": "Edit native-render"
+}
+{
+  "Description": "Add pixel format support to native-render",
+  "Instruction": "Add a C++ variable to track the active pixel format and properly downsample XRGB8888 to RGB565 if the core uses it.",
+  "ReplacementChunks": [
+    {
+      "AllowMultiple": false,
+      "EndLine": 43,
+      "ReplacementContent": "std::vector<uint8_t> webRleBuffer(1920 * 1080 * 2);\nstd::atomic<int> webWidth{0};\nstd::atomic<int> webHeight{0};\nstd::atomic<int> webRleSize{0};\nstd::atomic<bool> webStreaming{false};\nstd::atomic<int> activePixelFormat{2}; // 2 = RGB565, 1 = XRGB8888, 0 = 0RGB1555",
+      "StartLine": 38,
+      "TargetContent": "std::vector<uint8_t> webRleBuffer(1920 * 1080 * 2);\nstd::atomic<int> webWidth{0};\nstd::atomic<int> webHeight{0};\nstd::atomic<int> webRleSize{0};\nstd::atomic<bool> webStreaming{false};"
+    },
+    {
+      "AllowMultiple": false,
+      "EndLine": 329,
+      "ReplacementContent": "        if (totalPixels <= 1920 * 1080) {\n            uint16_t* dst = webBuffer.data();\n            int fmt = activePixelFormat.load();\n            \n            for (int y = 0; y < height; y++) {\n                const uint8_t* rowSrc = reinterpret_cast<const uint8_t*>(pixels) + (y * pitch);\n                uint16_t* rowDst = dst + (y * width);\n                \n                if (fmt == 1) { // XRGB8888\n                    const uint32_t* src32 = reinterpret_cast<const uint32_t*>(rowSrc);\n                    for (int x = 0; x < width; x++) {\n                        uint32_t color = src32[x];\n                        int r = (color >> 16) & 0xFF;\n                        int g = (color >> 8) & 0xFF;\n                        int b = color & 0xFF;\n                        rowDst[x] = ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);\n                    }\n                } else if (fmt == 0) { // 0RGB1555\n                    const uint16_t* src16 = reinterpret_cast<const uint16_t*>(rowSrc);\n                    for (int x = 0; x < width; x++) {\n                        uint16_t color = src16[x];\n                        int r = (color >> 10) & 0x1F;\n                        int g = (color >> 5) & 0x1F;\n                        int b = color & 0x1F;\n                        rowDst[x] = (r << 11) | ((g << 1) << 5) | b;\n                    }\n                } else { // RGB565\n                    memcpy(rowDst, rowSrc, width * 2);\n                }\n            }\n            \n            // Z-RLE Compression in Native C++ (Instantaneous)",
+      "StartLine": 324,
+      "TargetContent": "        if (totalPixels <= 1920 * 1080) {\n            uint16_t* dst = webBuffer.data();\n            for (int y = 0; y < height; y++) {\n                memcpy(reinterpret_cast<uint8_t*>(dst) + (y * width * 2), reinterpret_cast<const uint8_t*>(pixels) + (y * pitch), width * 2);\n            }\n            \n            // Z-RLE Compression in Native C++ (Instantaneous)"
+    },
+    {
+      "AllowMultiple": false,
+      "EndLine": 489,
+      "ReplacementContent": "extern \"C\" JNIEXPORT void JNICALL\nJava_dev_seven_1cgpalabs_mojosnap_WebCaster_waitForNextFrame(JNIEnv* env, jobject thiz) {\n    std::unique_lock<std::mutex> lock(webSyncMutex);\n    webCondVar.wait_for(lock, std::chrono::milliseconds(32), []{ return webFrameReady; }); // Timeout to prevent hangs\n    webFrameReady = false;\n}\n\nextern \"C\" JNIEXPORT void JNICALL\nJava_dev_seven_1cgpalabs_mojosnap_WebCaster_setPixelFormat(JNIEnv* env, jobject thiz, jint fmt) {\n    activePixelFormat.store(fmt);\n}\n\n// Global audio buffer for WebCaster",
+      "StartLine": 483,
+      "TargetContent": "extern \"C\" JNIEXPORT void JNICALL\nJava_dev_seven_1cgpalabs_mojosnap_WebCaster_waitForNextFrame(JNIEnv* env, jobject thiz) {\n    std::unique_lock<std::mutex> lock(webSyncMutex);\n    webCondVar.wait(lock, []{ return webFrameReady; });\n    webFrameReady = false;\n}\n\n// Global audio buffer for WebCaster"
+    }
+  ],
+  "TargetFile": "c:\\Users\\gagan\\Projects\\retro-mesh-console\\android\\app\\src\\main\\cpp\\native-render.cpp",
+  "toolAction": "Adding Pixel Format conversion",
+  "toolSummary": "Add Pixel Format conversion"
+}
+{
+  "Description": "Add C interface for set_pixel_format",
+  "Instruction": "Add a C-linkage export for set_pixel_format so Dart can call it directly via FFI.",
+  "ReplacementChunks": [
+    {
+      "AllowMultiple": false,
+      "EndLine": 430,
+      "ReplacementContent": "extern \"C\" void set_player1_pointer(int16_t x, int16_t y, bool pressed) {\n    pointer_x.store(x);\n    pointer_y.store(y);\n    pointer_pressed.store(pressed);\n}\n\nextern \"C\" void set_pixel_format(int fmt) {\n    activePixelFormat.store(fmt);\n}\n\n// --- WebCaster JNI ---",
+      "StartLine": 425,
+      "TargetContent": "extern \"C\" void set_player1_pointer(int16_t x, int16_t y, bool pressed) {\n    pointer_x.store(x);\n    pointer_y.store(y);\n    pointer_pressed.store(pressed);\n}\n\n// --- WebCaster JNI ---"
+    }
+  ],
+  "TargetFile": "c:\\Users\\gagan\\Projects\\retro-mesh-console\\android\\app\\src\\main\\cpp\\native-render.cpp",
+  "toolAction": "Adding C-linkage set_pixel_format",
+  "toolSummary": "Add set_pixel_format"
+}
+{
+  "Description": "Add EGL Hardware Rendering to native-render",
+  "Instruction": "Implement the EGL Context Initialization and hardware rendering callback functions necessary for Libretro cores to interact with the GPU directly.",
+  "ReplacementChunks": [
+    {
+      "AllowMultiple": false,
+      "EndLine": 6,
+      "ReplacementContent": "#include <EGL/egl.h>\n#include <GLES2/gl2.h>\n#include <GLES2/gl2ext.h>\n#include <jni.h>\n#include <android/native_window_jni.h>\n#include <android/native_window.h>\n#include <android/log.h>\n#include <cstring>\n#include <mutex>\n#include <atomic>\n#include <vector>",
+      "StartLine": 1,
+      "TargetContent": "#include <jni.h>\n#include <android/native_window_jni.h>\n#include <android/native_window.h>\n#include <android/log.h>\n#include <cstring>\n#include <mutex>"
+    },
+    {
+      "AllowMultiple": false,
+      "EndLine": 48,
+      "ReplacementContent": "std::atomic<int> activePixelFormat{2}; // 2 = RGB565, 1 = XRGB8888, 0 = 0RGB1555\n\n// EGL HW Context State\nstatic EGLDisplay hwDisplay = EGL_NO_DISPLAY;\nstatic EGLContext hwContext = EGL_NO_CONTEXT;\nstatic EGLSurface hwSurface = EGL_NO_SURFACE;\nstatic GLuint hwFbo = 0;\nstatic GLuint hwColorTexture = 0;\nstatic GLuint hwDepthTexture = 0;\nstatic int hwWidth = 0;\nstatic int hwHeight = 0;\n\nstd::mutex webSyncMutex;",
+      "StartLine": 45,
+      "TargetContent": "std::atomic<int> activePixelFormat{2}; // 2 = RGB565, 1 = XRGB8888, 0 = 0RGB1555\n\nstd::mutex webSyncMutex;"
+    },
+    {
+      "AllowMultiple": false,
+      "EndLine": 506,
+      "ReplacementContent": "extern \"C\" void set_pixel_format(int fmt) {\n    activePixelFormat.store(fmt);\n}\n\n// --- HW Render ---\n\nextern \"C\" bool hw_render_init(int width, int height) {\n    if (hwContext != EGL_NO_CONTEXT) return true;\n\n    hwDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);\n    if (hwDisplay == EGL_NO_DISPLAY) return false;\n\n    EGLint major, minor;\n    if (!eglInitialize(hwDisplay, &major, &minor)) return false;\n\n    EGLint configAttribs[] = {\n        EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,\n        EGL_SURFACE_TYPE, EGL_PBUFFER_BIT,\n        EGL_RED_SIZE, 8,\n        EGL_GREEN_SIZE, 8,\n        EGL_BLUE_SIZE, 8,\n        EGL_ALPHA_SIZE, 8,\n        EGL_DEPTH_SIZE, 16,\n        EGL_STENCIL_SIZE, 8,\n        EGL_NONE\n    };\n\n    EGLConfig config;\n    EGLint numConfigs;\n    if (!eglChooseConfig(hwDisplay, configAttribs, &config, 1, &numConfigs) || numConfigs < 1) return false;\n\n    EGLint pbufferAttribs[] = {\n        EGL_WIDTH, width,\n        EGL_HEIGHT, height,\n        EGL_NONE\n    };\n    hwSurface = eglCreatePbufferSurface(hwDisplay, config, pbufferAttribs);\n    if (hwSurface == EGL_NO_SURFACE) return false;\n\n    EGLint contextAttribs[] = {\n        EGL_CONTEXT_CLIENT_VERSION, 2,\n        EGL_NONE\n    };\n    hwContext = eglCreateContext(hwDisplay, config, EGL_NO_CONTEXT, contextAttribs);\n    if (hwContext == EGL_NO_CONTEXT) return false;\n\n    if (!eglMakeCurrent(hwDisplay, hwSurface, hwSurface, hwContext)) return false;\n\n    hwWidth = width;\n    hwHeight = height;\n\n    glGenFramebuffers(1, &hwFbo);\n    glBindFramebuffer(GL_FRAMEBUFFER, hwFbo);\n\n    glGenTextures(1, &hwColorTexture);\n    glBindTexture(GL_TEXTURE_2D, hwColorTexture);\n    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);\n    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, hwColorTexture, 0);\n\n    glGenRenderbuffers(1, &hwDepthTexture);\n    glBindRenderbuffer(GL_RENDERBUFFER, hwDepthTexture);\n    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8_OES, width, height);\n    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, hwDepthTexture);\n    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, hwDepthTexture);\n\n    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) return false;\n    \n    glClearColor(0, 0, 0, 1);\n    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);\n\n    return true;\n}\n\nextern \"C\" uintptr_t hw_get_current_framebuffer() {\n    return hwFbo;\n}\n\nextern \"C\" void* hw_get_proc_address(const char* sym) {\n    return (void*)eglGetProcAddress(sym);\n}\n\nextern \"C\" void hw_render_extract_frame() {\n    if (hwContext == EGL_NO_CONTEXT) return;\n    \n    static std::vector<uint8_t> hwReadBuffer;\n    hwReadBuffer.resize(hwWidth * hwHeight * 4);\n    \n    glBindFramebuffer(GL_FRAMEBUFFER, hwFbo);\n    glReadPixels(0, 0, hwWidth, hwHeight, GL_RGBA, GL_UNSIGNED_BYTE, hwReadBuffer.data());\n    \n    // GL_RGBA is [R, G, B, A]. We must map it to uint16_t RGB565.\n    activePixelFormat.store(3); // 3 = HW_GL_RGBA\n    \n    // Route it through the exact same render_to_window pipeline as if it was software rendered\n    render_to_window(reinterpret_cast<const uint16_t*>(hwReadBuffer.data()), hwWidth, hwHeight, hwWidth * 4);\n}\n\n\n// --- WebCaster JNI ---",
+      "StartLine": 493,
+      "TargetContent": "extern \"C\" void set_pixel_format(int fmt) {\n    activePixelFormat.store(fmt);\n}\n\n// --- WebCaster JNI ---"
+    },
+    {
+      "AllowMultiple": false,
+      "EndLine": 349,
+      "ReplacementContent": "                if (fmt == 1) { // XRGB8888\n                    const uint32_t* src32 = reinterpret_cast<const uint32_t*>(rowSrc);\n                    for (int x = 0; x < width; x++) {\n                        uint32_t color = src32[x];\n                        int r = (color >> 16) & 0xFF;\n                        int g = (color >> 8) & 0xFF;\n                        int b = color & 0xFF;\n                        rowDst[x] = ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);\n                    }\n                } else if (fmt == 3) { // HW_GL_RGBA [R, G, B, A]\n                    const uint8_t* src8 = reinterpret_cast<const uint8_t*>(rowSrc);\n                    for (int x = 0; x < width; x++) {\n                        int r = src8[x * 4 + 0];\n                        int g = src8[x * 4 + 1];\n                        int b = src8[x * 4 + 2];\n                        rowDst[x] = ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);\n                    }\n                } else if (fmt == 0) { // 0RGB1555",
+      "StartLine": 341,
+      "TargetContent": "                if (fmt == 1) { // XRGB8888\n                    const uint32_t* src32 = reinterpret_cast<const uint32_t*>(rowSrc);\n                    for (int x = 0; x < width; x++) {\n                        uint32_t color = src32[x];\n                        int r = (color >> 16) & 0xFF;\n                        int g = (color >> 8) & 0xFF;\n                        int b = color & 0xFF;\n                        rowDst[x] = ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);\n                    }\n                } else if (fmt == 0) { // 0RGB1555"
+    }
+  ],
+  "TargetFile": "c:\\Users\\gagan\\Projects\\retro-mesh-console\\android\\app\\src\\main\\cpp\\native-render.cpp",
+  "toolAction": "Updating native-render.cpp",
+  "toolSummary": "Update native-render"
+}
+{
+  "Description": "Make it 30FPS and remove AAudio blocking on Dart thread",
+  "Instruction": "1. Force the game loop to 30 FPS as requested by the user.\n2. Remove the AAudioStream_write blocking hack when web streaming is active, because blocking the Dart main thread causes massive event loop stuttering.",
+  "ReplacementChunks": [
+    {
+      "AllowMultiple": false,
+      "EndLine": 657,
+      "ReplacementContent": "    if (webStreaming.load()) {\n        // Do NOT block the Dart UI thread with AAudio when streaming!\n        // We rely purely on the Dart Timer.periodic for pacing.\n        return frames;\n    }",
+      "StartLine": 644,
+      "TargetContent": "    if (webStreaming.load()) {\n        // We still need to block to throttle! We write silence!\n        // But allocating a huge array of 0s every tick is slow. \n        // We can just use a static silent buffer.\n        static const int16_t silence[4096 * 2] = {0};\n        \n        int32_t framesLeft = frames;\n        while (framesLeft > 0) {\n            int32_t toWrite = framesLeft > 4096 ? 4096 : framesLeft;\n            int64_t timeoutNanos = 1000 * 1000 * 1000; // 1 second timeout\n            aaudio_result_t result = AAudioStream_write(stream, silence, toWrite, timeoutNanos);\n            if (result < 0) break;\n            framesLeft -= result;\n        }\n        return frames;\n    }"
+    }
+  ],
+  "TargetFile": "c:\\Users\\gagan\\Projects\\retro-mesh-console\\android\\app\\src\\main\\cpp\\native-render.cpp",
+  "toolAction": "Removing AAudio Block",
+  "toolSummary": "Remove AAudio Block"
+}

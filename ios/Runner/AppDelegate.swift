@@ -63,10 +63,28 @@ import AVKit
     systemChannel.setMethodCallHandler { (call, result) in
       switch call.method {
       case "startHost":
-        NetworkManager.shared.startHost()
+        if let args = call.arguments as? [String: Any],
+           let coreName = args["core"] as? String {
+            let playerName = args["playerName"] as? String ?? "Player 1"
+            NetworkManager.shared.startHost(coreName: coreName, playerName: playerName)
+        } else {
+            NetworkManager.shared.startHost(coreName: "nes", playerName: "Player 1")
+        }
         result(nil)
-      case "startClient":
-        NetworkManager.shared.startClient()
+      case "stopHost":
+        NetworkManager.shared.stop()
+        result(nil)
+      case "startDiscovery":
+        NetworkManager.shared.startDiscovery()
+        result(nil)
+      case "stopDiscovery":
+        NetworkManager.shared.stopDiscovery()
+        result(nil)
+      case "connectToHost":
+        if let args = call.arguments as? [String: Any],
+           let ip = args["ip"] as? String {
+            NetworkManager.shared.connectToServer(ip: ip)
+        }
         result(nil)
       case "sendInput":
         if let args = call.arguments as? [String: Any],
@@ -84,6 +102,18 @@ import AVKit
       default:
         result(FlutterMethodNotImplemented)
       }
+    }
+    
+    NetworkManager.shared.onHostsDiscovered = { hosts in
+        DispatchQueue.main.async {
+            systemChannel.invokeMethod("onHostsDiscovered", arguments: hosts)
+        }
+    }
+    
+    NetworkManager.shared.onHostDisconnected = {
+        DispatchQueue.main.async {
+            systemChannel.invokeMethod("onHostDisconnected", arguments: nil)
+        }
     }
     
     // Listen for screen connect/disconnect notifications (AirPlay/HDMI plug)

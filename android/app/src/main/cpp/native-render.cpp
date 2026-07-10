@@ -46,6 +46,14 @@ std::atomic<bool> tvThreadRunning{false};
 std::atomic<bool> tvFrameReady{false};
 std::atomic<float> thermalScale{1.0f};
 
+// WebCaster Z-RLE variables
+std::vector<uint8_t> webRleBuffer(1920 * 1080 * 2);
+std::atomic<int> webRleSize{0};
+std::mutex webSyncMutex;
+std::condition_variable webCondVar;
+bool webFrameReady = false;
+std::atomic<int> activePixelFormat{2};
+
 // Shaders
 const char* vertexShaderCode =
     "attribute vec4 aPosition;\n"
@@ -264,7 +272,7 @@ void TvRenderWorker() {
             eglReady = false;
         }
 
-       bool tvFrameReady = false;
+        tvFrameReady = false;
     }
     
     if (eglReady) {
@@ -296,7 +304,37 @@ Java_dev_seven_1cgpalabs_mojosnap_NativeRender_setTvSurface(JNIEnv* env, jclass 
     }
 }
 
-extern "C" void render_to_window(const uint16_t* pixels, int width, int height) {
+extern "C" bool native_environment_cb(unsigned cmd, void *data) {
+    if (cmd == 10) { // RETRO_ENVIRONMENT_SET_PIXEL_FORMAT
+        if (data) {
+            activePixelFormat.store(*static_cast<int*>(data));
+            return true;
+        }
+    } else if (cmd == 9 || cmd == 31) { // GET_SYSTEM_DIRECTORY or GET_SAVE_DIRECTORY
+        if (data) {
+            const char** dir = static_cast<const char**>(data);
+            *dir = "/sdcard/RetroMesh";
+            return true;
+        }
+    } else if (cmd == 17) { // GET_VARIABLE_UPDATE
+        if (data) {
+            *static_cast<bool*>(data) = false;
+            return true;
+        }
+    } else if (cmd == 15) { // GET_VARIABLE
+        return false;
+    } else if (cmd == 16) { // SET_VARIABLES
+        return true;
+    }
+    return false;
+}
+
+extern "C" void native_input_poll_cb() {
+}
+
+extern "C" void render_to_window(const void* data, unsigned width, unsigned height, size_t pitch) {
+    if (!data) return;
+    const uint16_t* pixels = reinterpret_cast<const uint16_t*>(data);
     std::lock_guard<std::mutex> lock(renderMutex);
     
     if (!tvThreadRunning) {
@@ -312,7 +350,37 @@ extern "C" void render_to_window(const uint16_t* pixels, int width, int height) 
         if (tvBuffer.size() != totalPixels) {
             tvBuffer.resize(totalPixels);
         }
-        memcpy(tvBuffer.data(), pixels, totalPixels * sizeof(uint16_t));
+        
+        int fmt = activePixelFormat.load();
+        uint16_t* dst = tvBuffer.data();
+        
+        for (unsigned y = 0; y < height; y++) {
+            const uint8_t* rowSrc = reinterpret_cast<const uint8_t*>(pixels) + (y * pitch);
+            uint16_t* rowDst = dst + (y * width);
+            
+            if (fmt == 1) { // XRGB8888
+                const uint32_t* src32 = reinterpret_cast<const uint32_t*>(rowSrc);
+                for (unsigned x = 0; x < width; x++) {
+                    uint32_t color = src32[x];
+                    int r = (color >> 16) & 0xFF;
+                    int g = (color >> 8) & 0xFF;
+                    int b = color & 0xFF;
+                    rowDst[x] = ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
+                }
+            } else if (fmt == 0) { // 0RGB1555
+                const uint16_t* src16 = reinterpret_cast<const uint16_t*>(rowSrc);
+                for (unsigned x = 0; x < width; x++) {
+                    uint16_t color = src16[x];
+                    int r = (color >> 10) & 0x1F;
+                    int g = (color >> 5) & 0x1F;
+                    int b = color & 0x1F;
+                    rowDst[x] = (r << 11) | ((g << 1) << 5) | b;
+                }
+            } else { // RGB565 and HW_GL_RGBA (assuming handled similarly if needed)
+                memcpy(rowDst, rowSrc, width * 2);
+            }
+        }
+        
         tvFrameReady = true;
         tvCondVar.notify_one();
     }
@@ -323,8 +391,93 @@ extern "C" void render_to_window(const uint16_t* pixels, int width, int height) 
         webHeight.store(height);
         size_t totalPixels = width * height;
         if (totalPixels <= 1920 * 1080) {
-            memcpy(webBuffer.data(), pixels, totalPixels * sizeof(uint16_t));
+            uint16_t* dst = webBuffer.data();
+            int fmt = activePixelFormat.load();
+            
+            for (unsigned y = 0; y < height; y++) {
+                const uint8_t* rowSrc = reinterpret_cast<const uint8_t*>(pixels) + (y * pitch);
+                uint16_t* rowDst = dst + (y * width);
+                
+                if (fmt == 1) { // XRGB8888
+                    const uint32_t* src32 = reinterpret_cast<const uint32_t*>(rowSrc);
+                    for (unsigned x = 0; x < width; x++) {
+                        uint32_t color = src32[x];
+                        int r = (color >> 16) & 0xFF;
+                        int g = (color >> 8) & 0xFF;
+                        int b = color & 0xFF;
+                        rowDst[x] = ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
+                    }
+                } else if (fmt == 3) { // HW_GL_RGBA
+                    const uint8_t* src8 = reinterpret_cast<const uint8_t*>(rowSrc);
+                    for (unsigned x = 0; x < width; x++) {
+                        int r = src8[x * 4 + 0];
+                        int g = src8[x * 4 + 1];
+                        int b = src8[x * 4 + 2];
+                        rowDst[x] = ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
+                    }
+                } else if (fmt == 0) { // 0RGB1555
+                    const uint16_t* src16 = reinterpret_cast<const uint16_t*>(rowSrc);
+                    for (unsigned x = 0; x < width; x++) {
+                        uint16_t color = src16[x];
+                        int r = (color >> 10) & 0x1F;
+                        int g = (color >> 5) & 0x1F;
+                        int b = color & 0x1F;
+                        rowDst[x] = (r << 11) | ((g << 1) << 5) | b;
+                    }
+                } else { // RGB565
+                    memcpy(rowDst, rowSrc, width * 2);
+                }
+            }
+            
+            // Z-RLE Compression
+            int outIdx = 0;
+            int i = 0;
+            uint8_t* out = webRleBuffer.data();
+            uint8_t* in = reinterpret_cast<uint8_t*>(dst);
+            int byteCount = totalPixels * 2;
+            
+            while (i < byteCount) {
+                int runLength = 1;
+                int maxRun = 129;
+                while (runLength < maxRun && i + (runLength * 2) < byteCount) {
+                    int nextIdx = i + (runLength * 2);
+                    if (in[nextIdx] == in[i] && in[nextIdx+1] == in[i+1]) {
+                        runLength++;
+                    } else {
+                        break;
+                    }
+                }
+                
+                if (runLength >= 2) {
+                    out[outIdx++] = (runLength - 2) + 128;
+                    out[outIdx++] = in[i];
+                    out[outIdx++] = in[i+1];
+                    i += runLength * 2;
+                } else {
+                    int rawLength = 1;
+                    int maxRaw = 128;
+                    while (rawLength < maxRaw && i + (rawLength * 2) < byteCount) {
+                        int currIdx = i + (rawLength * 2);
+                        int nextIdx = currIdx + 2;
+                        if (nextIdx < byteCount && in[currIdx] == in[nextIdx] && in[currIdx+1] == in[nextIdx+1]) {
+                            break;
+                        }
+                        rawLength++;
+                    }
+                    out[outIdx++] = rawLength - 1;
+                    memcpy(out + outIdx, in + i, rawLength * 2);
+                    outIdx += rawLength * 2;
+                    i += rawLength * 2;
+                }
+            }
+            webRleSize.store(outIdx);
         }
+        
+        {
+            std::lock_guard<std::mutex> syncLock(webSyncMutex);
+            webFrameReady = true;
+        }
+        webCondVar.notify_all();
     }
 }
 
@@ -424,4 +577,96 @@ Java_dev_seven_1cgpalabs_mojosnap_WebCaster_getFrameDimensions(JNIEnv* env, jobj
     dims[1] = webHeight.load();
     env->SetIntArrayRegion(result, 0, 2, dims);
     return result;
+}
+
+extern "C" JNIEXPORT jobject JNICALL
+Java_dev_seven_1cgpalabs_mojosnap_WebCaster_getRleBuffer(JNIEnv* env, jobject thiz) {
+    return env->NewDirectByteBuffer(webRleBuffer.data(), webRleBuffer.size());
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_dev_seven_1cgpalabs_mojosnap_WebCaster_getRleSize(JNIEnv* env, jobject thiz) {
+    return webRleSize.load();
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_dev_seven_1cgpalabs_mojosnap_WebCaster_waitForNextFrame(JNIEnv* env, jobject thiz) {
+    std::unique_lock<std::mutex> lock(webSyncMutex);
+    webCondVar.wait_for(lock, std::chrono::milliseconds(32), []{ return webFrameReady; });
+    webFrameReady = false;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_dev_seven_1cgpalabs_mojosnap_WebCaster_setPixelFormat(JNIEnv* env, jobject thiz, jint fmt) {
+    activePixelFormat.store(fmt);
+}
+
+extern "C" void set_pixel_format(int fmt) {
+    activePixelFormat.store(fmt);
+}
+
+// Dummy HW rendering functions to satisfy Dart FFI lookups
+extern "C" bool hw_render_init(int width, int height) { return false; }
+extern "C" void hw_render_extract_frame() {}
+extern "C" uintptr_t hw_get_current_framebuffer() { return 0; }
+extern "C" void* hw_get_proc_address(const char* sym) { return nullptr; }
+
+// Global audio buffer for WebCaster
+std::mutex webAudioMutex;
+std::vector<int16_t> webAudioBuffer;
+std::vector<int16_t> fixedWebAudio(44100 * 2);
+
+extern "C" void web_audio_batch_cb(const int16_t* data, intptr_t frames) {
+    if (!webStreaming.load()) return;
+    std::lock_guard<std::mutex> lock(webAudioMutex);
+    size_t samples = frames * 2;
+    if (webAudioBuffer.size() > 44100 * 2) {
+        webAudioBuffer.clear();
+    }
+    webAudioBuffer.insert(webAudioBuffer.end(), data, data + samples);
+}
+
+extern "C" JNIEXPORT jobject JNICALL
+Java_dev_seven_1cgpalabs_mojosnap_WebCaster_getAudioBuffer(JNIEnv* env, jobject thiz) {
+    return env->NewDirectByteBuffer(fixedWebAudio.data(), fixedWebAudio.size() * sizeof(int16_t));
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_dev_seven_1cgpalabs_mojosnap_WebCaster_getAudioSize(JNIEnv* env, jobject thiz) {
+    std::lock_guard<std::mutex> lock(webAudioMutex);
+    return (jint)(webAudioBuffer.size() * sizeof(int16_t));
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_dev_seven_1cgpalabs_mojosnap_WebCaster_consumeAudioBuffer(JNIEnv* env, jobject thiz) {
+    std::lock_guard<std::mutex> lock(webAudioMutex);
+    size_t copySize = std::min(webAudioBuffer.size(), fixedWebAudio.size());
+    if (copySize > 0) {
+        memcpy(fixedWebAudio.data(), webAudioBuffer.data(), copySize * sizeof(int16_t));
+        webAudioBuffer.erase(webAudioBuffer.begin(), webAudioBuffer.begin() + copySize);
+    }
+    return (jint)(copySize * sizeof(int16_t));
+}
+
+// --- Native Emulator Thread ---
+
+typedef void (*retro_run_t)();
+static std::atomic<bool> emulator_running{false};
+static std::thread emulator_thread;
+
+extern "C" void start_native_emulator_thread(uintptr_t retro_run_ptr) {
+    if (emulator_running.load()) return;
+    emulator_running.store(true);
+    retro_run_t run_func = reinterpret_cast<retro_run_t>(retro_run_ptr);
+    
+    emulator_thread = std::thread([run_func]() {
+        while (emulator_running.load()) {
+            run_func();
+        }
+    });
+    emulator_thread.detach();
+}
+
+extern "C" void stop_native_emulator_thread() {
+    emulator_running.store(false);
 }
