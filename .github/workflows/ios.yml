@@ -19,7 +19,7 @@ jobs:
         run: flutter pub get
 
       - name: Build iOS (Beta)
-        run: flutter build ios --release --no-codesign --build-name=beta.1.0.0 --build-number=${{ github.run_number }}
+        run: flutter build ios --release --no-codesign -v --build-name=beta.1.0.0 --build-number=${{ github.run_number }}
 
       - name: Upload iOS Build
         uses: actions/upload-artifact@v4
