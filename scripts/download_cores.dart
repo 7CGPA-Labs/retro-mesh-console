@@ -92,6 +92,7 @@ Future<void> main(List<String> args) async {
     }
   }
   
-  httpClient.close();
+  httpClient.close(force: true);
   print('Core downloading process complete.');
+  exit(0);
 }
