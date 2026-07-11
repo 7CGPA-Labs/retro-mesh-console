@@ -56,9 +56,7 @@ class CastingAdapter: NSObject, FlutterPlugin, FlutterStreamHandler {
             projectGameplay()
             result(nil)
         case "sendFrame":
-            if let args = call.arguments as? FlutterStandardTypedData {
-                renderFrame(data: args.data)
-            }
+            // Frames are now pushed directly to the CALayer via C++ Engine
             result(nil)
         case "disconnect":
             externalWindow = nil
