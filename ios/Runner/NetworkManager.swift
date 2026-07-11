@@ -146,9 +146,9 @@ extension NetworkManager {
         if let data = sender.addresses?.first {
             data.withUnsafeBytes { (pointer: UnsafeRawBufferPointer) in
                 let sockaddr = pointer.bindMemory(to: sockaddr.self).baseAddress!
-                if sockaddr.sa_family == UInt8(AF_INET) {
-                    let sockaddr_in = pointer.bindMemory(to: sockaddr_in.self).baseAddress!
-                    let ip = String(cString: inet_ntoa(sockaddr_in.sin_addr))
+                if sockaddr.pointee.sa_family == UInt8(AF_INET) {
+                    let sockaddr_in_ptr = pointer.bindMemory(to: sockaddr_in.self).baseAddress!
+                    let ip = String(cString: inet_ntoa(sockaddr_in_ptr.pointee.sin_addr))
                     
                     var coreName = "nes"
                     if let txtData = sender.txtRecordData() {
