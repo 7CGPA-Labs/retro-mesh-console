@@ -1,5 +1,4 @@
-#define MINIAUDIO_IMPLEMENTATION
-#include "miniaudio.h"
+#import <AudioToolbox/AudioToolbox.h>
 #include <mutex>
 #include <vector>
 #include <string.h>
@@ -8,9 +7,8 @@ extern "C" {
     #include <stdint.h>
 }
 
-// Global miniaudio device and config
-static ma_device g_audio_device;
-static ma_device_config g_device_config;
+// Global AudioUnit device and config
+static AudioComponentInstance g_audioUnit = nullptr;
 static bool g_audio_initialized = false;
 
 // Ring buffer for audio samples
@@ -19,10 +17,15 @@ static std::mutex g_audio_mutex;
 static size_t g_read_index = 0;
 static size_t g_write_index = 0;
 
-static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount) {
+static OSStatus render_callback(void *inRefCon,
+                                AudioUnitRenderActionFlags *ioActionFlags,
+                                const AudioTimeStamp *inTimeStamp,
+                                UInt32 inBusNumber,
+                                UInt32 inNumberFrames,
+                                AudioBufferList *ioData) {
     std::lock_guard<std::mutex> lock(g_audio_mutex);
-    int16_t* out = static_cast<int16_t*>(pOutput);
-    size_t samples_requested = frameCount * 2; // Stereo
+    int16_t* out = static_cast<int16_t*>(ioData->mBuffers[0].mData);
+    size_t samples_requested = inNumberFrames * 2; // Stereo
     
     size_t samples_available = g_write_index >= g_read_index ? 
                                (g_write_index - g_read_index) : 
@@ -31,13 +34,15 @@ static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput,
     if (samples_available < samples_requested) {
         // Underrun, fill with zeros for now
         memset(out, 0, samples_requested * sizeof(int16_t));
-        return;
+        return noErr;
     }
     
     for (size_t i = 0; i < samples_requested; ++i) {
         out[i] = g_audio_buffer[g_read_index];
         g_read_index = (g_read_index + 1) % g_audio_buffer.size();
     }
+    
+    return noErr;
 }
 
 extern "C" {
@@ -46,29 +51,86 @@ __attribute__((visibility("default"))) __attribute__((used))
 void native_audio_init(double sample_rate) {
     if (g_audio_initialized) return;
 
-    g_device_config = ma_device_config_init(ma_device_type_playback);
-    g_device_config.playback.format   = ma_format_s16;
-    g_device_config.playback.channels = 2; // Stereo
-    g_device_config.sampleRate        = (sample_rate > 0) ? (ma_uint32)sample_rate : 44100;
-    g_device_config.dataCallback      = data_callback;
+    double actual_sample_rate = (sample_rate > 0) ? sample_rate : 44100.0;
     
-    // Low latency
-    g_device_config.periodSizeInFrames = (ma_uint32)(g_device_config.sampleRate * 0.015);
+    // Allocate a large enough ring buffer (2 seconds stereo)
+    g_audio_buffer.resize(static_cast<size_t>(actual_sample_rate) * 2 * 2);
 
-    g_audio_buffer.resize(g_device_config.sampleRate * 2);
+    AudioComponentDescription desc;
+    desc.componentType = kAudioUnitType_Output;
+    desc.componentSubType = kAudioUnitSubType_RemoteIO;
+    desc.componentManufacturer = kAudioUnitManufacturer_Apple;
+    desc.componentFlags = 0;
+    desc.componentFlagsMask = 0;
 
-    if (ma_device_init(NULL, &g_device_config, &g_audio_device) != MA_SUCCESS) {
+    AudioComponent comp = AudioComponentFindNext(NULL, &desc);
+    if (!comp) return;
+
+    if (AudioComponentInstanceNew(comp, &g_audioUnit) != noErr) return;
+
+    AURenderCallbackStruct input;
+    input.inputProc = render_callback;
+    input.inputProcRefCon = nullptr;
+
+    if (AudioUnitSetProperty(g_audioUnit, 
+                             kAudioUnitProperty_SetRenderCallback, 
+                             kAudioUnitScope_Input,
+                             0, // Bus 0 is output to speaker
+                             &input, 
+                             sizeof(input)) != noErr) {
+        AudioComponentInstanceDispose(g_audioUnit);
+        g_audioUnit = nullptr;
         return;
     }
 
-    ma_device_start(&g_audio_device);
+    AudioStreamBasicDescription audioFormat;
+    audioFormat.mSampleRate = actual_sample_rate;
+    audioFormat.mFormatID = kAudioFormatLinearPCM;
+    audioFormat.mFormatFlags = kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked;
+    audioFormat.mFramesPerPacket = 1;
+    audioFormat.mChannelsPerFrame = 2; // Stereo
+    audioFormat.mBitsPerChannel = 16;
+    audioFormat.mBytesPerPacket = 4; // 2 channels * 2 bytes (16-bit)
+    audioFormat.mBytesPerFrame = 4;
+
+    if (AudioUnitSetProperty(g_audioUnit, 
+                             kAudioUnitProperty_StreamFormat, 
+                             kAudioUnitScope_Input, 
+                             0, 
+                             &audioFormat, 
+                             sizeof(audioFormat)) != noErr) {
+        AudioComponentInstanceDispose(g_audioUnit);
+        g_audioUnit = nullptr;
+        return;
+    }
+
+    if (AudioUnitInitialize(g_audioUnit) != noErr) {
+        AudioComponentInstanceDispose(g_audioUnit);
+        g_audioUnit = nullptr;
+        return;
+    }
+    
+    if (AudioOutputUnitStart(g_audioUnit) != noErr) {
+        AudioUnitUninitialize(g_audioUnit);
+        AudioComponentInstanceDispose(g_audioUnit);
+        g_audioUnit = nullptr;
+        return;
+    }
+
     g_audio_initialized = true;
 }
 
 __attribute__((visibility("default"))) __attribute__((used))
 void native_audio_deinit() {
     if (!g_audio_initialized) return;
-    ma_device_uninit(&g_audio_device);
+    
+    if (g_audioUnit) {
+        AudioOutputUnitStop(g_audioUnit);
+        AudioUnitUninitialize(g_audioUnit);
+        AudioComponentInstanceDispose(g_audioUnit);
+        g_audioUnit = nullptr;
+    }
+    
     g_audio_initialized = false;
     g_read_index = 0;
     g_write_index = 0;
