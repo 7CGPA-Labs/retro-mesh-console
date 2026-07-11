@@ -30,7 +30,12 @@ Future<void> main(List<String> args) async {
   String baseUrl = platform == 'android' ? androidBaseUrl : iosBaseUrl;
   String ext = platform == 'android' ? '_libretro_android.so' : '_libretro_ios.dylib';
   
-  Directory coresDir = Directory('assets/cores');
+  // Resolve the root directory regardless of whether this is run from root or from ios/
+  String rootPath = Directory.current.path.endsWith('ios') 
+      ? Directory.current.parent.path 
+      : Directory.current.path;
+  Directory coresDir = Directory(p.join(rootPath, 'assets/cores'));
+  
   if (!coresDir.existsSync()) {
     coresDir.createSync(recursive: true);
   }
