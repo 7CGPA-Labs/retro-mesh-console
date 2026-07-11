@@ -33,6 +33,11 @@ jobs:
       - name: Download iOS Cores
         run: dart run scripts/download_cores.dart ios
 
+      - name: Add Missing Source Files to Xcode Project
+        run: |
+          gem install xcodeproj
+          ruby scripts/add_ios_sources.rb
+
       - name: Build iOS (Beta)
         run: flutter build ios --release --no-codesign -v --build-name=beta.1.0.0 --build-number=${{ github.run_number }}
 
