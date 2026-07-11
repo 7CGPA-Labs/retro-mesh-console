@@ -88,8 +88,11 @@ class NetworkManager: NSObject, NetServiceDelegate {
             case .ready:
                 print("Connected to server")
                 self?.clientReceiveLoop(on: self!.clientConnection!)
-            case .failed(let error), .cancelled:
-                print("Connection failed/cancelled: \(error)")
+            case .failed(let error):
+                print("Connection failed: \(error)")
+                self?.onHostDisconnected?()
+            case .cancelled:
+                print("Connection cancelled")
                 self?.onHostDisconnected?()
             default:
                 break
