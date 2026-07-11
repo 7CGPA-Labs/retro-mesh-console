@@ -65,7 +65,16 @@ __attribute__((visibility("default"))) __attribute__((used))
 size_t native_audio_sample_batch_cb(const int16_t* data, size_t frames) {
     if (!g_audio_initialized || !stream) return frames;
     
-    web_audio_batch_cb(data, frames);
+    // Apply 4.0x digital gain boost for Miracast / WebCaster
+    std::vector<int16_t> boosted_data(frames * 2);
+    for (size_t i = 0; i < frames * 2; ++i) {
+        int32_t sample = (int32_t)data[i] * 4;
+        if (sample > 32767) sample = 32767;
+        if (sample < -32768) sample = -32768;
+        boosted_data[i] = (int16_t)sample;
+    }
+    
+    web_audio_batch_cb(boosted_data.data(), frames);
     
     if (webStreaming.load()) {
         // To maintain perfect pacing without playing sound on the device speaker,
@@ -90,7 +99,7 @@ size_t native_audio_sample_batch_cb(const int16_t* data, size_t frames) {
 
     int64_t timeoutNanos = 1000 * 1000 * 1000; // 1 second timeout
     int32_t framesLeft = frames;
-    const int16_t* p = data;
+    const int16_t* p = boosted_data.data();
     
     while (framesLeft > 0) {
         aaudio_result_t result = AAudioStream_write(stream, p, framesLeft, timeoutNanos);

@@ -664,9 +664,12 @@ extern "C" void start_native_emulator_thread(uintptr_t retro_run_ptr) {
             run_func();
         }
     });
-    emulator_thread.detach();
+    // Removed detach() to allow joining on stop
 }
 
 extern "C" void stop_native_emulator_thread() {
     emulator_running.store(false);
+    if (emulator_thread.joinable()) {
+        emulator_thread.join();
+    }
 }
