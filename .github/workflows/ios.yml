@@ -30,6 +30,9 @@ jobs:
       - name: Install Dependencies
         run: flutter pub get
 
+      - name: Download iOS Cores
+        run: dart run scripts/download_cores.dart ios
+
       - name: Build iOS (Beta)
         run: flutter build ios --release --no-codesign -v --build-name=beta.1.0.0 --build-number=${{ github.run_number }}
 
