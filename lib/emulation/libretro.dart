@@ -94,38 +94,10 @@ final class retro_hw_render_callback extends Struct {
   external Pointer<Void> context_destroy;
 }
 
-// --- Top-Level Callback Functions for FFI registration ---
-
-bool _environmentCallback(int cmd, Pointer<Void> data) {
-  return LibretroEngine.activeInstance?._handleEnvironment(cmd, data) ?? false;
-}
-
-void _videoRefreshCallback(Pointer<Void> data, int width, int height, int pitch) {
-  LibretroEngine.activeInstance?._handleVideoRefresh(data, width, height, pitch);
-}
-
-void _audioSampleCallback(int left, int right) {
-  LibretroEngine.activeInstance?._handleAudioSample(left, right);
-}
-
-int _audioSampleBatchCallback(Pointer<Int16> data, int frames) {
-  return LibretroEngine.activeInstance?._handleAudioSampleBatch(data, frames) ?? 0;
-}
-
-void _inputPollCallback() {
-  LibretroEngine.activeInstance?._handleInputPoll();
-}
-
-int _inputStateCallback(int port, int device, int index, int id) {
-  return LibretroEngine.activeInstance?._handleInputState(port, device, index, id) ?? 0;
-}
-
 // --- Main Engine Wrapper ---
 
 class LibretroEngine {
   static LibretroEngine? activeInstance;
-  
-  static const MethodChannel _audioChannel = MethodChannel('dev.seven_cgpalabs.mojosnap/audio');
 
   // Emulation State Notifiers
   // Texture ID notifier removed as we no longer render via Flutter texture
@@ -144,7 +116,6 @@ class LibretroEngine {
   String _coreName = 'Unknown Core';
   String get coreName => _coreName;
   Timer? _gameLoopTimer;
-  int _lastFrameTime = 0;
   bool isPaused = false;
 
   late void Function(Pointer<NativeFunction<retro_environment_t>>) _retroSetEnvironment;
@@ -159,7 +130,6 @@ class LibretroEngine {
   late int Function() _retroApiVersion;
   late void Function(int, int) _retroSetControllerPortDevice;
   late bool Function(Pointer<retro_game_info>) _retroLoadGame;
-  late void Function() _retroRun;
   late void Function() _retroUnloadGame;
   late void Function(Pointer<retro_system_info>) _retroGetSystemInfo;
   late void Function(Pointer<retro_system_av_info>) _retroGetSystemAvInfo;
@@ -167,9 +137,6 @@ class LibretroEngine {
   late int Function() _retroSerializeSize;
   late bool Function(Pointer<Void>, int) _retroSerialize;
   late bool Function(Pointer<Void>, int) _retroUnserialize;
-
-  late render_to_window_dart _renderToWindow;
-  
   // Native Audio Bridge
   late void Function(double) _nativeAudioInit;
   late void Function() _nativeAudioDeinit;
@@ -187,17 +154,8 @@ class LibretroEngine {
   late Pointer<NativeFunction<Void Function()>> _retroRunPtr;
   late void Function(int) _startNativeEmulatorThread;
   late void Function() _stopNativeEmulatorThread;
-  late void Function(int) _setPixelFormat;
-
-  late hw_render_init_dart _hwRenderInit;
-  late void Function() _hwRenderExtractFrame;
-  late Pointer<NativeFunction<retro_hw_get_current_framebuffer_t>> _hwGetFb;
-  late Pointer<NativeFunction<retro_hw_get_proc_address_t>> _hwGetProc;
-  
-  bool _hwRenderActive = false;
   
   double _coreFps = 60.0;
-  int _nextFrameTime = 0;
 
   // Mock Engine Rendering Variables
   int _mockX = 120;
@@ -253,17 +211,11 @@ class LibretroEngine {
         _setPlayer1Button = nativeRenderLib.lookupFunction<Void Function(Int32, Bool), void Function(int, bool)>('set_player1_button');
         _setPlayer1Analog = nativeRenderLib.lookupFunction<Void Function(Int32, Int32, Int16), void Function(int, int, int)>('set_player1_analog');
         _setPlayer1Pointer = nativeRenderLib.lookupFunction<Void Function(Int16, Int16, Bool), void Function(int, int, bool)>('set_player1_pointer');
-        _setPixelFormat = nativeRenderLib.lookupFunction<Void Function(Int32), void Function(int)>('set_pixel_format');
-        _hwRenderInit = nativeRenderLib.lookupFunction<hw_render_init_c, hw_render_init_dart>('hw_render_init');
-        _hwRenderExtractFrame = nativeRenderLib.lookupFunction<Void Function(), void Function()>('hw_render_extract_frame');
-        _hwGetFb = nativeRenderLib.lookup<NativeFunction<retro_hw_get_current_framebuffer_t>>('hw_get_current_framebuffer');
-        _hwGetProc = nativeRenderLib.lookup<NativeFunction<retro_hw_get_proc_address_t>>('hw_get_proc_address');
         _startNativeEmulatorThread = nativeRenderLib.lookupFunction<Void Function(IntPtr), void Function(int)>('start_native_emulator_thread');
         _stopNativeEmulatorThread = nativeRenderLib.lookupFunction<Void Function(), void Function()>('stop_native_emulator_thread');
       } else if (Platform.isIOS) {
         // Statically linked or loaded via Framework bundle on iOS
         _lib = DynamicLibrary.process();
-        _renderToWindow = DynamicLibrary.process().lookupFunction<render_to_window_c, render_to_window_dart>('render_to_window_ios');
         _nativeAudioInit = DynamicLibrary.process().lookupFunction<Void Function(Double), void Function(double)>('native_audio_init');
         _nativeAudioDeinit = DynamicLibrary.process().lookupFunction<Void Function(), void Function()>('native_audio_deinit');
         _nativeAudioCb = DynamicLibrary.process().lookup<NativeFunction<retro_audio_sample_batch_t>>('native_audio_sample_batch_cb');
@@ -271,11 +223,6 @@ class LibretroEngine {
         _setPlayer1Button = DynamicLibrary.process().lookupFunction<Void Function(Int32, Bool), void Function(int, bool)>('set_player1_button');
         _setPlayer1Analog = DynamicLibrary.process().lookupFunction<Void Function(Int32, Int32, Int16), void Function(int, int, int)>('set_player1_analog');
         _setPlayer1Pointer = DynamicLibrary.process().lookupFunction<Void Function(Int16, Int16, Bool), void Function(int, int, bool)>('set_player1_pointer');
-        _setPixelFormat = DynamicLibrary.process().lookupFunction<Void Function(Int32), void Function(int)>('set_pixel_format');
-        _hwRenderInit = DynamicLibrary.process().lookupFunction<hw_render_init_c, hw_render_init_dart>('hw_render_init');
-        _hwRenderExtractFrame = DynamicLibrary.process().lookupFunction<Void Function(), void Function()>('hw_render_extract_frame');
-        _hwGetFb = DynamicLibrary.process().lookup<NativeFunction<retro_hw_get_current_framebuffer_t>>('hw_get_current_framebuffer');
-        _hwGetProc = DynamicLibrary.process().lookup<NativeFunction<retro_hw_get_proc_address_t>>('hw_get_proc_address');
         _startNativeEmulatorThread = DynamicLibrary.process().lookupFunction<Void Function(IntPtr), void Function(int)>('start_native_emulator_thread');
         _stopNativeEmulatorThread = DynamicLibrary.process().lookupFunction<Void Function(), void Function()>('stop_native_emulator_thread');
       } else {
@@ -353,7 +300,6 @@ class LibretroEngine {
         bool Function(Pointer<retro_game_info>)>('retro_load_game');
 
     _retroRunPtr = dylib.lookup<NativeFunction<Void Function()>>('retro_run');
-    _retroRun = _retroRunPtr.asFunction<void Function()>();
     _retroUnloadGame = dylib.lookupFunction<Void Function(), void Function()>('retro_unload_game');
     _retroReset = dylib.lookupFunction<Void Function(), void Function()>('retro_reset');
 
@@ -551,136 +497,7 @@ class LibretroEngine {
 
   // --- Callback Internal Implementations ---
 
-  bool _handleEnvironment(int cmd, Pointer<Void> data) {
-    // Basic Environment Commands handling
-    switch (cmd) {
-      case 9: // RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY
-        if (data != nullptr) {
-          // Point core to documents folder
-          getApplicationDocumentsDirectory().then((dir) {
-            final p = data.cast<Pointer<Utf8>>();
-            p.value = dir.path.toNativeUtf8();
-          });
-          return true;
-        }
-        break;
-      case 10: // RETRO_ENVIRONMENT_SET_PIXEL_FORMAT
-        if (data != nullptr) {
-          final fmt = data.cast<Uint32>().value;
-          if (fmt == 0) { // RETRO_PIXEL_FORMAT_0RGB1555
-            _log('Requested format: 0RGB1555 (Supported via Native Bridge)');
-            _setPixelFormat(0);
-            return true;
-          } else if (fmt == 1) { // RETRO_PIXEL_FORMAT_XRGB8888
-            _log('Requested format: XRGB8888 (Supported via Native Bridge)');
-            _setPixelFormat(1);
-            return true;
-          } else if (fmt == 2) { // RETRO_PIXEL_FORMAT_RGB565
-            _log('Requested format: RGB565 (Native)');
-            _setPixelFormat(2);
-            return true;
-          }
-        }
-        break;
-      case 14: // RETRO_ENVIRONMENT_SET_HW_RENDER
-        if (data != nullptr) {
-          final hwInfo = data.cast<retro_hw_render_callback>();
-          _log('Core requested HW rendering context: ${hwInfo.ref.context_type}');
-          
-          if (_hwRenderInit(1920, 1080)) {
-            hwInfo.ref.get_current_framebuffer = _hwGetFb;
-            hwInfo.ref.get_proc_address = _hwGetProc;
-            _hwRenderActive = true;
-            _log('HW Rendering initialized successfully');
-            return true;
-          } else {
-            _log('HW Rendering initialization failed! Falling back to Software.');
-            _hwRenderActive = false;
-            return false;
-          }
-        }
-        break;
-    }
-    return false;
-  }
-
-  void _handleVideoRefresh(Pointer<Void> data, int width, int height, int pitch) {
-    if (_hwRenderActive && data.address == retro_hw_frame_buffer_valid) {
-      // Core rendered to HW framebuffer, extract it directly from the GPU
-      try {
-        _hwRenderExtractFrame();
-      } catch (e) {
-        _log('Failed to extract HW frame: $e');
-      }
-      return;
-    }
-    
-    if (data == nullptr) return;
-    
-    // RGB565 is natively supported by ANativeWindow_setBuffersGeometry
-    // We skip the costly RGB888 conversion and directly blast the 16-bit array to C++
-    final Pointer<Uint16> pixels16 = data.cast<Uint16>();
-    
-    try {
-      _renderToWindow(pixels16, width, height, pitch);
-    } catch (e) {
-      _log('Failed to render to native window: $e');
-    }
-  }
-
-  void _handleAudioSample(int left, int right) {
-    // Libretro audio out. Audio streams are not required for main UI presentation
-    // but hooks are maintained.
-  }
-
-  int _handleAudioSampleBatch(Pointer<Int16> data, int frames) {
-    if (frames > 0) {
-      final int bytesCount = frames * 4; // 2 channels * 16-bit (2 bytes) = 4 bytes per frame
-      final Uint8List audioBytes = data.cast<Uint8>().asTypedList(bytesCount);
-      _audioChannel.invokeMethod('pushAudio', audioBytes);
-    }
-    return frames;
-  }
-
-  void _handleInputPoll() {
-    // Inputs are polled automatically when calling input_state
-  }
-
-  int _handleInputState(int port, int device, int index, int id) {
-    if (device != RETRO_DEVICE_JOYPAD) return 0;
-    
-    final customId = _libretroIdToCustomId(id);
-    if (customId == null) return 0;
-
-    bool pressed = false;
-    if (port == 0) {
-      pressed = p1ButtonStates[customId] ?? false;
-    } else if (port == 1) {
-      pressed = p2ButtonStates[customId] ?? false;
-    }
-
-    return pressed ? 1 : 0;
-  }
-
-  int? _libretroIdToCustomId(int libretroId) {
-    switch (libretroId) {
-      case RETRO_DEVICE_ID_JOYPAD_B: return 6;      // B
-      case RETRO_DEVICE_ID_JOYPAD_Y: return 8;      // Y
-      case RETRO_DEVICE_ID_JOYPAD_SELECT: return 10; // SELECT
-      case RETRO_DEVICE_ID_JOYPAD_START: return 9;  // START
-      case RETRO_DEVICE_ID_JOYPAD_UP: return 1;     // Up
-      case RETRO_DEVICE_ID_JOYPAD_DOWN: return 2;   // Down
-      case RETRO_DEVICE_ID_JOYPAD_LEFT: return 3;   // Left
-      case RETRO_DEVICE_ID_JOYPAD_RIGHT: return 4;  // Right
-      case RETRO_DEVICE_ID_JOYPAD_A: return 5;      // A
-      case RETRO_DEVICE_ID_JOYPAD_X: return 7;      // X
-      case RETRO_DEVICE_ID_JOYPAD_L: return 12;     // L1
-      case RETRO_DEVICE_ID_JOYPAD_R: return 13;     // R1
-      case RETRO_DEVICE_ID_JOYPAD_L2: return 14;    // L2
-      case RETRO_DEVICE_ID_JOYPAD_R2: return 15;    // R2
-      default: return null;
-    }
-  }
+  // --- Callback Internal Implementations removed as C++ Bridge handles it ---
 
   // --- High-Performance Falling Interactive Mock Viewport ---
   

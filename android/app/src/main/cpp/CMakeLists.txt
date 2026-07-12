@@ -1,7 +1,13 @@
 cmake_minimum_required(VERSION 3.10.2)
 project(native_render)
 
-add_library(native_render SHARED native-render.cpp native-audio.cpp)
+add_library(native_render SHARED 
+    retro-bridge.cpp 
+    miracast-render.cpp 
+    miracast-audio.cpp 
+    webcaster-render.cpp 
+    webcaster-audio.cpp
+)
 
 find_library(log-lib log)
 find_library(android-lib android)
