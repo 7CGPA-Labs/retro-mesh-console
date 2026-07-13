@@ -8,8 +8,10 @@ class CoreRouter {
     // SNES
     'smc': 'snes9x',
     'sfc': 'snes9x',
-    // Sega Genesis / Mega Drive
+    // Sega Genesis / Master System / Game Gear
     'md': 'genesis_plus_gx',
+    'sms': 'genesis_plus_gx',
+    'gg': 'genesis_plus_gx',
     // Game Boy Advance
     'gba': 'mgba',
     // PlayStation 1
