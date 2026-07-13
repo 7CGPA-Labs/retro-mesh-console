@@ -606,10 +606,6 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
     bool isGenesis = cName.contains('genesis') || cName.contains('picodrive') || cName.contains('megadrive');
     bool isSnes = cName.contains('snes') || cName.contains('gba') || cName.contains('game boy advance') || cName.contains('vba') || cName.contains('mgba');
     bool isPs1 = cName.contains('playstation') || cName.contains('pcsx') || cName.contains('ps1');
-    bool isArcade = cName.contains('arcade') || cName.contains('fbneo') || cName.contains('mame');
-    bool isDreamcast = cName.contains('dreamcast') || cName.contains('flycast');
-    bool isDS = cName.contains('desmume') || cName.contains('melon') || cName.contains('ds');
-    bool hasAnalog = isDreamcast;
 
     return Stack(
       children: [
@@ -618,14 +614,8 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
           child: Container(color: Colors.black),
         ),
 
-        // Nintendo DS Touch Overlay
-        if (isDS)
-          Positioned.fill(
-            child: _buildDsOverlay(),
-          ),
-
-        // Shoulder buttons for SNES, GBA, PS1, Dreamcast (Triggers)
-        if (isSnes || isPs1 || isDreamcast) ...[
+        // Shoulder buttons for SNES, GBA, PS1 (Triggers)
+        if (isSnes || isPs1) ...[
           Positioned(
             left: 36,
             top: 24,
@@ -658,15 +648,14 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
             children: [
               // Left Side: D-pad
               Padding(
-                padding: EdgeInsets.only(left: 36, top: (isSnes || isPs1 || hasAnalog) ? 48 : 0),
-                child: hasAnalog ? _buildAnalogStick() : _buildDPad(),
+                padding: EdgeInsets.only(left: 36, top: (isSnes || isPs1) ? 48 : 0),
+                child: _buildDPad(),
               ),
               // Right Side: Dynamic Action Cluster
               Padding(
-                padding: EdgeInsets.only(right: 36, top: (isSnes || isPs1 || hasAnalog) ? 48 : 0),
-                child: isArcade ? _buildGenesisCluster() : // Arcade uses Genesis 6-button layout
-                       isGenesis ? _buildGenesisCluster() :
-                       isPs1 || isDreamcast ? _buildPs1Cluster() :
+                padding: EdgeInsets.only(right: 36, top: (isSnes || isPs1) ? 48 : 0),
+                child: isGenesis ? _buildGenesisCluster() :
+                       isPs1 ? _buildPs1Cluster() :
                        isSnes ? _buildSnesCluster() :
                        _buildNesCluster(),
               ),
@@ -1008,63 +997,6 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
 
 
 
-  Widget _buildAnalogStick() {
-    return GestureDetector(
-      onPanStart: (details) => _updateAnalog(details.localPosition),
-      onPanUpdate: (details) => _updateAnalog(details.localPosition),
-      onPanEnd: (details) => _resetAnalog(),
-      child: Container(
-        width: 120,
-        height: 120,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.1),
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white24, width: 2),
-        ),
-        child: Center(
-          child: Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade400,
-              shape: BoxShape.circle,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _updateAnalog(Offset pos) {
-    // Center is 60,60 for a 120x120 stick
-    double dx = pos.dx - 60;
-    double dy = pos.dy - 60;
-    // Normalize to -32767 to +32767
-    int xVal = ((dx / 60.0) * 32767).clamp(-32767, 32767).toInt();
-    int yVal = ((dy / 60.0) * 32767).clamp(-32767, 32767).toInt();
-    widget.engine?.updateAnalogState(0, 0, 0, xVal); // Port 0, Index 0 (Left Stick), X Axis
-    widget.engine?.updateAnalogState(0, 0, 1, yVal); // Port 0, Index 0 (Left Stick), Y Axis
-  }
-
-  void _resetAnalog() {
-    widget.engine?.updateAnalogState(0, 0, 0, 0);
-    widget.engine?.updateAnalogState(0, 0, 1, 0);
-  }
-
-  Widget _buildDsOverlay() {
-    return GestureDetector(
-      onPanStart: (details) => _updatePointer(details.localPosition, true),
-      onPanUpdate: (details) => _updatePointer(details.localPosition, true),
-      onPanEnd: (details) => _updatePointer(Offset.zero, false),
-      child: Container(
-        color: Colors.transparent,
-      ),
-    );
-  }
-
-  void _updatePointer(Offset pos, bool pressed) {
-    widget.engine?.updatePointerState(0, pos.dx.toInt(), pos.dy.toInt(), pressed);
-  }
 }
 
 /*

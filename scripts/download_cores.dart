@@ -3,15 +3,10 @@ import 'package:archive/archive_io.dart';
 import 'package:path/path.dart' as p;
 
 final cores = [
-  'fbneo',
-  'flycast',
-  'mame2003_plus',
-  'melonds',
   'pcsx_rearmed',
   'gambatte',
   'mgba',
   'dosbox_pure',
-  'bluemsx',
   'fceumm',
   'genesis_plus_gx',
   'snes9x',
