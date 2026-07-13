@@ -10,7 +10,6 @@ class CoreRouter {
     'sfc': 'snes9x',
     // Sega Genesis / Mega Drive
     'md': 'genesis_plus_gx',
-    'gen': 'genesis_plus_gx',
     // Game Boy Advance
     'gba': 'mgba',
     // PlayStation 1
@@ -18,10 +17,7 @@ class CoreRouter {
     'cue': 'pcsx_rearmed',
     'iso': 'pcsx_rearmed',
     'img': 'pcsx_rearmed',
-    // MSX / ColecoVision
-    'msx': 'bluemsx',
-    'col': 'bluemsx',
-    'dsk': 'bluemsx',
+
     // DOS
     'exe': 'dosbox_pure',
     'bat': 'dosbox_pure',

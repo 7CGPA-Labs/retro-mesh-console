@@ -603,9 +603,9 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
   /// Core gamepad layout split into D-pad, System Panel, and Action cluster
   Widget _buildGamepadControls() {
     String cName = widget.coreName.toLowerCase();
-    bool isGenesis = cName.contains('genesis') || cName.contains('picodrive') || cName.contains('megadrive');
-    bool isSnes = cName.contains('snes') || cName.contains('gba') || cName.contains('game boy advance') || cName.contains('vba') || cName.contains('mgba');
-    bool isPs1 = cName.contains('playstation') || cName.contains('pcsx') || cName.contains('ps1');
+    bool isGenesis = cName.contains('genesis');
+    bool isSnes = cName.contains('snes') || cName.contains('mgba');
+    bool isPs1 = cName.contains('pcsx');
 
     return Stack(
       children: [
