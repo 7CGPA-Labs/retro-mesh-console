@@ -4,9 +4,7 @@ project(native_render)
 add_library(native_render SHARED 
     retro-bridge.cpp 
     miracast-render.cpp 
-    miracast-audio.cpp 
-    webcaster-render.cpp 
-    webcaster-audio.cpp
+    miracast-audio.cpp
 )
 
 find_library(log-lib log)

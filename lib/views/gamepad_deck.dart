@@ -81,43 +81,20 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E1E38),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Select Casting Method', style: TextStyle(color: Colors.white, fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.tv, color: Color(0xFFFF2E93)),
-              title: const Text('Smart TV (Miracast)', style: TextStyle(color: Colors.white)),
-              subtitle: const Text('Zero latency hardware cast', style: TextStyle(color: Colors.white70)),
-              onTap: () {
-                Navigator.pop(ctx);
-                const MethodChannel('dev.seven_cgpalabs.mojosnap/projection').invokeMethod('openSystemCastMenu');
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.language, color: Color(0xFF00E5FF)),
-              title: const Text('Web Browser', style: TextStyle(color: Colors.white)),
-              subtitle: const Text('Play on PC/Mac via WiFi', style: TextStyle(color: Colors.white70)),
-              onTap: () async {
-                Navigator.pop(ctx);
-                final String? ip = await const MethodChannel('dev.seven_cgpalabs.mojosnap/projection').invokeMethod('startWebServer');
-                if (mounted && ip != null && ip.isNotEmpty) {
-                  setState(() { _isConnectingTV = false; });
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      duration: const Duration(days: 1),
-                      backgroundColor: const Color(0xFF00E5FF),
-                      content: Text('Open $ip in any browser to play!', style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-                      action: SnackBarAction(label: 'DISMISS', textColor: Colors.black, onPressed: () {
-                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                      }),
-                    ),
-                  );
-                }
-              },
-            ),
-          ],
+        title: const Text('Connect to a display', style: TextStyle(color: Colors.white, fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
+        content: const Text(
+          'Use the system display picker to connect to a wireless display or Smart TV.',
+          style: TextStyle(color: Colors.white70),
         ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              const MethodChannel('dev.seven_cgpalabs.mojosnap/projection').invokeMethod('openSystemCastMenu');
+            },
+            child: const Text('Open display picker', style: TextStyle(color: Color(0xFFFF2E93))),
+          ),
+        ],
       ),
     );
   }
@@ -176,7 +153,6 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
       _stopNativeTVProjection();
       widget.engine?.shutdown();
       NativeBridge.stopHost();
-      const MethodChannel('dev.seven_cgpalabs.mojosnap/projection').invokeMethod('stopWebServer');
     }
     super.dispose();
   }
@@ -376,7 +352,6 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
       _stopNativeTVProjection();
       widget.engine?.shutdown();
       NativeBridge.stopHost();
-      const MethodChannel('dev.seven_cgpalabs.mojosnap/projection').invokeMethod('stopWebServer');
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
     }
     Navigator.pop(context); // Redirect back to main page (RoleGate)

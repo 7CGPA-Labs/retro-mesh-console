@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mojo Snap Console - Headless Retro Gaming Protocol</title>
-    <meta name="description" content="Mojo Snap Console is a high-performance headless Libretro emulator for Android that streams zero-latency video/audio to WebCaster and Miracast.">
+    <meta name="description" content="Mojo Snap Console is a high-performance headless Libretro emulator for Android and iOS that projects gameplay to external displays.">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -284,7 +284,7 @@
             </svg>
         </div>
         <h1>Mojo Snap Console</h1>
-        <p class="subtitle">The ultimate headless Libretro emulator. Turn your Android device into a powerful gaming protocol server, streaming zero-latency gameplay to the Web and Smart TVs.</p>
+        <p class="subtitle">The ultimate headless Libretro emulator. Turn your phone into a powerful gaming protocol server and project gameplay to a TV or external display.</p>
         <div class="cta-group">
             <a href="#features" class="btn btn-primary">Discover Features</a>
             <a href="https://github.com/7CGPA-Labs/retro-mesh-console" target="_blank" class="btn btn-secondary">View on GitHub</a>
@@ -301,8 +301,8 @@
             </div>
             <div class="card glass">
                 <div class="card-icon">📡</div>
-                <h3>WebCaster Protocol</h3>
-                <p>Play directly in your browser. The engine performs high-speed Z-RLE (Run-Length Encoding) compression in C++ and pipes the frames via JNI DirectByteBuffers to a Kotlin WebSocket server at 60 FPS.</p>
+                <h3>External Display Projection</h3>
+                <p>Project gameplay directly to a compatible television or monitor with native Android and iOS display support.</p>
             </div>
             <div class="card glass">
                 <div class="card-icon">📺</div>
@@ -334,12 +334,12 @@
         tvCondVar.notify_one();
     }
 
-    <span class="code-comment">// 2. Handle WebCaster Z-RLE Compression</span>
-    <span class="code-keyword">if</span> (webStreaming.load()) {
-        std::lock_guard&lt;std::mutex&gt; lock(webMutex);
-        encode_zrle_payload(webRleBuffer, data);
-        webFrameReady = <span class="code-keyword">true</span>;
-        webCondVar.notify_all();
+    <span class="code-comment">// 2. Present via the native display projection path</span>
+    <span class="code-keyword">if</span> (tvWindow) {
+        std::lock_guard&lt;std::mutex&gt; lock(tvMutex);
+        copy_and_convert_pixel_format(tvBuffer, data);
+        tvFrameReady = <span class="code-keyword">true</span>;
+        tvCondVar.notify_one();
     }
 }
 </pre>

@@ -39,14 +39,6 @@ class CastingAdapter(
                     stopTVProjection()
                     result.success(null)
                 }
-                "startWebServer" -> {
-                    val ip = WebCaster.startServer()
-                    result.success(ip)
-                }
-                "stopWebServer" -> {
-                    WebCaster.stopServer()
-                    result.success(null)
-                }
                 else -> result.notImplemented()
             }
         }

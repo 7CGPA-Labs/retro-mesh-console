@@ -48,12 +48,6 @@ import AVKit
       } else if call.method == "stopTVProjection" {
         self.externalWindow = nil
         result(true)
-      } else if call.method == "startWebServer" {
-        let ip = WebCaster.shared.startServer()
-        result(ip)
-      } else if call.method == "stopWebServer" {
-        WebCaster.shared.stopServer()
-        result(nil)
       } else {
         result(FlutterMethodNotImplemented)
       }

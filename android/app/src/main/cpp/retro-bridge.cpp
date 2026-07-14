@@ -5,7 +5,6 @@
 #include "retro-bridge.h"
 
 // Global state shared across modules
-std::atomic<bool> g_webStreaming{false};
 std::atomic<int> g_activePixelFormat{2};
 
 // Input state
@@ -49,31 +48,19 @@ void render_to_window(const void* data, unsigned width, unsigned height, size_t 
     
     // Push to Miracast / Local display
     miracast_video_push_frame(data, width, height, pitch, fmt);
-    
-    // Push to WebCaster if active
-    if (g_webStreaming.load()) {
-        webcaster_video_push_frame(data, width, height, pitch, fmt);
-    }
 }
 
 // --- Audio Bridge ---
 void native_audio_init(double sample_rate) {
     miracast_audio_init(sample_rate);
-    webcaster_audio_init(sample_rate);
 }
 
 void native_audio_deinit() {
     miracast_audio_deinit();
-    webcaster_audio_deinit();
 }
 
 size_t native_audio_sample_batch_cb(const int16_t* data, size_t frames) {
-    if (g_webStreaming.load()) {
-        webcaster_audio_push_batch(data, frames);
-        miracast_audio_push_silence(frames);
-    } else {
-        miracast_audio_push_batch(data, frames);
-    }
+    miracast_audio_push_batch(data, frames);
     return frames;
 }
 
@@ -173,19 +160,6 @@ bool hw_render_init(int width, int height) { return false; }
 void hw_render_extract_frame() {}
 uintptr_t hw_get_current_framebuffer() { return 0; }
 void* hw_get_proc_address(const char* sym) { return nullptr; }
-
-// --- WebCaster State JNI & Utils ---
-JNIEXPORT void JNICALL Java_dev_seven_1cgpalabs_mojosnap_WebCaster_setWebStreaming(JNIEnv* env, jobject thiz, jboolean streaming) {
-    g_webStreaming.store(streaming);
-}
-
-JNIEXPORT void JNICALL Java_dev_seven_1cgpalabs_mojosnap_WebCaster_setPixelFormat(JNIEnv* env, jobject thiz, jint fmt) {
-    g_activePixelFormat.store(fmt);
-}
-
-void set_pixel_format(int fmt) {
-    g_activePixelFormat.store(fmt);
-}
 
 JNIEXPORT void JNICALL Java_dev_seven_1cgpalabs_mojosnap_NetworkManager_updatePlayer2Button(JNIEnv* env, jobject thiz, jint buttonId, jboolean pressed) {
     if (buttonId >= 0 && buttonId < 16) {

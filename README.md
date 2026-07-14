@@ -24,7 +24,7 @@ It projects an independent gameplay viewport to a television (via native Android
 * **Dual-Screen TV Projection**: Uses method channels to allocate native presentation boundaries:
   * **Android**: Renders on external displays using `android.app.Presentation` dialog views.
   * **iOS**: Listens for AirPlay connections to display root controllers in a secondary `UIWindow`.
-* **Zero-Copy Web Casting**: Built-in Kotlin `WebCaster` service bypasses Dart entirely. It streams 60 FPS gameplay to any PC/Mac browser on your local network using a JNI `DirectByteBuffer` and raw WebSockets.
+* **External Display Projection**: The app targets native external display projection on Android and iOS, using platform display APIs to present gameplay on a TV or monitor.
 * **Telemetry HUD**: Displays connection states (glowing green/red status chips), battery charge levels, and network connectivity indicators for both devices natively overlaid on the Host Gamepad interface.
 
 ---
@@ -37,7 +37,6 @@ It projects an independent gameplay viewport to a television (via native Android
 * **[`lib/utils/native_bridge.dart`](file:///c:/Users/gagan/Projects/retro-mesh-console/lib/utils/native_bridge.dart)**: Routes networking and system wakelock commands directly to the Native OS.
 * **[`android/app/src/main/cpp/native-audio.cpp`](file:///c:/Users/gagan/Projects/retro-mesh-console/android/app/src/main/cpp/native-audio.cpp)** / **[`native-render.cpp`](file:///c:/Users/gagan/Projects/retro-mesh-console/android/app/src/main/cpp/native-render.cpp)**: Pure native C++ drivers for audio, zero-copy video rendering, and thread-safe input handling.
 * **[`android/app/src/main/kotlin/com/retromesh/retro_mesh_console/NetworkManager.kt`](file:///c:/Users/gagan/Projects/retro-mesh-console/android/app/src/main/kotlin/com/retromesh/retro_mesh_console/NetworkManager.kt)**: Native Android implementation for raw TCP sockets and mDNS, bypassing Dart entirely.
-* **[`android/app/src/main/kotlin/com/retromesh/retro_mesh_console/WebCaster.kt`](file:///c:/Users/gagan/Projects/retro-mesh-console/android/app/src/main/kotlin/com/retromesh/retro_mesh_console/WebCaster.kt)**: Native Kotlin WebSocket server for dual-casting gameplay to any local browser via JNI `DirectByteBuffer`.
 * **[`lib/views/role_gate.dart`](file:///c:/Users/gagan/Projects/retro-mesh-console/lib/views/role_gate.dart)**: Welcome gate layout featuring visual selector cards and storage picker hooks.
 * **[`lib/views/gamepad_deck.dart`](file:///c:/Users/gagan/Projects/retro-mesh-console/lib/views/gamepad_deck.dart)**: Symmetrical touch controller deck featuring dynamic layouts, zero-delay multi-touch `Listener` widgets, platform-channel presentation hooks, and a live preview of the TV Canvas and Telemetry HUD.
 

@@ -3,7 +3,6 @@
 #include "retro-bridge.h"
 
 // Global state shared across modules
-std::atomic<bool> g_webStreaming{false};
 std::atomic<int> g_activePixelFormat{2};
 
 // Input state
@@ -22,31 +21,19 @@ void render_to_window_ios(const uint16_t* pixels, int width, int height) {
     
     // Push to Miracast / Local display
     miracast_video_push_frame(pixels, width, height, width * 2, fmt);
-    
-    // Push to WebCaster if active
-    if (g_webStreaming.load()) {
-        webcaster_video_push_frame(pixels, width, height, width * 2, fmt);
-    }
 }
 
 // --- Audio Bridge ---
 void native_audio_init(double sample_rate) {
     miracast_audio_init(sample_rate);
-    webcaster_audio_init(sample_rate);
 }
 
 void native_audio_deinit() {
     miracast_audio_deinit();
-    webcaster_audio_deinit();
 }
 
 size_t native_audio_sample_batch_cb(const int16_t* data, size_t frames) {
-    if (g_webStreaming.load()) {
-        webcaster_audio_push_batch(data, frames);
-        miracast_audio_push_silence(frames);
-    } else {
-        miracast_audio_push_batch(data, frames);
-    }
+    miracast_audio_push_batch(data, frames);
     return frames;
 }
 
@@ -94,11 +81,6 @@ void updatePlayer2Button(int buttonId, bool pressed) {
     if (buttonId >= 0 && buttonId < 16) {
         ios_button_states[1][buttonId].store(pressed);
     }
-}
-
-__attribute__((visibility("default"))) __attribute__((used))
-void set_web_streaming(bool streaming) {
-    g_webStreaming.store(streaming);
 }
 
 }

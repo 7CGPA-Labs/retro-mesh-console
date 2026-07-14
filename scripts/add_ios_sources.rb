@@ -8,7 +8,6 @@ group = project.main_group.find_subpath('Runner', true)
 files_to_add = [
   'NetworkManager.swift',
   'CastingAdapter.swift',
-  'WebCaster.swift',
   'native-render.mm',
   'native-audio.mm'
 ]
