@@ -101,8 +101,19 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && widget.isHost && _isConnectingTV) {
-      _tryConnectTV();
+    if (state == AppLifecycleState.resumed) {
+      NativeBridge.keepScreenOn(true);
+      
+      if (widget.isHost && _isConnectingTV) {
+        _tryConnectTV();
+      }
+    } else if (state == AppLifecycleState.paused) {
+      if (widget.isHost && widget.engine != null) {
+        // Automatically pause emulator to prevent background audio playback
+        setState(() {
+          widget.engine!.isPaused = true;
+        });
+      }
     }
   }
 
@@ -329,7 +340,7 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
               ListTile(
                 dense: true,
                 leading: const Icon(Icons.exit_to_app, color: Color(0xFFEF4444)),
-                title: const Text('Exit to Main Menu', style: TextStyle(color: Color(0xFFEF4444), fontFamily: 'Outfit', fontWeight: FontWeight.bold, fontSize: 14)),
+                title: const Text('Stop Emulation & Exit', style: TextStyle(color: Color(0xFFEF4444), fontFamily: 'Outfit', fontWeight: FontWeight.bold, fontSize: 14)),
                 onTap: () {
                   Navigator.pop(ctx);
                   _exitGame(context);
@@ -582,71 +593,78 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
     bool isSnes = cName.contains('snes') || cName.contains('mgba');
     bool isPs1 = cName.contains('pcsx');
 
-    return Stack(
-      children: [
-        // Solid black background for pure controller experience
-        Positioned.fill(
-          child: Container(color: Colors.black),
-        ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final double baseSize = (constraints.maxHeight * 0.22).clamp(40.0, 100.0);
+        return Stack(
+          children: [
+            // Solid black background for pure controller experience
+            Positioned.fill(
+              child: Container(color: Colors.black),
+            ),
 
-        // Shoulder buttons for SNES, GBA, PS1 (Triggers)
-        if (isSnes || isPs1) ...[
-          Positioned(
-            left: 36,
-            top: 24,
-            child: _buildShoulderButton(label: isPs1 ? 'L1' : 'L', buttonId: 12),
-          ),
-          Positioned(
-            right: 36,
-            top: 24,
-            child: _buildShoulderButton(label: isPs1 ? 'R1' : 'R', buttonId: 13),
-          ),
-        ],
-        // Extra triggers for PS1
-        if (isPs1) ...[
-          Positioned(
-            left: 36,
-            top: 96,
-            child: _buildShoulderButton(label: 'L2', buttonId: 14),
-          ),
-          Positioned(
-            right: 36,
-            top: 96,
-            child: _buildShoulderButton(label: 'R2', buttonId: 15),
-          ),
-        ],
-
-        // Left & Right Controls
-        Positioned.fill(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Left Side: D-pad
-              Padding(
-                padding: EdgeInsets.only(left: 36, top: (isSnes || isPs1) ? 48 : 0),
-                child: _buildDPad(),
+            // Shoulder buttons for SNES, GBA, PS1 (Triggers)
+            if (isSnes || isPs1) ...[
+              Positioned(
+                left: 36,
+                top: constraints.maxHeight * 0.05,
+                child: _buildShoulderButton(label: isPs1 ? 'L1' : 'L', buttonId: 12),
               ),
-              // Right Side: Dynamic Action Cluster
-              Padding(
-                padding: EdgeInsets.only(right: 36, top: (isSnes || isPs1) ? 48 : 0),
-                child: isGenesis ? _buildGenesisCluster() :
-                       isPs1 ? _buildPs1Cluster() :
-                       isSnes ? _buildSnesCluster() :
-                       _buildNesCluster(),
+              Positioned(
+                right: 36,
+                top: constraints.maxHeight * 0.05,
+                child: _buildShoulderButton(label: isPs1 ? 'R1' : 'R', buttonId: 13),
               ),
             ],
-          ),
-        ),
+            // Extra triggers for PS1
+            if (isPs1) ...[
+              Positioned(
+                left: 36,
+                top: constraints.maxHeight * 0.25,
+                child: _buildShoulderButton(label: 'L2', buttonId: 14),
+              ),
+              Positioned(
+                right: 36,
+                top: constraints.maxHeight * 0.25,
+                child: _buildShoulderButton(label: 'R2', buttonId: 15),
+              ),
+            ],
 
-        // Center: System Keys (SELECT / START / MENU)
-        Align(
-          alignment: Alignment.bottomCenter,
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 24),
-            child: _buildSystemPanel(),
-          ),
-        ),
-      ],
+            // Left & Right Controls
+            Positioned.fill(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Left Side: D-pad
+                  Padding(
+                    padding: EdgeInsets.only(left: 36, top: (isSnes || isPs1) ? constraints.maxHeight * 0.15 : 0),
+                    child: Center(child: _buildDPad(baseSize)),
+                  ),
+                  // Right Side: Dynamic Action Cluster
+                  Padding(
+                    padding: EdgeInsets.only(right: 36, top: (isSnes || isPs1) ? constraints.maxHeight * 0.15 : 0),
+                    child: Center(
+                      child: isGenesis ? _buildGenesisCluster(baseSize) :
+                             isPs1 ? _buildPs1Cluster(baseSize) :
+                             isSnes ? _buildSnesCluster(baseSize) :
+                             _buildNesCluster(baseSize),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Center: System Keys (SELECT / START / MENU)
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 24),
+                child: _buildSystemPanel(),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -677,8 +695,7 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildDPad() {
-    const double size = 72;
+  Widget _buildDPad(double size) {
     return SizedBox(
       width: size * 3,
       height: size * 3,
@@ -864,8 +881,7 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildNesCluster() {
-    const double size = 64;
+  Widget _buildNesCluster(double size) {
     return SizedBox(
       width: size * 2.5,
       height: size * 1.5,
@@ -878,9 +894,8 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildSnesCluster() {
-    const double size = 64;
-    const double spacing = 128;
+  Widget _buildSnesCluster(double size) {
+    double spacing = size * 2.0;
     return SizedBox(
       width: size + spacing,
       height: size + spacing,
@@ -895,9 +910,8 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildPs1Cluster() {
-    const double size = 64;
-    const double spacing = 128;
+  Widget _buildPs1Cluster(double size) {
+    double spacing = size * 2.0;
     return SizedBox(
       width: size + spacing,
       height: size + spacing,
@@ -912,10 +926,9 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildGenesisCluster() {
-    const double size = 56;
-    const double xSpacing = 64;
-    const double ySpacing = 56;
+  Widget _buildGenesisCluster(double size) {
+    double xSpacing = size * 1.15;
+    double ySpacing = size;
     return SizedBox(
       width: size + xSpacing * 2,
       height: size + ySpacing,

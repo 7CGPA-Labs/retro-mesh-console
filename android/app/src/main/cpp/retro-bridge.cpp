@@ -2,6 +2,7 @@
 #include <atomic>
 #include <thread>
 #include <mutex>
+#include <chrono>
 #include "retro-bridge.h"
 
 // Global state shared across modules
@@ -22,14 +23,30 @@ static std::thread emulator_thread;
 extern "C" {
 
 // --- Threading ---
-void start_native_emulator_thread(uintptr_t retro_run_ptr) {
+void start_native_emulator_thread(uintptr_t retro_run_ptr, double fps) {
     if (emulator_running.load()) return;
     emulator_running.store(true);
     retro_run_t run_func = reinterpret_cast<retro_run_t>(retro_run_ptr);
     
-    emulator_thread = std::thread([run_func]() {
+    emulator_thread = std::thread([run_func, fps]() {
+        double current_fps = (fps <= 0.0) ? 60.0 : fps;
+        double targetFrameTime = 1.0 / current_fps;
+        auto lastTime = std::chrono::steady_clock::now();
+        double accumulator = 0.0;
+        
         while (emulator_running.load()) {
-            run_func();
+            auto currentTime = std::chrono::steady_clock::now();
+            double dt = std::chrono::duration<double>(currentTime - lastTime).count();
+            lastTime = currentTime;
+            
+            accumulator += dt;
+            if (accumulator > 0.1) accumulator = 0.1;
+            
+            while (accumulator >= targetFrameTime && emulator_running.load()) {
+                run_func();
+                accumulator -= targetFrameTime;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
     });
 }

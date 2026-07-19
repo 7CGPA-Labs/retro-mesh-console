@@ -9,6 +9,7 @@ extern "C" {
 void miracast_video_init();
 void miracast_video_deinit();
 void miracast_video_push_frame(const void* data, unsigned width, unsigned height, size_t pitch, int pixel_format);
+bool is_tv_connected();
 
 // Audio API
 void miracast_audio_init(double sample_rate);

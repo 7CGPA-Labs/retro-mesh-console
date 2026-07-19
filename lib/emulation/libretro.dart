@@ -152,7 +152,7 @@ class LibretroEngine {
   
   // Native Emulator Thread Bridge
   late Pointer<NativeFunction<Void Function()>> _retroRunPtr;
-  late void Function(int) _startNativeEmulatorThread;
+  late void Function(int, double) _startNativeEmulatorThread;
   late void Function() _stopNativeEmulatorThread;
   
   double _coreFps = 60.0;
@@ -211,7 +211,7 @@ class LibretroEngine {
         _setPlayer1Button = nativeRenderLib.lookupFunction<Void Function(Int32, Bool), void Function(int, bool)>('set_player1_button');
         _setPlayer1Analog = nativeRenderLib.lookupFunction<Void Function(Int32, Int32, Int16), void Function(int, int, int)>('set_player1_analog');
         _setPlayer1Pointer = nativeRenderLib.lookupFunction<Void Function(Int16, Int16, Bool), void Function(int, int, bool)>('set_player1_pointer');
-        _startNativeEmulatorThread = nativeRenderLib.lookupFunction<Void Function(IntPtr), void Function(int)>('start_native_emulator_thread');
+        _startNativeEmulatorThread = nativeRenderLib.lookupFunction<Void Function(IntPtr, Double), void Function(int, double)>('start_native_emulator_thread');
         _stopNativeEmulatorThread = nativeRenderLib.lookupFunction<Void Function(), void Function()>('stop_native_emulator_thread');
       } else if (Platform.isIOS) {
         // Statically linked or loaded via Framework bundle on iOS
@@ -223,7 +223,7 @@ class LibretroEngine {
         _setPlayer1Button = DynamicLibrary.process().lookupFunction<Void Function(Int32, Bool), void Function(int, bool)>('set_player1_button');
         _setPlayer1Analog = DynamicLibrary.process().lookupFunction<Void Function(Int32, Int32, Int16), void Function(int, int, int)>('set_player1_analog');
         _setPlayer1Pointer = DynamicLibrary.process().lookupFunction<Void Function(Int16, Int16, Bool), void Function(int, int, bool)>('set_player1_pointer');
-        _startNativeEmulatorThread = DynamicLibrary.process().lookupFunction<Void Function(IntPtr), void Function(int)>('start_native_emulator_thread');
+        _startNativeEmulatorThread = DynamicLibrary.process().lookupFunction<Void Function(IntPtr, Double), void Function(int, double)>('start_native_emulator_thread');
         _stopNativeEmulatorThread = DynamicLibrary.process().lookupFunction<Void Function(), void Function()>('stop_native_emulator_thread');
       } else {
         _lib = DynamicLibrary.open(corePath);
@@ -240,7 +240,7 @@ class LibretroEngine {
       }
       calloc.free(info);
 
-      _nativeAudioInit(44100.0); // Most retro cores run at 44.1kHz
+      // _nativeAudioInit is called in loadGame once we have sample_rate
 
       _isCoreInitialized = true;
       isMockMode = false;
@@ -348,6 +348,9 @@ class LibretroEngine {
         _coreFps = avInfo.ref.timing.fps;
         if (_coreFps <= 0) _coreFps = 60.0;
         _log('Core requested FPS: $_coreFps');
+        double sampleRate = avInfo.ref.timing.sample_rate;
+        if (sampleRate <= 0) sampleRate = 44100.0;
+        _nativeAudioInit(sampleRate);
         calloc.free(avInfo);
         
         startGameLoop();
@@ -432,8 +435,8 @@ class LibretroEngine {
         _renderMockFrame();
       });
     } else {
-      _log('Starting Native C++ Emulator Thread');
-      _startNativeEmulatorThread(_retroRunPtr.address);
+      _log('Starting Native C++ Emulator Thread with FPS: $_coreFps');
+      _startNativeEmulatorThread(_retroRunPtr.address, _coreFps);
     }
   }
 

@@ -32,7 +32,7 @@ static int tvHeight = 224;
 static int physicalWidth = 0;
 static int physicalHeight = 0;
 
-static std::vector<uint16_t> tvBuffer;
+static std::vector<uint32_t> tvBuffer;
 static std::mutex tvMutex;
 static std::condition_variable tvCondVar;
 static std::atomic<bool> tvThreadRunning{false};
@@ -238,15 +238,17 @@ static void TvRenderWorker() {
             glBindTexture(GL_TEXTURE_2D, textureId);
             
             if (currentTexWidth != tvWidth || currentTexHeight != tvHeight) {
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, tvWidth, tvHeight, 0, GL_RGB, GL_UNSIGNED_SHORT_5_6_5, tvBuffer.data());
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tvWidth, tvHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, tvBuffer.data());
                 currentTexWidth = tvWidth;
                 currentTexHeight = tvHeight;
             } else {
-                glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, tvWidth, tvHeight, GL_RGB, GL_UNSIGNED_SHORT_5_6_5, tvBuffer.data());
+                glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, tvWidth, tvHeight, GL_RGBA, GL_UNSIGNED_BYTE, tvBuffer.data());
             }
             
+            lock.unlock();
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
             eglSwapBuffers(eglDisplay, eglSurface);
+            lock.lock();
         } else if (eglReady && !tvWindow) {
             destroyEGL();
             eglReady = false;
@@ -290,32 +292,39 @@ void miracast_video_push_frame(const void* data, unsigned width, unsigned height
             tvBuffer.resize(totalPixels);
         }
         
-        uint16_t* dst = tvBuffer.data();
+        uint32_t* dst = tvBuffer.data();
         
         for (unsigned y = 0; y < height; y++) {
             const uint8_t* rowSrc = reinterpret_cast<const uint8_t*>(pixels) + (y * pitch);
-            uint16_t* rowDst = dst + (y * width);
+            uint32_t* rowDst = dst + (y * width);
             
             if (pixel_format == 1) { // XRGB8888
                 const uint32_t* src32 = reinterpret_cast<const uint32_t*>(rowSrc);
                 for (unsigned x = 0; x < width; x++) {
                     uint32_t color = src32[x];
-                    int r = (color >> 16) & 0xFF;
-                    int g = (color >> 8) & 0xFF;
-                    int b = color & 0xFF;
-                    rowDst[x] = ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
+                    uint32_t r = (color >> 16) & 0xFF;
+                    uint32_t g = (color >> 8) & 0xFF;
+                    uint32_t b = color & 0xFF;
+                    rowDst[x] = (0xFFu << 24) | (b << 16) | (g << 8) | r;
                 }
             } else if (pixel_format == 0) { // 0RGB1555
                 const uint16_t* src16 = reinterpret_cast<const uint16_t*>(rowSrc);
                 for (unsigned x = 0; x < width; x++) {
                     uint16_t color = src16[x];
-                    int r = (color >> 10) & 0x1F;
-                    int g = (color >> 5) & 0x1F;
-                    int b = color & 0x1F;
-                    rowDst[x] = (r << 11) | ((g << 1) << 5) | b;
+                    uint32_t r = ((color >> 10) & 0x1F) << 3;
+                    uint32_t g = ((color >> 5) & 0x1F) << 3;
+                    uint32_t b = (color & 0x1F) << 3;
+                    rowDst[x] = (0xFFu << 24) | (b << 16) | (g << 8) | r;
                 }
             } else { // RGB565
-                memcpy(rowDst, rowSrc, width * 2);
+                const uint16_t* src16 = reinterpret_cast<const uint16_t*>(rowSrc);
+                for (unsigned x = 0; x < width; x++) {
+                    uint16_t color = src16[x];
+                    uint32_t r = ((color >> 11) & 0x1F) << 3;
+                    uint32_t g = ((color >> 5) & 0x3F) << 2;
+                    uint32_t b = (color & 0x1F) << 3;
+                    rowDst[x] = (0xFFu << 24) | (b << 16) | (g << 8) | r;
+                }
             }
         }
         
@@ -337,13 +346,19 @@ JNIEXPORT void JNICALL Java_dev_seven_1cgpalabs_mojosnap_NativeRender_setFlutter
 
 JNIEXPORT void JNICALL Java_dev_seven_1cgpalabs_mojosnap_NativeRender_setTvSurface(JNIEnv* env, jclass clazz, jobject surface) {
     std::lock_guard<std::mutex> lock(renderMutex);
+    
     if (tvWindow) {
         ANativeWindow_release(tvWindow);
         tvWindow = nullptr;
     }
-    if (surface != nullptr) {
+    
+    if (surface) {
         tvWindow = ANativeWindow_fromSurface(env, surface);
     }
+}
+
+bool is_tv_connected() {
+    return tvWindow != nullptr;
 }
 
 JNIEXPORT void JNICALL Java_dev_seven_1cgpalabs_mojosnap_ThermalManager_setThermalScale(JNIEnv* env, jobject thiz, jfloat scale) {

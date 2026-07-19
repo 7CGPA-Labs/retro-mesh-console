@@ -12,6 +12,10 @@ extern "C" {
     void set_global_tv_layer(void* layer) {
         global_tv_layer = (__bridge CALayer*)layer;
     }
+    
+    bool is_tv_connected() {
+        return global_tv_layer != nil;
+    }
 
     void miracast_video_init() {}
     void miracast_video_deinit() {}
@@ -21,22 +25,44 @@ extern "C" {
             return;
         }
 
-        const uint16_t* pixels = reinterpret_cast<const uint16_t*>(data);
-        size_t numPixels = width * height;
-        uint32_t* rgba = (uint32_t*)malloc(numPixels * 4);
+        const uint8_t* pixels = reinterpret_cast<const uint8_t*>(data);
+        uint32_t* rgba = (uint32_t*)malloc(width * height * 4);
         
-        for (size_t i = 0; i < numPixels; i++) {
-            uint16_t p = pixels[i];
-            uint8_t r = (p >> 11) & 0x1F;
-            uint8_t g = (p >> 5) & 0x3F;
-            uint8_t b = p & 0x1F;
+        for (unsigned y = 0; y < height; y++) {
+            const uint8_t* rowSrc = pixels + (y * pitch);
+            uint32_t* rowDst = rgba + (y * width);
             
-            r = (r << 3) | (r >> 2);
-            g = (g << 2) | (g >> 4);
-            b = (b << 3) | (b >> 2);
-            
-            rgba[i] = (0xFF << 24) | (b << 16) | (g << 8) | r;
+            if (pixel_format == 1) { // XRGB8888
+                const uint32_t* src32 = reinterpret_cast<const uint32_t*>(rowSrc);
+                for (unsigned x = 0; x < width; x++) {
+                    uint32_t color = src32[x];
+                    uint32_t r = (color >> 16) & 0xFF;
+                    uint32_t g = (color >> 8) & 0xFF;
+                    uint32_t b = color & 0xFF;
+                    rowDst[x] = (0xFFu << 24) | (b << 16) | (g << 8) | r;
+                }
+            } else if (pixel_format == 0) { // 0RGB1555
+                const uint16_t* src16 = reinterpret_cast<const uint16_t*>(rowSrc);
+                for (unsigned x = 0; x < width; x++) {
+                    uint16_t color = src16[x];
+                    uint32_t r = ((color >> 10) & 0x1F) << 3;
+                    uint32_t g = ((color >> 5) & 0x1F) << 3;
+                    uint32_t b = (color & 0x1F) << 3;
+                    rowDst[x] = (0xFFu << 24) | (b << 16) | (g << 8) | r;
+                }
+            } else { // RGB565
+                const uint16_t* src16 = reinterpret_cast<const uint16_t*>(rowSrc);
+                for (unsigned x = 0; x < width; x++) {
+                    uint16_t color = src16[x];
+                    uint32_t r = ((color >> 11) & 0x1F) << 3;
+                    uint32_t g = ((color >> 5) & 0x3F) << 2;
+                    uint32_t b = (color & 0x1F) << 3;
+                    rowDst[x] = (0xFFu << 24) | (b << 16) | (g << 8) | r;
+                }
+            }
         }
+        
+        size_t numPixels = width * height;
 
         NSData *nsdata = [NSData dataWithBytesNoCopy:rgba length:numPixels * 4 freeWhenDone:YES];
         CGDataProviderRef provider = CGDataProviderCreateWithCFData((__bridge CFDataRef)nsdata);
