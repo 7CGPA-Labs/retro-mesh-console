@@ -23,6 +23,34 @@ static std::thread emulator_thread;
 
 extern "C" {
 
+// --- Rumble Callback ---
+typedef void (*dart_rumble_cb_t)(unsigned port, unsigned effect, uint16_t strength);
+static dart_rumble_cb_t g_rumble_cb = nullptr;
+
+void set_rumble_callback(dart_rumble_cb_t cb) {
+    g_rumble_cb = cb;
+}
+
+enum retro_rumble_effect {
+   RETRO_RUMBLE_STRONG = 0,
+   RETRO_RUMBLE_WEAK = 1,
+   RETRO_RUMBLE_DUMMY = 0x7fffffff
+};
+
+struct retro_rumble_interface {
+   bool (*set_rumble_state)(unsigned port, enum retro_rumble_effect effect, uint16_t strength);
+};
+
+static bool native_set_rumble_state(unsigned port, enum retro_rumble_effect effect, uint16_t strength) {
+    if (g_rumble_cb) {
+        g_rumble_cb(port, effect, strength);
+        return true;
+    }
+    return false;
+}
+
+static struct retro_rumble_interface rumble_intf = { native_set_rumble_state };
+
 // --- Threading ---
 void start_native_emulator_thread(uintptr_t retro_run_ptr, double fps) {
     if (emulator_running.load()) return;
@@ -115,6 +143,11 @@ bool native_environment_cb(unsigned cmd, void *data) {
         return false;
     } else if (cmd == 16) { // SET_VARIABLES
         return true;
+    } else if (cmd == 23) { // RETRO_ENVIRONMENT_GET_RUMBLE_INTERFACE
+        if (data) {
+            *static_cast<struct retro_rumble_interface**>(data) = &rumble_intf;
+            return true;
+        }
     }
     return false;
 }
