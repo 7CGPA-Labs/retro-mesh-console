@@ -71,7 +71,6 @@ typedef retro_audio_sample_t = Void Function(Int16 left, Int16 right);
 typedef retro_audio_sample_batch_t = IntPtr Function(Pointer<Int16> data, IntPtr frames);
 typedef retro_input_poll_t = Void Function();
 typedef retro_input_state_t = Int16 Function(Uint32 port, Uint32 device, Uint32 index, Uint32 id);
-typedef dart_rumble_cb_c = Void Function(Uint32 port, Uint32 effect, Uint16 strength);
 
 typedef render_to_window_c = Void Function(Pointer<Uint16> pixels, Int32 width, Int32 height, Int32 pitch);
 typedef render_to_window_dart = void Function(Pointer<Uint16> pixels, int width, int height, int pitch);
@@ -158,7 +157,6 @@ class LibretroEngine {
   late void Function(int, double) _startNativeEmulatorThread;
   late void Function() _stopNativeEmulatorThread;
   late void Function(bool) _setNativeEmulatorPaused;
-  late void Function(Pointer<NativeFunction<dart_rumble_cb_c>>) _setRumbleCallback;
   
   double _coreFps = 60.0;
 
@@ -220,7 +218,6 @@ class LibretroEngine {
         _startNativeEmulatorThread = nativeRenderLib.lookupFunction<Void Function(IntPtr, Double), void Function(int, double)>('start_native_emulator_thread');
         _stopNativeEmulatorThread = nativeRenderLib.lookupFunction<Void Function(), void Function()>('stop_native_emulator_thread');
         _setNativeEmulatorPaused = nativeRenderLib.lookupFunction<Void Function(Bool), void Function(bool)>('set_native_emulator_paused');
-        _setRumbleCallback = nativeRenderLib.lookupFunction<Void Function(Pointer<NativeFunction<dart_rumble_cb_c>>), void Function(Pointer<NativeFunction<dart_rumble_cb_c>>)>('set_rumble_callback');
       } else if (Platform.isIOS) {
         // Statically linked or loaded via Framework bundle on iOS
         _lib = DynamicLibrary.process();
@@ -235,7 +232,6 @@ class LibretroEngine {
         _startNativeEmulatorThread = DynamicLibrary.process().lookupFunction<Void Function(IntPtr, Double), void Function(int, double)>('start_native_emulator_thread');
         _stopNativeEmulatorThread = DynamicLibrary.process().lookupFunction<Void Function(), void Function()>('stop_native_emulator_thread');
         _setNativeEmulatorPaused = DynamicLibrary.process().lookupFunction<Void Function(Bool), void Function(bool)>('set_native_emulator_paused');
-        _setRumbleCallback = DynamicLibrary.process().lookupFunction<Void Function(Pointer<NativeFunction<dart_rumble_cb_c>>), void Function(Pointer<NativeFunction<dart_rumble_cb_c>>)>('set_rumble_callback');
       } else {
         _lib = DynamicLibrary.open(corePath);
       }
