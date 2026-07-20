@@ -253,7 +253,7 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
   void _togglePause() {
     if (widget.isHost && widget.engine != null) {
       setState(() {
-        widget.engine!.isPaused = !widget.engine!.isPaused;
+        widget.engine!.togglePause();
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
