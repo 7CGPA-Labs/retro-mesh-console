@@ -475,6 +475,7 @@ class LibretroEngine {
     if (port == 0 && !isMockMode) {
       _setPlayer1Analog(index, id, value);
     }
+  }
   
 
   /// Shutdown emulator and release resources
