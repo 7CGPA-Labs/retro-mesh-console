@@ -33,6 +33,7 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
   late String _currentCoreName;
   late StreamSubscription<String> _coreSubscription;
   StreamSubscription<GamepadEvent>? _gamepadSubscription;
+  bool _isPhysicalControllerActive = false;
 
   @override
   void initState() {
@@ -215,6 +216,12 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
   }
 
   void _handleButtonEvent(int buttonId, bool pressed) {
+    if (_isPhysicalControllerActive) {
+      setState(() {
+        _isPhysicalControllerActive = false;
+      });
+    }
+
     if (buttonId == 11) { // MENU
       if (pressed) {
         if (widget.isHost) {
@@ -239,6 +246,12 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
   }
 
   void _onGamepadEvent(GamepadEvent event) {
+    if (!_isPhysicalControllerActive) {
+      setState(() {
+        _isPhysicalControllerActive = true;
+      });
+    }
+
     if (event.type == KeyType.button) {
       int? buttonId;
       final k = event.key.toLowerCase();
@@ -561,13 +574,73 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
   // --- HOST LAYOUTS (P1) ---
 
   Widget _buildHostLayout() {
-    return _buildGamepadControls();
+    return _isPhysicalControllerActive ? _buildTelemetryHub() : _buildGamepadControls();
   }
 
   // --- CLIENT LAYOUTS (P2) ---
 
   Widget _buildClientLayout() {
-    return _buildGamepadControls();
+    return _isPhysicalControllerActive ? _buildTelemetryHub() : _buildGamepadControls();
+  }
+
+  Widget _buildTelemetryHub() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.gamepad, size: 80, color: Color(0xFFFF2E93)),
+          const SizedBox(height: 24),
+          const Text(
+            'TELEMETRY HUB',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 4.0,
+              fontFamily: 'Outfit',
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Core: ${_currentCoreName.toUpperCase()}  |  Status: ONLINE',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.7),
+              fontSize: 16,
+              fontFamily: 'Outfit',
+              letterSpacing: 1.5,
+            ),
+          ),
+          const SizedBox(height: 48),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.menu),
+            label: const Text('CONSOLE MENU'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1E1E38),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              side: const BorderSide(color: Color(0xFFFF2E93), width: 2),
+              textStyle: const TextStyle(
+                fontFamily: 'Outfit',
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                letterSpacing: 1.2,
+              ),
+            ),
+            onPressed: () {
+              if (widget.isHost) {
+                _togglePause();
+                if (widget.engine != null && widget.engine!.isPaused) {
+                  _showMenuOverlay();
+                }
+              } else {
+                _showClientMenuOverlay();
+              }
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   /// Core gamepad layout split into D-pad, System Panel, and Action cluster
