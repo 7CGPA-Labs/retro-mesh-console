@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:nsd/nsd.dart' as nsd;
@@ -12,6 +13,9 @@ class NativeBridge {
 
   static final StreamController<void> _disconnectController = StreamController.broadcast();
   static Stream<void> get onDisconnected => _disconnectController.stream;
+
+  static final StreamController<String> _coreChangedController = StreamController.broadcast();
+  static Stream<String> get onCoreChanged => _coreChangedController.stream;
 
   static nsd.Discovery? _discovery;
   static WebSocketChannel? _wsChannel;
@@ -106,7 +110,16 @@ class NativeBridge {
       // TCP / WebSocket (for State, Sync, and Long-Range WAN)
       _wsChannel = WebSocketChannel.connect(Uri.parse('ws://$hostIp:$port/controller'));
       _wsChannel!.stream.listen(
-        (message) {},
+        (message) {
+          if (message is String) {
+            try {
+              final json = jsonDecode(message);
+              if (json['event'] == 'core_loaded') {
+                _coreChangedController.add(json['core'] as String);
+              }
+            } catch (_) {}
+          }
+        },
         onDone: () {
           _wsChannel = null;
           _disconnectController.add(null);

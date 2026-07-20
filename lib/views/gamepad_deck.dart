@@ -10,6 +10,7 @@ class GamepadDeck extends StatefulWidget {
   final LibretroEngine? engine;
   final String romName;
   final String coreName;
+  final String hostType;
 
   const GamepadDeck({
     super.key,
@@ -17,6 +18,7 @@ class GamepadDeck extends StatefulWidget {
     this.engine,
     required this.romName,
     this.coreName = 'nes',
+    this.hostType = 'unknown',
   });
 
   @override
@@ -27,10 +29,20 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
   static const MethodChannel _projectionChannel = MethodChannel('dev.seven_cgpalabs.mojosnap/projection');
   
   bool _isConnectingTV = false; // Track if waiting for OS Cast dialog to return
+  late String _currentCoreName;
+  late StreamSubscription<String> _coreSubscription;
 
   @override
   void initState() {
     super.initState();
+    _currentCoreName = widget.coreName;
+    _coreSubscription = NativeBridge.onCoreChanged.listen((newCore) {
+      if (mounted) {
+        setState(() {
+          _currentCoreName = newCore;
+        });
+      }
+    });
     WidgetsBinding.instance.addObserver(this);
     
     // 1. Lock screen orientation to Landscape
@@ -153,6 +165,7 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _coreSubscription.cancel();
     WidgetsBinding.instance.removeObserver(this);
     HardwareKeyboard.instance.removeHandler(_onKeyEvent);
     if (widget.isHost) {
@@ -497,7 +510,7 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
 
   /// Core gamepad layout split into D-pad, System Panel, and Action cluster
   Widget _buildGamepadControls() {
-    String cName = widget.coreName.toLowerCase();
+    String cName = _currentCoreName.toLowerCase();
     bool isGenesis = cName.contains('genesis');
     bool isSnes = cName.contains('snes') || cName.contains('mgba');
     bool isPs1 = cName.contains('pcsx');
@@ -707,12 +720,13 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
           ],
         ),
         const SizedBox(height: 12),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildSystemButton(label: 'MENU', buttonId: 11, isHotKey: true),
-          ],
-        ),
+        if (widget.hostType != 'desktop')
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildSystemButton(label: 'MENU', buttonId: 11, isHotKey: true),
+            ],
+          ),
       ],
     );
   }

@@ -193,6 +193,7 @@ class RoleGate extends StatelessWidget {
                                 isHost: false,
                                 romName: 'Connected to ${host['name']}',
                                 coreName: host['core'],
+                                hostType: host['hostType'] ?? 'unknown',
                               ),
                             ),
                           );
