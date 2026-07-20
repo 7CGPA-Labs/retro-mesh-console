@@ -15,6 +15,10 @@ class NativeBridge {
 
   static nsd.Discovery? _discovery;
   static WebSocketChannel? _wsChannel;
+  static RawDatagramSocket? _udpSocket;
+  static InternetAddress? _hostIpAddress;
+  static int _hostUdpPort = 55444;
+  static bool _isLocalLan = true;
 
   static void init() {
     _channel.setMethodCallHandler((call) async {
@@ -94,8 +98,12 @@ class NativeBridge {
     }
   }
 
-  static Future<void> connectToHost(String hostIp, {int port = 8080}) async {
+  static Future<void> connectToHost(String hostIp, {int port = 8080, bool isLocal = true}) async {
     try {
+      _isLocalLan = isLocal;
+      _hostIpAddress = InternetAddress(hostIp);
+      
+      // TCP / WebSocket (for State, Sync, and Long-Range WAN)
       _wsChannel = WebSocketChannel.connect(Uri.parse('ws://$hostIp:$port/controller'));
       _wsChannel!.stream.listen(
         (message) {},
@@ -108,6 +116,11 @@ class NativeBridge {
           _disconnectController.add(null);
         },
       );
+
+      // UDP / Datagram (for Ultra-Low Latency Inputs on LAN)
+      if (_isLocalLan) {
+        _udpSocket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
+      }
     } catch (e) {
       debugPrint('Failed to connect to host: $e');
     }
@@ -115,12 +128,19 @@ class NativeBridge {
 
   static Future<void> sendInput(int buttonId, bool pressed) async {
     try {
-      if (_wsChannel != null) {
+      if (_wsChannel != null || _udpSocket != null) {
         final payload = Uint8List(3);
         payload[0] = 2; // Player 2
         payload[1] = pressed ? 1 : 2; // 1 = BUTTON_DOWN, 2 = BUTTON_UP
         payload[2] = buttonId;
-        _wsChannel!.sink.add(payload);
+
+        if (_isLocalLan && _udpSocket != null && _hostIpAddress != null) {
+          // Fire ultra-fast UDP packet (no handshake, no ACKs)
+          _udpSocket!.send(payload, _hostIpAddress!, _hostUdpPort);
+        } else if (_wsChannel != null) {
+          // Fallback to TCP WebSocket for WAN / long-range
+          _wsChannel!.sink.add(payload);
+        }
       } else {
         await _channel.invokeMethod('sendInput', {
           'buttonId': buttonId,
