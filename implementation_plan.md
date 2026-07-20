@@ -61,7 +61,7 @@ Ensure that opening sub-menus respects the `_setNativeEmulatorPaused(true)` stat
 ---
 
 ## Phase 5: Physical Controller Auto-Morphing (Bluetooth & 2.4G)
-To provide the ultimate ergonomic experience for complex systems like PS1 (which requires analog sticks and L1/L2/R1/R2) and DOSBox (which relies heavily on keyboard/mouse mappings), the app will implement a smart fallback system for physical controllers.
+To provide the ultimate ergonomic experience for complex systems like PS1 (which requires Bluetooth and 2.4G physical controllers and L1/L2/R1/R2) and DOSBox (which relies heavily on keyboard/mouse mappings), the app will implement a smart fallback system for physical controllers.
 
 **1. Universal Hardware Detection:**
 *   **Bluetooth Controllers:** Automatically detect when a user pairs a DualSense, Xbox Wireless, or 8BitDo controller.
@@ -71,3 +71,4 @@ To provide the ultimate ergonomic experience for complex systems like PS1 (which
 *   **Virtual Pad Fade-out:** The moment a physical controller is detected, smoothly fade out the virtual touch buttons from the screen to free up visual space.
 *   **Smart Telemetry Hub:** Morph the phone's touch interface into a clean "Command Center" that displays connection health, battery status, quick-save slots, and the active console menu, shifting the heavy lifting of gameplay entirely to the physical pad.
 *   **Seamless Fallback:** If the controller disconnects or the dongle is unplugged, instantly restore the virtual touch controller so the user never loses control.
+

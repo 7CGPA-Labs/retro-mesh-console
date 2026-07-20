@@ -4,12 +4,14 @@ import '../utils/logger.dart';
 import 'package:flutter/material.dart';
 import '../emulation/libretro.dart';
 import '../utils/native_bridge.dart';
+import 'package:gamepads/gamepads.dart';
 
 class GamepadDeck extends StatefulWidget {
   final bool isHost;
   final LibretroEngine? engine;
   final String romName;
   final String coreName;
+  final String hostType;
 
   const GamepadDeck({
     super.key,
@@ -17,6 +19,7 @@ class GamepadDeck extends StatefulWidget {
     this.engine,
     required this.romName,
     this.coreName = 'nes',
+    this.hostType = 'unknown',
   });
 
   @override
@@ -32,10 +35,22 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
   Offset _analogStickPos = Offset.zero;
   int? _activeAnalogDPadX; // 3 for left, 4 for right
   int? _activeAnalogDPadY; // 1 for up, 2 for down
+  late String _currentCoreName;
+  late StreamSubscription<String> _coreSubscription;
+  StreamSubscription<GamepadEvent>? _gamepadSubscription;
+  bool _isPhysicalControllerActive = false;
 
   @override
   void initState() {
     super.initState();
+    _currentCoreName = widget.coreName;
+    _coreSubscription = NativeBridge.onCoreChanged.listen((newCore) {
+      if (mounted) {
+        setState(() {
+          _currentCoreName = newCore;
+        });
+      }
+    });
     WidgetsBinding.instance.addObserver(this);
     
     // 1. Lock screen orientation to Landscape
@@ -51,6 +66,8 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
     NativeBridge.keepScreenOn(true);
 
     HardwareKeyboard.instance.addHandler(_onKeyEvent);
+
+    _gamepadSubscription = Gamepads.events.listen(_onGamepadEvent);
 
     if (widget.isHost) {
       _isConnectingTV = true;
@@ -158,6 +175,8 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _coreSubscription.cancel();
+    _gamepadSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     HardwareKeyboard.instance.removeHandler(_onKeyEvent);
     if (widget.isHost) {
@@ -206,6 +225,12 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
       HapticFeedback.lightImpact();
     }
     
+    if (_isPhysicalControllerActive) {
+      setState(() {
+        _isPhysicalControllerActive = false;
+      });
+    }
+
     if (buttonId == 11) { // MENU
       if (pressed) {
         if (widget.isHost) {
@@ -236,6 +261,69 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
       NativeBridge.sendInput(buttonId, pressed);
     }
   }
+
+  void _onGamepadEvent(GamepadEvent event) {
+    if (!_isPhysicalControllerActive) {
+      setState(() {
+        _isPhysicalControllerActive = true;
+      });
+    }
+
+    if (event.type == KeyType.button) {
+      int? buttonId;
+      final k = event.key.toLowerCase();
+      if (k.contains('dpad-up') || k.contains('dpad_up') || k == 'up') buttonId = 1;
+      else if (k.contains('dpad-down') || k.contains('dpad_down') || k == 'down') buttonId = 2;
+      else if (k.contains('dpad-left') || k.contains('dpad_left') || k == 'left') buttonId = 3;
+      else if (k.contains('dpad-right') || k.contains('dpad_right') || k == 'right') buttonId = 4;
+      else if (k.contains('button-a') || k.contains('button_a') || k == 'a') buttonId = 5;
+      else if (k.contains('button-b') || k.contains('button_b') || k == 'b') buttonId = 6;
+      else if (k.contains('button-x') || k.contains('button_x') || k == 'x') buttonId = 7;
+      else if (k.contains('button-y') || k.contains('button_y') || k == 'y') buttonId = 8;
+      else if (k.contains('start')) buttonId = 9;
+      else if (k.contains('select')) buttonId = 10;
+      else if (k.contains('mode') || k.contains('menu')) buttonId = 11;
+      else if (k.contains('l1')) buttonId = 12;
+      else if (k.contains('r1')) buttonId = 13;
+      else if (k.contains('l2')) buttonId = 14;
+      else if (k.contains('r2')) buttonId = 15;
+
+      if (buttonId != null) {
+        final pressed = event.value > 0.5;
+        _handleButtonEvent(buttonId, pressed);
+      }
+    } else if (event.type == KeyType.analog) {
+      int? index;
+      int? id;
+      final k = event.key.toLowerCase();
+      
+      if (k.contains('left')) {
+        index = 0; // RETRO_DEVICE_INDEX_ANALOG_LEFT
+      } else if (k.contains('right')) {
+        index = 1; // RETRO_DEVICE_INDEX_ANALOG_RIGHT
+      }
+
+      if (k.contains('x')) {
+        id = 0; // RETRO_DEVICE_ID_ANALOG_X
+      } else if (k.contains('y')) {
+        id = 1; // RETRO_DEVICE_ID_ANALOG_Y
+      }
+
+      if (index != null && id != null) {
+        int analogValue = (event.value * 32767).toInt();
+        // Clamp to Int16
+        if (analogValue < -32768) analogValue = -32768;
+        if (analogValue > 32767) analogValue = 32767;
+
+        if (widget.isHost) {
+          widget.engine?.updateAnalogState(0, index, id, analogValue);
+        } else {
+          NativeBridge.sendAnalogInput(index, id, analogValue);
+        }
+      }
+    }
+  }
+
 
   bool _onKeyEvent(KeyEvent event) {
     if (event is KeyDownEvent || event is KeyUpEvent) {
@@ -508,18 +596,78 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
   // --- HOST LAYOUTS (P1) ---
 
   Widget _buildHostLayout() {
-    return _buildGamepadControls();
+    return _isPhysicalControllerActive ? _buildTelemetryHub() : _buildGamepadControls();
   }
 
   // --- CLIENT LAYOUTS (P2) ---
 
   Widget _buildClientLayout() {
-    return _buildGamepadControls();
+    return _isPhysicalControllerActive ? _buildTelemetryHub() : _buildGamepadControls();
+  }
+
+  Widget _buildTelemetryHub() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.gamepad, size: 80, color: Color(0xFFFF2E93)),
+          const SizedBox(height: 24),
+          const Text(
+            'TELEMETRY HUB',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 4.0,
+              fontFamily: 'Outfit',
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Core: ${_currentCoreName.toUpperCase()}  |  Status: ONLINE',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.7),
+              fontSize: 16,
+              fontFamily: 'Outfit',
+              letterSpacing: 1.5,
+            ),
+          ),
+          const SizedBox(height: 48),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.menu),
+            label: const Text('CONSOLE MENU'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1E1E38),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              side: const BorderSide(color: Color(0xFFFF2E93), width: 2),
+              textStyle: const TextStyle(
+                fontFamily: 'Outfit',
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                letterSpacing: 1.2,
+              ),
+            ),
+            onPressed: () {
+              if (widget.isHost) {
+                _togglePause();
+                if (widget.engine != null && widget.engine!.isPaused) {
+                  _showMenuOverlay();
+                }
+              } else {
+                _showClientMenuOverlay();
+              }
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   /// Core gamepad layout split into D-pad, System Panel, and Action cluster
   Widget _buildGamepadControls() {
-    String cName = widget.coreName.toLowerCase();
+    String cName = _currentCoreName.toLowerCase();
     bool isGenesis = cName.contains('genesis');
     bool isSnes = cName.contains('snes') || cName.contains('mgba');
     bool isPs1 = cName.contains('pcsx');
@@ -903,12 +1051,13 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
           ],
         ),
         const SizedBox(height: 12),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildSystemButton(label: 'MENU', buttonId: 11, isHotKey: true),
-          ],
-        ),
+        if (widget.hostType != 'desktop')
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildSystemButton(label: 'MENU', buttonId: 11, isHotKey: true),
+            ],
+          ),
       ],
     );
   }
