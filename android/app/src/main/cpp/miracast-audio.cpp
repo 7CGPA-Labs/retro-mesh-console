@@ -37,7 +37,9 @@ void miracast_audio_init(double sample_rate) {
     }
 
     int32_t framesPerBurst = AAudioStream_getFramesPerBurst(stream);
-    AAudioStream_setBufferSizeInFrames(stream, framesPerBurst * 2);
+    int32_t targetBuffer = framesPerBurst * 2;
+    if (targetBuffer > 1024) targetBuffer = 1024; // Limit to ~23ms at 44.1kHz to prevent input lag
+    AAudioStream_setBufferSizeInFrames(stream, targetBuffer);
 
     AAudioStream_requestStart(stream);
     

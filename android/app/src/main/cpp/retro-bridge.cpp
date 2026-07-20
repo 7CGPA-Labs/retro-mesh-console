@@ -11,9 +11,6 @@ std::atomic<int> g_activePixelFormat{2};
 // Input state
 std::atomic<bool> button_states[2][16];
 std::atomic<int16_t> analog_states[2][2][2]; // [port][index][id (0=X, 1=Y)]
-std::atomic<int16_t> pointer_x{0};
-std::atomic<int16_t> pointer_y{0};
-std::atomic<bool> pointer_pressed{false};
 
 // Emulator thread
 typedef void (*retro_run_t)();
@@ -23,33 +20,7 @@ static std::thread emulator_thread;
 
 extern "C" {
 
-// --- Rumble Callback ---
-typedef void (*dart_rumble_cb_t)(unsigned port, unsigned effect, uint16_t strength);
-static dart_rumble_cb_t g_rumble_cb = nullptr;
-
-void set_rumble_callback(dart_rumble_cb_t cb) {
-    g_rumble_cb = cb;
-}
-
-enum retro_rumble_effect {
-   RETRO_RUMBLE_STRONG = 0,
-   RETRO_RUMBLE_WEAK = 1,
-   RETRO_RUMBLE_DUMMY = 0x7fffffff
-};
-
-struct retro_rumble_interface {
-   bool (*set_rumble_state)(unsigned port, enum retro_rumble_effect effect, uint16_t strength);
-};
-
-static bool native_set_rumble_state(unsigned port, enum retro_rumble_effect effect, uint16_t strength) {
-    if (g_rumble_cb) {
-        g_rumble_cb(port, effect, strength);
-        return true;
-    }
-    return false;
-}
-
-static struct retro_rumble_interface rumble_intf = { native_set_rumble_state };
+// Removed rumble interface
 
 // --- Threading ---
 void start_native_emulator_thread(uintptr_t retro_run_ptr, double fps) {
@@ -111,6 +82,10 @@ void native_audio_deinit() {
     miracast_audio_deinit();
 }
 
+void native_video_deinit() {
+    miracast_video_deinit();
+}
+
 size_t native_audio_sample_batch_cb(const int16_t* data, size_t frames) {
     miracast_audio_push_batch(data, frames);
     return frames;
@@ -143,11 +118,6 @@ bool native_environment_cb(unsigned cmd, void *data) {
         return false;
     } else if (cmd == 16) { // SET_VARIABLES
         return true;
-    } else if (cmd == 23) { // RETRO_ENVIRONMENT_GET_RUMBLE_INTERFACE
-        if (data) {
-            *static_cast<struct retro_rumble_interface**>(data) = &rumble_intf;
-            return true;
-        }
     }
     return false;
 }
@@ -183,14 +153,6 @@ int16_t native_input_state_cb(unsigned port, unsigned device, unsigned index, un
         if (port > 1 || index > 1 || id > 1) return 0;
         return analog_states[port][index][id].load();
     }
-    else if (device == 6) { // RETRO_DEVICE_POINTER
-        if (port > 0) return 0; // Pointer usually only on port 0
-        switch(id) {
-            case 0: return pointer_x.load();
-            case 1: return pointer_y.load();
-            case 2: return pointer_pressed.load() ? 1 : 0;
-        }
-    }
     return 0;
 }
 
@@ -206,17 +168,7 @@ void set_player1_analog(int index, int id, int16_t value) {
     }
 }
 
-void set_player1_pointer(int16_t x, int16_t y, bool pressed) {
-    pointer_x.store(x);
-    pointer_y.store(y);
-    pointer_pressed.store(pressed);
-}
 
-// Dummy HW rendering functions to satisfy Dart FFI lookups
-bool hw_render_init(int width, int height) { return false; }
-void hw_render_extract_frame() {}
-uintptr_t hw_get_current_framebuffer() { return 0; }
-void* hw_get_proc_address(const char* sym) { return nullptr; }
 
 JNIEXPORT void JNICALL Java_dev_seven_1cgpalabs_mojosnap_NetworkManager_updatePlayer2Button(JNIEnv* env, jobject thiz, jint buttonId, jboolean pressed) {
     if (buttonId >= 0 && buttonId < 16) {

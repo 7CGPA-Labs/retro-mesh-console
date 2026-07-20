@@ -48,7 +48,8 @@ void miracast_audio_init(double sample_rate) {
     if (g_audio_initialized) return;
 
     double actual_sample_rate = (sample_rate > 0) ? sample_rate : 44100.0;
-    g_audio_buffer.resize(static_cast<size_t>(actual_sample_rate) * 2 * 2);
+    // Limit buffer to ~23ms to prevent emulator from running ahead and causing input lag
+    g_audio_buffer.resize(4096);
 
     AudioComponentDescription desc;
     desc.componentType = kAudioUnitType_Output;

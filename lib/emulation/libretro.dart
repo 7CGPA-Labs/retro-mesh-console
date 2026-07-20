@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import '../utils/logger.dart';
 // --- Libretro Constants ---
 const int RETRO_DEVICE_JOYPAD = 1;
+const int RETRO_DEVICE_ANALOG = 5;
 const int RETRO_DEVICE_ID_JOYPAD_B = 0;
 const int RETRO_DEVICE_ID_JOYPAD_Y = 1;
 const int RETRO_DEVICE_ID_JOYPAD_SELECT = 2;
@@ -70,7 +71,6 @@ typedef retro_audio_sample_t = Void Function(Int16 left, Int16 right);
 typedef retro_audio_sample_batch_t = IntPtr Function(Pointer<Int16> data, IntPtr frames);
 typedef retro_input_poll_t = Void Function();
 typedef retro_input_state_t = Int16 Function(Uint32 port, Uint32 device, Uint32 index, Uint32 id);
-typedef dart_rumble_cb_c = Void Function(Uint32 port, Uint32 effect, Uint16 strength);
 
 typedef render_to_window_c = Void Function(Pointer<Uint16> pixels, Int32 width, Int32 height, Int32 pitch);
 typedef render_to_window_dart = void Function(Pointer<Uint16> pixels, int width, int height, int pitch);
@@ -141,9 +141,9 @@ class LibretroEngine {
   // Native Audio Bridge
   late void Function(double) _nativeAudioInit;
   late void Function() _nativeAudioDeinit;
+  late void Function() _nativeVideoDeinit;
   late void Function(int, bool) _setPlayer1Button;
   late void Function(int, int, int) _setPlayer1Analog;
-  late void Function(int, int, bool) _setPlayer1Pointer;
   late Pointer<NativeFunction<retro_audio_sample_batch_t>> _nativeAudioCb;
   late Pointer<NativeFunction<retro_input_state_t>> _nativeInputCb;
   late Pointer<NativeFunction<retro_video_refresh_t>> _nativeVideoCb;
@@ -156,8 +156,6 @@ class LibretroEngine {
   late void Function(int, double) _startNativeEmulatorThread;
   late void Function() _stopNativeEmulatorThread;
   late void Function(bool) _setNativeEmulatorPaused;
-  late void Function(Pointer<NativeFunction<dart_rumble_cb_c>>) _setRumbleCallback;
-  NativeCallable<dart_rumble_cb_c>? _rumbleListener;
   
   double _coreFps = 60.0;
 
@@ -210,29 +208,29 @@ class LibretroEngine {
         
         _nativeAudioInit = nativeRenderLib.lookupFunction<Void Function(Double), void Function(double)>('native_audio_init');
         _nativeAudioDeinit = nativeRenderLib.lookupFunction<Void Function(), void Function()>('native_audio_deinit');
+        _nativeVideoDeinit = nativeRenderLib.lookupFunction<Void Function(), void Function()>('native_video_deinit');
         _nativeAudioCb = nativeRenderLib.lookup<NativeFunction<retro_audio_sample_batch_t>>('native_audio_sample_batch_cb');
         _nativeInputCb = nativeRenderLib.lookup<NativeFunction<retro_input_state_t>>('native_input_state_cb');
         _setPlayer1Button = nativeRenderLib.lookupFunction<Void Function(Int32, Bool), void Function(int, bool)>('set_player1_button');
         _setPlayer1Analog = nativeRenderLib.lookupFunction<Void Function(Int32, Int32, Int16), void Function(int, int, int)>('set_player1_analog');
-        _setPlayer1Pointer = nativeRenderLib.lookupFunction<Void Function(Int16, Int16, Bool), void Function(int, int, bool)>('set_player1_pointer');
+
         _startNativeEmulatorThread = nativeRenderLib.lookupFunction<Void Function(IntPtr, Double), void Function(int, double)>('start_native_emulator_thread');
         _stopNativeEmulatorThread = nativeRenderLib.lookupFunction<Void Function(), void Function()>('stop_native_emulator_thread');
         _setNativeEmulatorPaused = nativeRenderLib.lookupFunction<Void Function(Bool), void Function(bool)>('set_native_emulator_paused');
-        _setRumbleCallback = nativeRenderLib.lookupFunction<Void Function(Pointer<NativeFunction<dart_rumble_cb_c>>), void Function(Pointer<NativeFunction<dart_rumble_cb_c>>)>('set_rumble_callback');
       } else if (Platform.isIOS) {
         // Statically linked or loaded via Framework bundle on iOS
         _lib = DynamicLibrary.process();
         _nativeAudioInit = DynamicLibrary.process().lookupFunction<Void Function(Double), void Function(double)>('native_audio_init');
         _nativeAudioDeinit = DynamicLibrary.process().lookupFunction<Void Function(), void Function()>('native_audio_deinit');
+        _nativeVideoDeinit = DynamicLibrary.process().lookupFunction<Void Function(), void Function()>('native_video_deinit');
         _nativeAudioCb = DynamicLibrary.process().lookup<NativeFunction<retro_audio_sample_batch_t>>('native_audio_sample_batch_cb');
         _nativeInputCb = DynamicLibrary.process().lookup<NativeFunction<retro_input_state_t>>('native_input_state_cb');
         _setPlayer1Button = DynamicLibrary.process().lookupFunction<Void Function(Int32, Bool), void Function(int, bool)>('set_player1_button');
         _setPlayer1Analog = DynamicLibrary.process().lookupFunction<Void Function(Int32, Int32, Int16), void Function(int, int, int)>('set_player1_analog');
-        _setPlayer1Pointer = DynamicLibrary.process().lookupFunction<Void Function(Int16, Int16, Bool), void Function(int, int, bool)>('set_player1_pointer');
+
         _startNativeEmulatorThread = DynamicLibrary.process().lookupFunction<Void Function(IntPtr, Double), void Function(int, double)>('start_native_emulator_thread');
         _stopNativeEmulatorThread = DynamicLibrary.process().lookupFunction<Void Function(), void Function()>('stop_native_emulator_thread');
         _setNativeEmulatorPaused = DynamicLibrary.process().lookupFunction<Void Function(Bool), void Function(bool)>('set_native_emulator_paused');
-        _setRumbleCallback = DynamicLibrary.process().lookupFunction<Void Function(Pointer<NativeFunction<dart_rumble_cb_c>>), void Function(Pointer<NativeFunction<dart_rumble_cb_c>>)>('set_rumble_callback');
       } else {
         _lib = DynamicLibrary.open(corePath);
       }
@@ -323,22 +321,9 @@ class LibretroEngine {
     _retroSetAudioSampleBatch(_nativeAudioCb);
     _retroSetInputPoll(_nativeInputPollCb);
     _retroSetInputState(_nativeInputCb);
-
-    if (!isMockMode) {
-      _rumbleListener = NativeCallable<dart_rumble_cb_c>.listener(_onRumble);
-      _setRumbleCallback(_rumbleListener!.nativeFunction);
-    }
   }
 
-  void _onRumble(int port, int effect, int strength) {
-    if (strength > 0) {
-      if (effect == 0) {
-        HapticFeedback.heavyImpact();
-      } else {
-        HapticFeedback.lightImpact();
-      }
-    }
-  }
+
 
   /// Load ROM file and boot up core
   bool loadGame(String romPath) {
@@ -358,8 +343,9 @@ class LibretroEngine {
     gameInfo.ref.meta = nullptr;
 
     try {
-      _retroSetControllerPortDevice(0, RETRO_DEVICE_JOYPAD);
-      _retroSetControllerPortDevice(1, RETRO_DEVICE_JOYPAD);
+      int deviceType = _coreName.toLowerCase().contains('pcsx') ? RETRO_DEVICE_ANALOG : RETRO_DEVICE_JOYPAD;
+      _retroSetControllerPortDevice(0, deviceType);
+      _retroSetControllerPortDevice(1, deviceType);
       
       final success = _retroLoadGame(gameInfo);
       if (success) {
@@ -484,20 +470,13 @@ class LibretroEngine {
     }
   }
 
-  /// Update analog state buffer (Dreamcast)
+  /// Update analog state buffer
   void updateAnalogState(int port, int index, int id, int value) {
     if (port == 0 && !isMockMode) {
       _setPlayer1Analog(index, id, value);
     }
-    // Note: Player 2 analog over network not fully implemented yet
   }
-
-  /// Update pointer state buffer (Nintendo DS)
-  void updatePointerState(int port, int x, int y, bool pressed) {
-    if (port == 0 && !isMockMode) {
-      _setPlayer1Pointer(x, y, pressed);
-    }
-  }
+  
 
   /// Shutdown emulator and release resources
   void togglePause() {
@@ -512,6 +491,7 @@ class LibretroEngine {
     _log('Shutting down engine');
     if (_lib != null && !isMockMode) {
       _nativeAudioDeinit();
+      _nativeVideoDeinit();
       if (_isGameLoaded) {
         _retroUnloadGame();
         _isGameLoaded = false;

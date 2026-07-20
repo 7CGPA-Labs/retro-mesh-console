@@ -283,7 +283,7 @@ void miracast_video_deinit() {
 }
 
 void miracast_video_push_frame(const void* data, unsigned width, unsigned height, size_t pitch, int pixel_format) {
-    if (!data) return;
+    if (!data || width == 0 || height == 0) return;
     const uint16_t* pixels = reinterpret_cast<const uint16_t*>(data);
     std::lock_guard<std::mutex> lock(renderMutex);
     
