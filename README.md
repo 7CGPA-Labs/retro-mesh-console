@@ -5,49 +5,52 @@
 [![iOS Build](https://github.com/7CGPA-Labs/retro-mesh-console/actions/workflows/ios.yml/badge.svg)](https://github.com/7CGPA-Labs/retro-mesh-console/actions/workflows/ios.yml)
 
 🌐 **[Visit the Official Mojo Snap Console Website](https://7cgpa-labs.github.io/retro-mesh-console/)**
-A high-performance, self-contained cross-platform mobile application built with **Flutter (Dart)** that transforms your mobile devices into a localized video game emulation console and wireless gamepad controller mesh network.
 
-It projects an independent gameplay viewport to a television (via native Android Cast SDK / iOS AirPlay UIWindow structures) while transforming the handheld smartphone screen into an ultra-low-latency wireless touch controller.
+A high-performance, cross-platform mobile application built with **Flutter (Dart)** that transforms your smartphone into both a localized video game emulation console and an ultra-low-latency wireless gamepad controller. 
+
+It projects the gameplay directly to a wireless television (via Miracast Android Presentation API / iOS AirPlay) while transforming your mobile device's screen into an immersive, edge-to-edge touch controller.
 
 ---
 
 ## ⚡ Key Capabilities
 
-* **Symmetrical Dual-Role Entry Gate**: A single unified binary package that branches execution on boot based on user selection: **Host Console System** or **Join Controller Squad**.
-* **Smart Core Routing**: Hides the complexities of "emulation cores" from the user. You just pick a game file, and the internal `CoreRouter` automatically loads the optimal engine based on the extension (`.nes`, `.smc`, `.sfc`, `.md`, `.gen`, `.gba`, `.iso`, `.cue`, `.img`, `.bin`).
-* **Dynamic Controller Layouts**: The virtual gamepad automatically morphs to match the console you are playing (e.g., standard D-Pad + A/B for NES, 6-button layout for Sega Genesis, 4-button + shoulder triggers for SNES/GBA/PS1).
-* **Native C++ Audio & Video Pipelines**: Achieves perfect, zero-latency audio-video sync by completely bypassing Dart/Kotlin overhead and MethodChannels for output. The FFI Libretro core pushes audio frame batches directly into a C++ ring buffer, instantly consumed by Android's AAudio and iOS's CoreAudio layers. Video rendering is similarly handled by blasting RGB565 buffers directly onto OS native window layers (`ANativeWindow` / `CALayer`).
-* **Dart FFI Libretro Core Wrapper**: Direct C/C++ FFI bindings to load compiled emulator binaries (`.so` / `.dylib`), managing native callbacks for input polling, while routing video and audio to the native C++ bridge.
-* **Player 1 (Console Host Mode)**: Serves as the central computing unit. P1 selects a local ROM, boots an embedded native TCP socket server on port 48293, starts an active native mDNS broadcast (`_retroconsole._tcp`), and maps virtual touch inputs directly down to Port 1 of the C++ input array.
-* **Player 2 (Peripheral Client Mode)**: Automatically scans the local network via native OS mDNS service discovery, establishes a raw TCP socket connection directly to P1, and acts as a touch gamepad.
-* **Zero-Latency Native Input Protocol**: Bypasses Dart completely for Player 2 networking. Physical screen taps on the Client send a 2-byte packet over the TCP socket, which is received by the Native OS (Kotlin/Swift) on the Host, and directly updates the thread-safe C++ input array for the emulator core via JNI/FFI hooks.
-* **Dual-Screen TV Projection**: Uses method channels to allocate native presentation boundaries:
+* **Symmetrical Dual-Role Entry Gate**: A single binary that allows the user to boot as either the **Host Console System** (projects to TV) or join as a **Client Controller** (Player 2 gamepad).
+* **True Full-Screen Immersive Gamepad**: The virtual gamepad automatically morphs to match the console you are playing (NES, SNES, Genesis, PS1). It runs in true immersive mode (no status bar or navigation gestures) with native multi-touch zero-latency polling.
+* **Native C++ Audio & Video Pipelines**: Achieves perfect, zero-latency audio-video sync by completely bypassing Dart overhead. The FFI Libretro core pushes audio and video frames directly into C++ threads (`miracast-render.cpp`, `miracast-audio.cpp`), where they are consumed instantly by Android's AAudio, EGL contexts, and iOS's CoreAudio layers.
+* **Dart FFI Libretro Core Wrapper**: Direct C/C++ FFI bindings load compiled emulator binaries (`.so` / `.dylib`) and manage memory serialization for the instant Quick Save and Quick Load functionality. 
+* **Zero-Latency Native Input Protocol (Player 2)**: Player 2 inputs bypass Flutter entirely. Physical screen taps on the Client send tiny packets over a raw TCP socket. The Native OS layer (Kotlin/Swift) receives these packets and directly updates the thread-safe C++ input array for the emulator core via JNI/FFI.
+* **Dual-Screen TV Projection**: 
   * **Android**: Renders on external displays using `android.app.Presentation` dialog views.
   * **iOS**: Listens for AirPlay connections to display root controllers in a secondary `UIWindow`.
-* **External Display Projection**: The app targets native external display projection on Android and iOS, using platform display APIs to present gameplay on a TV or monitor.
-* **Telemetry HUD**: Displays connection states (glowing green/red status chips), battery charge levels, and network connectivity indicators for both devices natively overlaid on the Host Gamepad interface.
 
 ---
 
 ## 📁 Project Architecture
 
-* **[`lib/main.dart`](file:///c:/Users/gagan/Projects/retro-mesh-console/lib/main.dart)**: Bootstraps the material MaterialApp, configures a retro dark theme, and loads the role selection gate.
-* **[`lib/emulation/libretro.dart`](file:///c:/Users/gagan/Projects/retro-mesh-console/lib/emulation/libretro.dart)**: Implements Dart FFI bindings for Libretro cores and handles the 60 FPS game loop.
-* **[`lib/emulation/core_router.dart`](file:///c:/Users/gagan/Projects/retro-mesh-console/lib/emulation/core_router.dart)**: The Smart Core Router that maps file extensions to emulator cores.
-* **[`lib/utils/native_bridge.dart`](file:///c:/Users/gagan/Projects/retro-mesh-console/lib/utils/native_bridge.dart)**: Routes networking and system wakelock commands directly to the Native OS.
-* **[`android/app/src/main/cpp/native-audio.cpp`](file:///c:/Users/gagan/Projects/retro-mesh-console/android/app/src/main/cpp/native-audio.cpp)** / **[`native-render.cpp`](file:///c:/Users/gagan/Projects/retro-mesh-console/android/app/src/main/cpp/native-render.cpp)**: Pure native C++ drivers for audio, zero-copy video rendering, and thread-safe input handling.
-* **[`android/app/src/main/kotlin/com/retromesh/retro_mesh_console/NetworkManager.kt`](file:///c:/Users/gagan/Projects/retro-mesh-console/android/app/src/main/kotlin/com/retromesh/retro_mesh_console/NetworkManager.kt)**: Native Android implementation for raw TCP sockets and mDNS, bypassing Dart entirely.
-* **[`lib/views/role_gate.dart`](file:///c:/Users/gagan/Projects/retro-mesh-console/lib/views/role_gate.dart)**: Welcome gate layout featuring visual selector cards and storage picker hooks.
-* **[`lib/views/gamepad_deck.dart`](file:///c:/Users/gagan/Projects/retro-mesh-console/lib/views/gamepad_deck.dart)**: Symmetrical touch controller deck featuring dynamic layouts, zero-delay multi-touch `Listener` widgets, platform-channel presentation hooks, and a live preview of the TV Canvas and Telemetry HUD.
+* **`lib/main.dart`**: Bootstraps the app and loads the role selection gate.
+* **`lib/emulation/libretro.dart`**: High-level Dart wrapper that utilizes `dart:ffi` to bridge the native Libretro C APIs, managing emulation lifecycle, paused states, and save-state memory serialization.
+* **`lib/emulation/core_router.dart`**: Smart routing that maps file extensions to emulator cores automatically.
+* **`lib/views/gamepad_deck.dart`**: The edge-to-edge virtual controller featuring dynamic layouts, multi-touch `Listener` widgets, and the in-game quick-action menu.
+* **`android/app/src/main/cpp/miracast-audio.cpp` / `miracast-render.cpp`**: Pure native C++ drivers for low-latency AAudio and double-buffered EGL rendering to external `ANativeWindow` surfaces.
+* **`android/app/src/main/kotlin/dev/seven_cgpalabs/mojosnap/NetworkManager.kt`**: Native Android implementation for raw TCP sockets, routing Player 2 controller inputs directly into the C++ bridge.
+* **`ios/Runner/retro-bridge.mm`**: Fully synchronized iOS native layer that supports Analog joysticks, DS touch pointers, and precise pixel format rendering environments.
 
 ---
 
 ## 🛠️ Getting Started & Run Guide
 
-### 1. Prerequisite: Place Emulator Core Binaries
-Place your compiled Libretro core shared libraries in the `assets/cores/` directory:
-* **Android**: `assets/cores/fceumm_libretro_android.so` (NES), `assets/cores/snes9x_libretro_android.so` (SNES), `assets/cores/genesis_plus_gx_libretro_android.so` (Sega Genesis)
-* **iOS**: Cores must be compiled statically and linked in the Xcode project workspace.
+### 1. Download Emulator Cores
+You no longer need to manually manage core files! We have included a Dart script that automatically downloads the latest stable Libretro cores straight from the BuildBot servers and extracts them into your assets folder.
+
+Run the following command from the root of your project:
+* **For Android:**
+  ```bash
+  dart run scripts/download_cores.dart android
+  ```
+* **For iOS:**
+  ```bash
+  dart run scripts/download_cores.dart ios
+  ```
 
 ### 2. Build & Run the App
 Connect two mobile devices to the **same Wi-Fi network**.
