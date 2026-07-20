@@ -769,12 +769,18 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
       const double threshold = 0.5;
       
       int? newX;
-      if (x < -threshold) newX = 3; // LEFT
-      else if (x > threshold) newX = 4; // RIGHT
+      if (x < -threshold) {
+        newX = 3; // LEFT
+      } else if (x > threshold) {
+        newX = 4; // RIGHT
+      }
       
       int? newY;
-      if (y < -threshold) newY = 1; // UP
-      else if (y > threshold) newY = 2; // DOWN
+      if (y < -threshold) {
+        newY = 1; // UP
+      } else if (y > threshold) {
+        newY = 2; // DOWN
+      }
       
       // Release old buttons if they changed
       if (_activeAnalogDPadX != null && _activeAnalogDPadX != newX) {
