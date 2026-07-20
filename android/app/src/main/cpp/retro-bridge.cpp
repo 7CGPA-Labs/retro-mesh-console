@@ -153,7 +153,6 @@ int16_t native_input_state_cb(unsigned port, unsigned device, unsigned index, un
         if (port > 1 || index > 1 || id > 1) return 0;
         return analog_states[port][index][id].load();
     }
-    }
     return 0;
 }
 
