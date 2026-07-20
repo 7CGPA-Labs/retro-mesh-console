@@ -8,9 +8,6 @@ std::atomic<int> g_activePixelFormat{2};
 // Input state
 std::atomic<bool> ios_button_states[2][16];
 std::atomic<int16_t> ios_analog_states[2][2][2]; // [port][index][id (0=X, 1=Y)]
-std::atomic<int16_t> ios_pointer_x{0};
-std::atomic<int16_t> ios_pointer_y{0};
-std::atomic<bool> ios_pointer_pressed{false};
 
 extern "C" {
 
@@ -156,14 +153,6 @@ int16_t native_input_state_cb(unsigned port, unsigned device, unsigned index, un
         if (port > 1 || index > 1 || id > 1) return 0;
         return ios_analog_states[port][index][id].load();
     }
-    else if (device == 6) { // RETRO_DEVICE_POINTER
-        if (port > 0) return 0; // Pointer usually only on port 0
-        switch(id) {
-            case 0: return ios_pointer_x.load();
-            case 1: return ios_pointer_y.load();
-            case 2: return ios_pointer_pressed.load() ? 1 : 0;
-        }
-    }
     return 0;
 }
 
@@ -179,13 +168,6 @@ void set_player1_analog(int index, int id, int16_t value) {
     if (index >= 0 && index < 2 && id >= 0 && id < 2) {
         ios_analog_states[0][index][id].store(value);
     }
-}
-
-__attribute__((visibility("default"))) __attribute__((used))
-void set_player1_pointer(int16_t x, int16_t y, bool pressed) {
-    ios_pointer_x.store(x);
-    ios_pointer_y.store(y);
-    ios_pointer_pressed.store(pressed);
 }
 
 __attribute__((visibility("default"))) __attribute__((used))

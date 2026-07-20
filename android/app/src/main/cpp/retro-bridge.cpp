@@ -11,9 +11,6 @@ std::atomic<int> g_activePixelFormat{2};
 // Input state
 std::atomic<bool> button_states[2][16];
 std::atomic<int16_t> analog_states[2][2][2]; // [port][index][id (0=X, 1=Y)]
-std::atomic<int16_t> pointer_x{0};
-std::atomic<int16_t> pointer_y{0};
-std::atomic<bool> pointer_pressed{false};
 
 // Emulator thread
 typedef void (*retro_run_t)();
@@ -156,13 +153,6 @@ int16_t native_input_state_cb(unsigned port, unsigned device, unsigned index, un
         if (port > 1 || index > 1 || id > 1) return 0;
         return analog_states[port][index][id].load();
     }
-    else if (device == 6) { // RETRO_DEVICE_POINTER
-        if (port > 0) return 0; // Pointer usually only on port 0
-        switch(id) {
-            case 0: return pointer_x.load();
-            case 1: return pointer_y.load();
-            case 2: return pointer_pressed.load() ? 1 : 0;
-        }
     }
     return 0;
 }
@@ -179,17 +169,7 @@ void set_player1_analog(int index, int id, int16_t value) {
     }
 }
 
-void set_player1_pointer(int16_t x, int16_t y, bool pressed) {
-    pointer_x.store(x);
-    pointer_y.store(y);
-    pointer_pressed.store(pressed);
-}
 
-// Dummy HW rendering functions to satisfy Dart FFI lookups
-bool hw_render_init(int width, int height) { return false; }
-void hw_render_extract_frame() {}
-uintptr_t hw_get_current_framebuffer() { return 0; }
-void* hw_get_proc_address(const char* sym) { return nullptr; }
 
 JNIEXPORT void JNICALL Java_dev_seven_1cgpalabs_mojosnap_NetworkManager_updatePlayer2Button(JNIEnv* env, jobject thiz, jint buttonId, jboolean pressed) {
     if (buttonId >= 0 && buttonId < 16) {
