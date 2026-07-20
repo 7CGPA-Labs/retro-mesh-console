@@ -27,6 +27,7 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
   static const MethodChannel _projectionChannel = MethodChannel('dev.seven_cgpalabs.mojosnap/projection');
   
   bool _isConnectingTV = false; // Track if waiting for OS Cast dialog to return
+  bool _isMenuOpen = false;
 
   @override
   void initState() {
@@ -200,12 +201,20 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
     if (buttonId == 11) { // MENU
       if (pressed) {
         if (widget.isHost) {
-          _togglePause();
-          if (widget.engine != null && widget.engine!.isPaused) {
-            _showMenuOverlay();
+          if (_isMenuOpen) {
+            Navigator.of(context, rootNavigator: true).pop();
+          } else {
+            _togglePause();
+            if (widget.engine != null && widget.engine!.isPaused) {
+              _showMenuOverlay();
+            }
           }
         } else {
-          _showClientMenuOverlay();
+          if (_isMenuOpen) {
+            Navigator.of(context, rootNavigator: true).pop();
+          } else {
+            _showClientMenuOverlay();
+          }
         }
       }
       return;
@@ -275,6 +284,7 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
   }
 
   void _showMenuOverlay() {
+    _isMenuOpen = true;
     showDialog(
       context: context,
       barrierDismissible: true,
@@ -363,6 +373,7 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
         ),
       ),
     ).then((_) {
+      _isMenuOpen = false;
       // Unpause whenever the dialog is dismissed (either by button tap or tapping outside)
       if (widget.engine != null && widget.engine!.isPaused) {
         _togglePause();
@@ -371,6 +382,7 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
   }
 
   void _showClientMenuOverlay() {
+    _isMenuOpen = true;
     showDialog(
       context: context,
       barrierDismissible: true,
@@ -412,7 +424,9 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
           ),
         ),
       ),
-    );
+    ).then((_) {
+      _isMenuOpen = false;
+    });
   }
 
   void _exitGame(BuildContext context) {

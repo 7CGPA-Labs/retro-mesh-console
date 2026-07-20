@@ -21,7 +21,7 @@ extern "C" {
     void miracast_video_deinit() {}
 
     void miracast_video_push_frame(const void* data, unsigned width, unsigned height, size_t pitch, int pixel_format) {
-        if (global_tv_layer == nil || !data) {
+        if (global_tv_layer == nil || !data || width == 0 || height == 0) {
             return;
         }
 
