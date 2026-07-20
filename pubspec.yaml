@@ -40,6 +40,7 @@ dependencies:
   path: ^1.9.1
   nsd: ^5.0.1
   web_socket_channel: ^3.0.3
+  gamepads: ^0.1.10+5
 
 dev_dependencies:
   archive: ^4.0.2

@@ -165,6 +165,34 @@ class NativeBridge {
     }
   }
 
+  static Future<void> sendAnalogInput(int index, int id, int value) async {
+    try {
+      if (_wsChannel != null || _udpSocket != null) {
+        final payload = Uint8List(6);
+        payload[0] = 2; // Player 2
+        payload[1] = 3; // 3 = ANALOG
+        payload[2] = index;
+        payload[3] = id;
+        ByteData.view(payload.buffer).setInt16(4, value, Endian.little);
+
+        if (_isLocalLan && _udpSocket != null && _hostIpAddress != null) {
+          _udpSocket!.send(payload, _hostIpAddress!, _hostUdpPort);
+        } else if (_wsChannel != null) {
+          _wsChannel!.sink.add(payload);
+        }
+      } else {
+        await _channel.invokeMethod('sendAnalogInput', {
+          'index': index,
+          'id': id,
+          'value': value,
+        });
+      }
+    } catch (e) {
+      debugPrint('Failed to send analog input: $e');
+    }
+  }
+
+
   static Future<void> keepScreenOn(bool enable) async {
     try {
       await _channel.invokeMethod('keepScreenOn', {'enable': enable});
