@@ -113,9 +113,11 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
     } else if (state == AppLifecycleState.paused) {
       if (widget.isHost && widget.engine != null) {
         // Automatically pause emulator to prevent background audio playback
-        setState(() {
-          widget.engine!.isPaused = true;
-        });
+        if (!widget.engine!.isPaused) {
+          setState(() {
+            widget.engine!.togglePause();
+          });
+        }
       }
     }
   }
