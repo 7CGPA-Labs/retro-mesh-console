@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
+import 'package:nsd/nsd.dart' as nsd;
+import 'package:web_socket_channel/web_socket_channel.dart';
 
 class NativeBridge {
   static const MethodChannel _channel = MethodChannel('dev.seven_cgpalabs.mojosnap/system');
@@ -11,13 +13,12 @@ class NativeBridge {
   static final StreamController<void> _disconnectController = StreamController.broadcast();
   static Stream<void> get onDisconnected => _disconnectController.stream;
 
+  static nsd.Discovery? _discovery;
+  static WebSocketChannel? _wsChannel;
+
   static void init() {
     _channel.setMethodCallHandler((call) async {
-      if (call.method == 'onHostsDiscovered') {
-        final List<dynamic> raw = call.arguments;
-        final List<Map<String, dynamic>> hosts = raw.map((e) => Map<String, dynamic>.from(e)).toList();
-        _hostsController.add(hosts);
-      } else if (call.method == 'onHostDisconnected') {
+      if (call.method == 'onHostDisconnected') {
         _disconnectController.add(null);
       }
     });
@@ -41,7 +42,42 @@ class NativeBridge {
 
   static Future<void> startDiscovery() async {
     try {
-      await _channel.invokeMethod('startDiscovery');
+      _discovery = await nsd.startDiscovery('_retroconsole._tcp');
+      _discovery!.addListener(() {
+        final hosts = _discovery!.services.map((nsd.Service s) {
+          final txt = s.txt ?? {};
+          String name = 'Unknown Host';
+          if (txt['serverName'] != null) {
+            name = String.fromCharCodes(txt['serverName']!);
+          } else if (s.name != null) {
+            name = s.name!;
+          }
+          
+          String hostType = 'unknown';
+          if (txt['hostType'] != null) {
+            hostType = String.fromCharCodes(txt['hostType']!);
+          }
+          
+          String core = 'unknown';
+          if (txt['core'] != null) {
+            core = String.fromCharCodes(txt['core']!);
+          }
+
+          int port = s.port ?? 8080;
+          if (txt['port'] != null) {
+            port = int.tryParse(String.fromCharCodes(txt['port']!)) ?? port;
+          }
+
+          return {
+            'name': name,
+            'ip': s.host ?? '',
+            'port': port,
+            'hostType': hostType,
+            'core': core,
+          };
+        }).toList();
+        _hostsController.add(hosts);
+      });
     } catch (e) {
       debugPrint('Failed to start discovery: $e');
     }
@@ -49,15 +85,29 @@ class NativeBridge {
 
   static Future<void> stopDiscovery() async {
     try {
-      await _channel.invokeMethod('stopDiscovery');
+      if (_discovery != null) {
+        await nsd.stopDiscovery(_discovery!);
+        _discovery = null;
+      }
     } catch (e) {
       debugPrint('Failed to stop discovery: $e');
     }
   }
 
-  static Future<void> connectToHost(String hostIp) async {
+  static Future<void> connectToHost(String hostIp, {int port = 8080}) async {
     try {
-      await _channel.invokeMethod('connectToHost', {'ip': hostIp});
+      _wsChannel = WebSocketChannel.connect(Uri.parse('ws://$hostIp:$port/controller'));
+      _wsChannel!.stream.listen(
+        (message) {},
+        onDone: () {
+          _wsChannel = null;
+          _disconnectController.add(null);
+        },
+        onError: (error) {
+          _wsChannel = null;
+          _disconnectController.add(null);
+        },
+      );
     } catch (e) {
       debugPrint('Failed to connect to host: $e');
     }
@@ -65,10 +115,18 @@ class NativeBridge {
 
   static Future<void> sendInput(int buttonId, bool pressed) async {
     try {
-      await _channel.invokeMethod('sendInput', {
-        'buttonId': buttonId,
-        'pressed': pressed,
-      });
+      if (_wsChannel != null) {
+        final payload = Uint8List(3);
+        payload[0] = 2; // Player 2
+        payload[1] = pressed ? 1 : 2; // 1 = BUTTON_DOWN, 2 = BUTTON_UP
+        payload[2] = buttonId;
+        _wsChannel!.sink.add(payload);
+      } else {
+        await _channel.invokeMethod('sendInput', {
+          'buttonId': buttonId,
+          'pressed': pressed,
+        });
+      }
     } catch (e) {
       debugPrint('Failed to send input: $e');
     }

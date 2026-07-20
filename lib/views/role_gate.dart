@@ -175,12 +175,16 @@ class RoleGate extends StatelessWidget {
                     itemBuilder: (context, index) {
                       final host = snapshot.data![index];
                       return ListTile(
-                        leading: const Icon(Icons.videogame_asset, color: Color(0xFF00E5FF)),
+                        leading: Icon(
+                          host['hostType'] == 'desktop' ? Icons.desktop_windows :
+                          host['hostType'] == 'webos' ? Icons.tv : Icons.videogame_asset,
+                          color: const Color(0xFF00E5FF)
+                        ),
                         title: Text(host['name'], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                         subtitle: Text('IP: ${host['ip']} | System: ${host['core'].toString().toUpperCase()}', style: const TextStyle(color: Colors.white70)),
                         onTap: () {
                           NativeBridge.stopDiscovery();
-                          NativeBridge.connectToHost(host['ip']);
+                          NativeBridge.connectToHost(host['ip'], port: host['port'] ?? 8080);
                           Navigator.pop(ctx);
                           Navigator.push(
                             context,
