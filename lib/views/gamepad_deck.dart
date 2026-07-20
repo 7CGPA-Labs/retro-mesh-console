@@ -513,26 +513,26 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
             // Shoulder buttons for SNES, GBA, PS1 (Triggers)
             if (isSnes || isPs1) ...[
               Positioned(
-                left: 36,
+                left: isPs1 ? 172.0 : 36.0,
                 top: constraints.maxHeight * 0.05,
                 child: _buildShoulderButton(label: isPs1 ? 'L1' : 'L', buttonId: 12),
               ),
               Positioned(
-                right: 36,
+                right: isPs1 ? 172.0 : 36.0,
                 top: constraints.maxHeight * 0.05,
                 child: _buildShoulderButton(label: isPs1 ? 'R1' : 'R', buttonId: 13),
               ),
             ],
-            // Extra triggers for PS1
+            // Extra triggers for PS1 (placed on the outer edges beside L1/R1)
             if (isPs1) ...[
               Positioned(
                 left: 36,
-                top: constraints.maxHeight * 0.25,
+                top: constraints.maxHeight * 0.05,
                 child: _buildShoulderButton(label: 'L2', buttonId: 14),
               ),
               Positioned(
                 right: 36,
-                top: constraints.maxHeight * 0.25,
+                top: constraints.maxHeight * 0.05,
                 child: _buildShoulderButton(label: 'R2', buttonId: 15),
               ),
             ],
@@ -561,12 +561,12 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
               ),
             ),
 
-            // Center: System Keys (SELECT / START / MENU)
+            // Center: System Keys (SELECT/MODE / START / MENU)
             Align(
               alignment: Alignment.bottomCenter,
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 24),
-                child: _buildSystemPanel(),
+                child: _buildSystemPanel(isGenesis),
               ),
             ),
           ],
@@ -689,7 +689,7 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildSystemPanel() {
+  Widget _buildSystemPanel(bool isGenesis) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
@@ -699,7 +699,7 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _buildSystemButton(label: 'SELECT', buttonId: 10),
+            _buildSystemButton(label: isGenesis ? 'MODE' : 'SELECT', buttonId: 10),
             const SizedBox(width: 16),
             _buildSystemButton(label: 'START', buttonId: 9),
           ],

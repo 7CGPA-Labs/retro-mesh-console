@@ -135,8 +135,8 @@ int16_t native_input_state_cb(unsigned port, unsigned device, unsigned index, un
             case 7: customId = 4; break; // RIGHT
             case 8: customId = 5; break; // A
             case 9: customId = 7; break; // X
-            case 10: customId = 11; break; // L
-            case 11: customId = 12; break; // R
+            case 10: customId = 12; break; // L (L1)
+            case 11: customId = 13; break; // R (R1)
             case 12: customId = 14; break; // L2
             case 13: customId = 15; break; // R2
             case 14: customId = 16; break; // L3
