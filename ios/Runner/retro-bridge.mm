@@ -110,6 +110,10 @@ void native_audio_deinit() {
     miracast_audio_deinit();
 }
 
+void native_video_deinit() {
+    miracast_video_deinit();
+}
+
 size_t native_audio_sample_batch_cb(const int16_t* data, size_t frames) {
     miracast_audio_push_batch(data, frames);
     return frames;

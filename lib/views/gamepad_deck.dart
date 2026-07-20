@@ -28,6 +28,10 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
   
   bool _isConnectingTV = false; // Track if waiting for OS Cast dialog to return
   bool _isMenuOpen = false;
+  bool _useAnalogStick = false;
+  Offset _analogStickPos = Offset.zero;
+  int? _activeAnalogDPadX; // 3 for left, 4 for right
+  int? _activeAnalogDPadY; // 1 for up, 2 for down
 
   @override
   void initState() {
@@ -198,6 +202,10 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
   }
 
   void _handleButtonEvent(int buttonId, bool pressed) {
+    if (pressed) {
+      HapticFeedback.lightImpact();
+    }
+    
     if (buttonId == 11) { // MENU
       if (pressed) {
         if (widget.isHost) {
@@ -553,15 +561,26 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
               ),
             ],
 
+            // Analog toggle
+            Positioned(
+              top: constraints.maxHeight * 0.15,
+              left: constraints.maxWidth / 2 - 80,
+              child: _buildAnalogToggle(),
+            ),
+
             // Left & Right Controls
             Positioned.fill(
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Left Side: D-pad
+                  // Left Side: D-pad or Analog
                   Padding(
                     padding: EdgeInsets.only(left: 36, top: (isSnes || isPs1) ? constraints.maxHeight * 0.15 : 0),
-                    child: Center(child: _buildDPad(baseSize)),
+                    child: Center(
+                      child: _useAnalogStick 
+                          ? _buildAnalogStick(baseSize * 3) 
+                          : _buildDPad(baseSize),
+                    ),
                   ),
                   // Right Side: Dynamic Action Cluster
                   Padding(
@@ -594,7 +613,7 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
   Widget _buildShoulderButton({required String label, required int buttonId}) {
     return Listener(
       onPointerDown: (_) {
-        HapticFeedback.lightImpact();
+        
         _handleButtonEvent(buttonId, true);
       },
       onPointerUp: (_) {
@@ -619,6 +638,163 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
         ),
       ),
     );
+  }
+
+  Widget _buildAnalogToggle() {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _useAnalogStick = !_useAnalogStick;
+        });
+      },
+      child: Container(
+        width: 160,
+        height: 40,
+        decoration: BoxDecoration(
+          color: _useAnalogStick ? const Color(0xFFFF2E93).withValues(alpha: 0.2) : Colors.white12,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: _useAnalogStick ? const Color(0xFFFF2E93) : Colors.white24,
+            width: 2,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              _useAnalogStick ? Icons.gamepad : Icons.directions_walk,
+              color: _useAnalogStick ? const Color(0xFFFF2E93) : Colors.white54,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              _useAnalogStick ? 'ANALOG ON' : 'D-PAD ON',
+              style: TextStyle(
+                color: _useAnalogStick ? const Color(0xFFFF2E93) : Colors.white54,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                fontFamily: 'Outfit',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAnalogStick(double size) {
+    double radius = size / 2;
+    double knobRadius = size / 5;
+
+    return GestureDetector(
+      onPanStart: (details) {
+        _updateAnalog(details.localPosition, radius);
+      },
+      onPanUpdate: (details) {
+        _updateAnalog(details.localPosition, radius);
+      },
+      onPanEnd: (details) {
+        setState(() {
+          _analogStickPos = Offset.zero;
+        });
+        _handleAnalogEvent(0.0, 0.0);
+      },
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: const Color(0xFF1E1E38).withValues(alpha: 0.5),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white24, width: 2),
+        ),
+        child: Center(
+          child: Transform.translate(
+            offset: _analogStickPos,
+            child: Container(
+              width: knobRadius * 2,
+              height: knobRadius * 2,
+              decoration: BoxDecoration(
+                color: const Color(0xFF14142B),
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFFFF2E93), width: 3),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFFF2E93).withValues(alpha: 0.3),
+                    blurRadius: 10,
+                    spreadRadius: 2,
+                  )
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _updateAnalog(Offset localPosition, double radius) {
+    // Map local position to a vector from the center
+    Offset center = Offset(radius, radius);
+    Offset delta = localPosition - center;
+
+    // Clamp to circle
+    double distance = delta.distance;
+    if (distance > radius) {
+      delta = Offset.fromDirection(delta.direction, radius);
+    }
+
+    setState(() {
+      _analogStickPos = delta;
+    });
+
+    // Normalize for Libretro [-1.0, 1.0]
+    double nx = delta.dx / radius;
+    double ny = delta.dy / radius; // Libretro Y might be inverted depending on core, assuming standard Y down here
+    _handleAnalogEvent(nx, ny);
+  }
+
+  void _handleAnalogEvent(double x, double y) {
+    bool isPs1 = widget.coreName.toLowerCase().contains('pcsx');
+    
+    if (isPs1) {
+      if (widget.isHost && widget.engine != null) {
+        // Map [-1.0, 1.0] to [-0x7FFF, 0x7FFF]
+        int ix = (x * 32767).round().clamp(-32767, 32767);
+        int iy = (y * 32767).round().clamp(-32767, 32767);
+        widget.engine!.updateAnalogState(0, 0, 0, ix);
+        widget.engine!.updateAnalogState(0, 0, 1, iy); // 0=left stick, 1=right stick
+      }
+    } else {
+      // Analog-to-D-pad Translation for older cores
+      const double threshold = 0.5;
+      
+      int? newX;
+      if (x < -threshold) newX = 3; // LEFT
+      else if (x > threshold) newX = 4; // RIGHT
+      
+      int? newY;
+      if (y < -threshold) newY = 1; // UP
+      else if (y > threshold) newY = 2; // DOWN
+      
+      // Release old buttons if they changed
+      if (_activeAnalogDPadX != null && _activeAnalogDPadX != newX) {
+        _handleButtonEvent(_activeAnalogDPadX!, false);
+      }
+      if (_activeAnalogDPadY != null && _activeAnalogDPadY != newY) {
+        _handleButtonEvent(_activeAnalogDPadY!, false);
+      }
+      
+      // Press new buttons if they changed
+      if (newX != null && _activeAnalogDPadX != newX) {
+        _handleButtonEvent(newX, true);
+      }
+      if (newY != null && _activeAnalogDPadY != newY) {
+        _handleButtonEvent(newY, true);
+      }
+      
+      _activeAnalogDPadX = newX;
+      _activeAnalogDPadY = newY;
+    }
   }
 
   Widget _buildDPad(double size) {
@@ -674,7 +850,7 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
   }) {
     return Listener(
       onPointerDown: (_) {
-        HapticFeedback.lightImpact();
+        
         _handleButtonEvent(buttonId, true);
       },
       onPointerUp: (_) {
@@ -781,7 +957,7 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
   }) {
     return Listener(
       onPointerDown: (_) {
-        HapticFeedback.lightImpact();
+        
         _handleButtonEvent(buttonId, true);
       },
       onPointerUp: (_) {
@@ -887,7 +1063,7 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
   }) {
     return Listener(
       onPointerDown: (_) {
-        HapticFeedback.lightImpact();
+        
         _handleButtonEvent(buttonId, true);
       },
       onPointerUp: (_) {
