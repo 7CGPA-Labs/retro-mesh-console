@@ -18,6 +18,7 @@ std::atomic<bool> pointer_pressed{false};
 // Emulator thread
 typedef void (*retro_run_t)();
 static std::atomic<bool> emulator_running{false};
+static std::atomic<bool> emulator_paused{false};
 static std::thread emulator_thread;
 
 extern "C" {
@@ -43,7 +44,9 @@ void start_native_emulator_thread(uintptr_t retro_run_ptr, double fps) {
             if (accumulator > 0.1) accumulator = 0.1;
             
             while (accumulator >= targetFrameTime && emulator_running.load()) {
-                run_func();
+                if (!emulator_paused.load()) {
+                    run_func();
+                }
                 accumulator -= targetFrameTime;
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -56,6 +59,10 @@ void stop_native_emulator_thread() {
     if (emulator_thread.joinable()) {
         emulator_thread.join();
     }
+}
+
+void set_native_emulator_paused(bool paused) {
+    emulator_paused.store(paused);
 }
 
 // --- Video Bridge ---

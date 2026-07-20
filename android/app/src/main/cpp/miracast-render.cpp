@@ -165,6 +165,7 @@ static void TvRenderWorker() {
     bool eglReady = false;
     int currentTexWidth = 0;
     int currentTexHeight = 0;
+    ANativeWindow* lastTvWindow = nullptr;
 
     while (tvThreadRunning) {
         std::unique_lock<std::mutex> lock(tvMutex);
@@ -172,6 +173,14 @@ static void TvRenderWorker() {
         
         if (!tvThreadRunning) break;
         
+        if (tvWindow != lastTvWindow) {
+            if (eglReady) {
+                destroyEGL();
+                eglReady = false;
+            }
+            lastTvWindow = tvWindow;
+        }
+
         if (tvWindow && !eglReady) {
             eglReady = setupEGL();
         }

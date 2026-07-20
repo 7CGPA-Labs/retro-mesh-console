@@ -130,7 +130,7 @@ void miracast_audio_deinit() {
 }
 
 void miracast_audio_push_batch(const int16_t* data, size_t frames) {
-    if (!g_audio_initialized || !is_tv_connected()) return;
+    if (!g_audio_initialized) return;
     
     std::lock_guard<std::mutex> lock(g_audio_mutex);
     size_t samples_to_write = frames * 2;

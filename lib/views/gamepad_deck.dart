@@ -39,6 +39,9 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
       DeviceOrientation.landscapeRight,
     ]);
     
+    // Hide system UI (status bar / navigation bar) for full immersive gameplay
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    
     // 2. Prevent mobile OS from sleeping or throttling priority threads natively
     NativeBridge.keepScreenOn(true);
 
@@ -158,6 +161,9 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
     ]);
+    
+    // Restore system UI overlays
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: SystemUiOverlay.values);
     NativeBridge.keepScreenOn(false);
 
     if (widget.isHost) {
@@ -190,10 +196,14 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
 
   void _handleButtonEvent(int buttonId, bool pressed) {
     if (buttonId == 11) { // MENU
-      if (pressed && widget.isHost) {
-        _togglePause();
-        if (widget.engine!.isPaused) {
-          _showMenuOverlay();
+      if (pressed) {
+        if (widget.isHost) {
+          _togglePause();
+          if (widget.engine != null && widget.engine!.isPaused) {
+            _showMenuOverlay();
+          }
+        } else {
+          _showClientMenuOverlay();
         }
       }
       return;
@@ -358,6 +368,51 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
     });
   }
 
+  void _showClientMenuOverlay() {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E38),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.menu, color: Color(0xFF00E5FF)),
+            const SizedBox(width: 10),
+            const Text(
+              'CLIENT MENU',
+              style: TextStyle(color: Colors.white, fontFamily: 'Outfit', fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                dense: true,
+                leading: const Icon(Icons.play_arrow, color: Colors.white70),
+                title: const Text('Resume', style: TextStyle(color: Colors.white, fontFamily: 'Outfit', fontSize: 14)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                },
+              ),
+              ListTile(
+                dense: true,
+                leading: const Icon(Icons.exit_to_app, color: Color(0xFFEF4444)),
+                title: const Text('Disconnect', style: TextStyle(color: Color(0xFFEF4444), fontFamily: 'Outfit', fontWeight: FontWeight.bold, fontSize: 14)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  Navigator.pop(context); // Disconnect and go back
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _exitGame(BuildContext context) {
     if (widget.isHost) {
       _stopNativeTVProjection();
@@ -429,161 +484,13 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
   // --- HOST LAYOUTS (P1) ---
 
   Widget _buildHostLayout() {
-    return SafeArea(
-      child: Column(
-        children: [
-          _buildHeaderBar(
-            title: 'CONSOLE HOST • PORT 1',
-            subtitle: widget.romName,
-            color: const Color(0xFFFF2E93),
-            extraActions: [
-              TextButton.icon(
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      backgroundColor: const Color(0xFF1E1E38),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      title: const Text('Exit Game', style: TextStyle(color: Colors.white, fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
-                      content: const Text('Are you sure you want to exit? This will stop the emulation and disconnect all players.', style: TextStyle(color: Colors.white70, fontFamily: 'Outfit')),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx),
-                          child: const Text('CANCEL', style: TextStyle(color: Colors.white38)),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            Navigator.pop(ctx);
-                            _exitGame(context);
-                          },
-                          child: const Text('EXIT', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold)),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.exit_to_app, color: Color(0xFFEF4444), size: 16),
-                label: const Text(
-                  'EXIT GAME',
-                  style: TextStyle(
-                    color: Color(0xFFEF4444),
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Outfit',
-                  ),
-                ),
-              ),
-            ],
-          ),
-          Expanded(
-            child: _buildGamepadControls(),
-          ),
-        ],
-      ),
-    );
+    return _buildGamepadControls();
   }
 
   // --- CLIENT LAYOUTS (P2) ---
 
   Widget _buildClientLayout() {
-    // ValueListenableBuilder is no longer supported for native client socket without an event channel.
-    // For now we will just show the client layout assuming it connects.
-    return SafeArea(
-      child: Column(
-        children: [
-          _buildHeaderBar(
-            title: 'CLIENT SQUAD CONTROLLER • PORT 2',
-            subtitle: 'Native TCP Socket Connected',
-            color: const Color(0xFF00E5FF),
-            extraActions: [
-              TextButton.icon(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                icon: const Icon(Icons.exit_to_app, color: Color(0xFFEF4444), size: 16),
-                label: const Text(
-                  'DISCONNECT',
-                  style: TextStyle(
-                    color: Color(0xFFEF4444),
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          Expanded(
-            child: _buildGamepadControls(),
-          ),
-        ],
-      ),
-    );
-  }
-
-
-  // --- REUSABLE UI BLOCKS ---
-
-  Widget _buildHeaderBar({
-    required String title,
-    required String subtitle,
-    required Color color,
-    List<Widget> extraActions = const [],
-  }) {
-    return Container(
-      height: 45,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: const BoxDecoration(
-        color: Color(0xFF0F0F28),
-        border: Border(
-          bottom: BorderSide(color: Colors.white12, width: 1.0),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Row(
-              children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(shape: BoxShape.circle, color: color),
-                ),
-                const SizedBox(width: 10),
-                Flexible(
-                  child: Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: color,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.0,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    '|  $subtitle',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.4),
-                      fontSize: 10,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Row(children: extraActions),
-        ],
-      ),
-    );
+    return _buildGamepadControls();
   }
 
   /// Core gamepad layout split into D-pad, System Panel, and Action cluster
@@ -677,6 +584,9 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
       onPointerUp: (_) {
         _handleButtonEvent(buttonId, false);
       },
+      onPointerCancel: (_) {
+        _handleButtonEvent(buttonId, false);
+      },
       child: Container(
         width: 120,
         height: 48,
@@ -752,6 +662,9 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
         _handleButtonEvent(buttonId, true);
       },
       onPointerUp: (_) {
+        _handleButtonEvent(buttonId, false);
+      },
+      onPointerCancel: (_) {
         _handleButtonEvent(buttonId, false);
       },
       child: Container(
@@ -858,6 +771,9 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
       onPointerUp: (_) {
         _handleButtonEvent(buttonId, false);
       },
+      onPointerCancel: (_) {
+        _handleButtonEvent(buttonId, false);
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         decoration: BoxDecoration(
@@ -959,6 +875,9 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
         _handleButtonEvent(buttonId, true);
       },
       onPointerUp: (_) {
+        _handleButtonEvent(buttonId, false);
+      },
+      onPointerCancel: (_) {
         _handleButtonEvent(buttonId, false);
       },
       child: Container(

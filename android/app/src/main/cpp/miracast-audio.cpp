@@ -56,7 +56,7 @@ void miracast_audio_deinit() {
 }
 
 void miracast_audio_push_batch(const int16_t* data, size_t frames) {
-    if (!g_audio_initialized || !stream || !is_tv_connected()) return;
+    if (!g_audio_initialized || !stream) return;
     
     // Apply 4.0x digital gain boost for Miracast / WebCaster
     static std::vector<int16_t> boosted_data;

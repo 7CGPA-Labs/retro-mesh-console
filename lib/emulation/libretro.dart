@@ -154,6 +154,7 @@ class LibretroEngine {
   late Pointer<NativeFunction<Void Function()>> _retroRunPtr;
   late void Function(int, double) _startNativeEmulatorThread;
   late void Function() _stopNativeEmulatorThread;
+  late void Function(bool) _setNativeEmulatorPaused;
   
   double _coreFps = 60.0;
 
@@ -213,6 +214,7 @@ class LibretroEngine {
         _setPlayer1Pointer = nativeRenderLib.lookupFunction<Void Function(Int16, Int16, Bool), void Function(int, int, bool)>('set_player1_pointer');
         _startNativeEmulatorThread = nativeRenderLib.lookupFunction<Void Function(IntPtr, Double), void Function(int, double)>('start_native_emulator_thread');
         _stopNativeEmulatorThread = nativeRenderLib.lookupFunction<Void Function(), void Function()>('stop_native_emulator_thread');
+        _setNativeEmulatorPaused = nativeRenderLib.lookupFunction<Void Function(Bool), void Function(bool)>('set_native_emulator_paused');
       } else if (Platform.isIOS) {
         // Statically linked or loaded via Framework bundle on iOS
         _lib = DynamicLibrary.process();
@@ -225,6 +227,7 @@ class LibretroEngine {
         _setPlayer1Pointer = DynamicLibrary.process().lookupFunction<Void Function(Int16, Int16, Bool), void Function(int, int, bool)>('set_player1_pointer');
         _startNativeEmulatorThread = DynamicLibrary.process().lookupFunction<Void Function(IntPtr, Double), void Function(int, double)>('start_native_emulator_thread');
         _stopNativeEmulatorThread = DynamicLibrary.process().lookupFunction<Void Function(), void Function()>('stop_native_emulator_thread');
+        _setNativeEmulatorPaused = DynamicLibrary.process().lookupFunction<Void Function(Bool), void Function(bool)>('set_native_emulator_paused');
       } else {
         _lib = DynamicLibrary.open(corePath);
       }
@@ -479,6 +482,9 @@ class LibretroEngine {
   /// Shutdown emulator and release resources
   void togglePause() {
     isPaused = !isPaused;
+    if (!isMockMode) {
+      _setNativeEmulatorPaused(isPaused);
+    }
   }
 
   void shutdown() {
