@@ -15,10 +15,10 @@ It projects the gameplay directly to a wireless television (via Miracast Android
 ## ⚡ Key Capabilities
 
 * **Symmetrical Dual-Role Entry Gate**: A single binary that allows the user to boot as either the **Host Console System** (projects to TV) or join as a **Client Controller** (Player 2 gamepad).
-* **True Full-Screen Immersive Gamepad**: The virtual gamepad automatically morphs to match the console you are playing (NES, SNES, Genesis, PS1). It runs in true immersive mode (no status bar or navigation gestures) with native multi-touch zero-latency polling.
-* **Native C++ Audio & Video Pipelines**: Achieves perfect, zero-latency audio-video sync by completely bypassing Dart overhead. The FFI Libretro core pushes audio and video frames directly into C++ threads (`miracast-render.cpp`, `miracast-audio.cpp`), where they are consumed instantly by Android's AAudio, EGL contexts, and iOS's CoreAudio layers.
+* **True Full-Screen Immersive Gamepad**: The virtual gamepad automatically morphs to match the console you are playing (NES, SNES, Genesis, PS1). It runs in true immersive mode (no status bar or navigation gestures) with native multi-touch high-frequency polling.
+* **Native C++ Audio & Video Pipelines**: Achieves consistent, low-latency audio-video synchronization by minimizing Dart FFI overhead. The Libretro core pushes audio and video frames directly into C++ threads (`miracast-render.cpp`, `miracast-audio.cpp`), where they are consumed effectively by Android's AAudio, EGL contexts, and iOS's CoreAudio layers.
 * **Dart FFI Libretro Core Wrapper**: Direct C/C++ FFI bindings load compiled emulator binaries (`.so` / `.dylib`) and manage memory serialization for the instant Quick Save and Quick Load functionality. 
-* **Zero-Latency Native Input Protocol (Player 2)**: Player 2 inputs bypass Flutter entirely. Physical screen taps on the Client send tiny packets over a raw TCP socket. The Native OS layer (Kotlin/Swift) receives these packets and directly updates the thread-safe C++ input array for the emulator core via JNI/FFI.
+* **Low-Latency Native Input Protocol (Player 2)**: Player 2 inputs bypass Flutter entirely. Physical screen taps on the Client send tiny packets over a raw TCP socket. The Native OS layer (Kotlin/Swift) receives these packets and directly updates the thread-safe C++ input array for the emulator core via JNI/FFI, aiming for sub-millisecond network transmission.
 * **Dual-Screen TV Projection**: 
   * **Android**: Renders on external displays using `android.app.Presentation` dialog views.
   * **iOS**: Listens for AirPlay connections to display root controllers in a secondary `UIWindow`.

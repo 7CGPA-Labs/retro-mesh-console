@@ -9,13 +9,8 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.Display
-import io.flutter.plugin.common.BinaryMessenger
-import io.flutter.plugin.common.MethodCall
-import io.flutter.plugin.common.MethodChannel
-
 class CastingAdapter(
-    private val activity: Activity,
-    messenger: BinaryMessenger
+    private val activity: Activity
 ) {
 
     private val handler = Handler(Looper.getMainLooper())
@@ -23,28 +18,7 @@ class CastingAdapter(
     
     private var presentationDialog: Presentation? = null
 
-    init {
-        val channel = MethodChannel(messenger, "dev.seven_cgpalabs.mojosnap/projection")
-        channel.setMethodCallHandler { call, result ->
-            when (call.method) {
-                "openSystemCastMenu" -> {
-                    openSystemCastMenu()
-                    result.success(null)
-                }
-                "startTVProjection" -> {
-                    val success = startTVProjection()
-                    result.success(success)
-                }
-                "stopTVProjection" -> {
-                    stopTVProjection()
-                    result.success(null)
-                }
-                else -> result.notImplemented()
-            }
-        }
-    }
-
-    private fun openSystemCastMenu() {
+    fun openSystemCastMenu() {
         handler.post {
             val intentsToTry = listOf(
                 Intent("miui.intent.action.WIFI_DISPLAY_SETTINGS"),
@@ -78,7 +52,7 @@ class CastingAdapter(
         }
     }
 
-    private fun startTVProjection(): Boolean {
+    fun startTVProjection(): Boolean {
         var success = false
         handler.post {
             try {
@@ -159,7 +133,7 @@ class CastingAdapter(
         return success
     }
 
-    private fun stopTVProjection() {
+    fun stopTVProjection() {
         handler.post {
             try {
                 presentationDialog?.dismiss()

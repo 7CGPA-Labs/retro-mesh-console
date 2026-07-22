@@ -13,12 +13,9 @@
 static AAudioStreamBuilder* builder = nullptr;
 static AAudioStream* stream = nullptr;
 static bool g_audio_initialized = false;
+static std::mutex audioMutex;
 
-extern "C" {
-
-void miracast_audio_init(double sample_rate) {
-    if (g_audio_initialized) return;
-
+static void _init_audio_stream_locked(double sample_rate) {
     AAudio_createStreamBuilder(&builder);
     AAudioStreamBuilder_setFormat(builder, AAUDIO_FORMAT_PCM_I16);
     AAudioStreamBuilder_setChannelCount(builder, 2);
@@ -38,18 +35,28 @@ void miracast_audio_init(double sample_rate) {
 
     int32_t framesPerBurst = AAudioStream_getFramesPerBurst(stream);
     int32_t targetBuffer = framesPerBurst * 2;
-    if (targetBuffer > 1024) targetBuffer = 1024; // Limit to ~23ms at 44.1kHz to prevent input lag
+    if (targetBuffer > 1024) targetBuffer = 1024;
     AAudioStream_setBufferSizeInFrames(stream, targetBuffer);
 
     AAudioStream_requestStart(stream);
     
     AAudioStreamBuilder_delete(builder);
     builder = nullptr;
+}
+
+extern "C" {
+
+void miracast_audio_init(double sample_rate) {
+    std::lock_guard<std::mutex> lock(audioMutex);
+    if (g_audio_initialized) return;
+    
+    _init_audio_stream_locked(sample_rate);
     
     g_audio_initialized = true;
 }
 
 void miracast_audio_deinit() {
+    std::lock_guard<std::mutex> lock(audioMutex);
     if (!g_audio_initialized) return;
     AAudioStream_requestStop(stream);
     AAudioStream_close(stream);
@@ -58,6 +65,7 @@ void miracast_audio_deinit() {
 }
 
 void miracast_audio_push_batch(const int16_t* data, size_t frames) {
+    std::lock_guard<std::mutex> lock(audioMutex);
     if (!g_audio_initialized || !stream) return;
     
     // Apply 4.0x digital gain boost for Miracast / WebCaster
@@ -77,8 +85,20 @@ void miracast_audio_push_batch(const int16_t* data, size_t frames) {
     const int16_t* p = boosted_data.data();
     
     while (framesLeft > 0) {
+        if (!stream) break;
         aaudio_result_t result = AAudioStream_write(stream, p, framesLeft, timeoutNanos);
         if (result < 0) {
+            if (result == AAUDIO_ERROR_DISCONNECTED) {
+                LOGE("AAudio stream disconnected, attempting recovery...");
+                double current_rate = (double)AAudioStream_getSampleRate(stream);
+                AAudioStream_requestStop(stream);
+                AAudioStream_close(stream);
+                stream = nullptr;
+                _init_audio_stream_locked(current_rate);
+                if (stream) {
+                    continue; // Retry with new stream
+                }
+            }
             LOGE("AAudio stream write failed: %s", AAudio_convertResultToText(result));
             break;
         }
@@ -88,6 +108,7 @@ void miracast_audio_push_batch(const int16_t* data, size_t frames) {
 }
 
 void miracast_audio_push_silence(size_t frames) {
+    std::lock_guard<std::mutex> lock(audioMutex);
     if (!g_audio_initialized || !stream) return;
     
     static std::vector<int16_t> silenceBuffer(8192, 0);
@@ -100,8 +121,22 @@ void miracast_audio_push_silence(size_t frames) {
     const int16_t* p = silenceBuffer.data();
     
     while (framesLeft > 0) {
+        if (!stream) break;
         aaudio_result_t result = AAudioStream_write(stream, p, framesLeft, timeoutNanos);
-        if (result < 0) break;
+        if (result < 0) {
+            if (result == AAUDIO_ERROR_DISCONNECTED) {
+                LOGE("AAudio stream disconnected (silence), attempting recovery...");
+                double current_rate = (double)AAudioStream_getSampleRate(stream);
+                AAudioStream_requestStop(stream);
+                AAudioStream_close(stream);
+                stream = nullptr;
+                _init_audio_stream_locked(current_rate);
+                if (stream) {
+                    continue; // Retry with new stream
+                }
+            }
+            break;
+        }
         framesLeft -= result;
         p += (result * 2);
     }

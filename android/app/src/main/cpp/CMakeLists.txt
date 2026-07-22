@@ -5,6 +5,7 @@ add_library(native_render SHARED
     retro-bridge.cpp 
     miracast-render.cpp 
     miracast-audio.cpp
+    libretro-frontend.cpp
 )
 
 find_library(log-lib log)

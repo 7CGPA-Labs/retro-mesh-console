@@ -4,9 +4,9 @@
 #include <mutex>
 #include <chrono>
 #include "retro-bridge.h"
-
+#include "libretro-frontend.h"
 // Global state shared across modules
-std::atomic<int> g_activePixelFormat{2};
+std::atomic<int> g_activePixelFormat{0};
 
 // Input state
 std::atomic<bool> button_states[2][16];
@@ -174,6 +174,63 @@ JNIEXPORT void JNICALL Java_dev_seven_1cgpalabs_mojosnap_NetworkManager_updatePl
     if (buttonId >= 0 && buttonId < 16) {
         button_states[1][buttonId].store(pressed);
     }
+}
+
+JNIEXPORT jboolean JNICALL Java_dev_seven_1cgpalabs_mojosnap_MainActivity_loadGame(JNIEnv* env, jobject thiz, jstring coreDir, jstring romPath) {
+    const char* c_core_dir = env->GetStringUTFChars(coreDir, NULL);
+    const char* c_rom_path = env->GetStringUTFChars(romPath, NULL);
+    
+    bool result = frontend_init_and_load(c_core_dir, c_rom_path);
+    
+    env->ReleaseStringUTFChars(coreDir, c_core_dir);
+    env->ReleaseStringUTFChars(romPath, c_rom_path);
+    return result;
+}
+
+JNIEXPORT void JNICALL Java_dev_seven_1cgpalabs_mojosnap_MainActivity_setButtonState(JNIEnv* env, jobject thiz, jint port, jint customButtonId, jboolean pressed) {
+    if (port == 0) {
+        set_player1_button(customButtonId, pressed);
+    } else if (port == 1) {
+        if (customButtonId >= 0 && customButtonId < 16) {
+            button_states[1][customButtonId].store(pressed);
+        }
+    }
+}
+
+JNIEXPORT void JNICALL Java_dev_seven_1cgpalabs_mojosnap_MainActivity_setAnalogState(JNIEnv* env, jobject thiz, jint port, jint index, jint id, jint value) {
+    if (port == 0) {
+        set_player1_analog(index, id, value);
+    } else if (port == 1) {
+        if (index >= 0 && index < 2 && id >= 0 && id < 2) {
+            analog_states[1][index][id].store(value);
+        }
+    }
+}
+
+JNIEXPORT void JNICALL Java_dev_seven_1cgpalabs_mojosnap_MainActivity_togglePause(JNIEnv* env, jobject thiz) {
+    frontend_toggle_pause();
+}
+
+JNIEXPORT void JNICALL Java_dev_seven_1cgpalabs_mojosnap_MainActivity_resetGame(JNIEnv* env, jobject thiz) {
+    frontend_reset();
+}
+
+JNIEXPORT void JNICALL Java_dev_seven_1cgpalabs_mojosnap_MainActivity_shutdown(JNIEnv* env, jobject thiz) {
+    frontend_deinit();
+}
+
+JNIEXPORT jboolean JNICALL Java_dev_seven_1cgpalabs_mojosnap_MainActivity_saveState(JNIEnv* env, jobject thiz, jint slot, jstring saveDir) {
+    const char* c_save_dir = env->GetStringUTFChars(saveDir, NULL);
+    bool result = frontend_save_state(slot, c_save_dir);
+    env->ReleaseStringUTFChars(saveDir, c_save_dir);
+    return result;
+}
+
+JNIEXPORT jboolean JNICALL Java_dev_seven_1cgpalabs_mojosnap_MainActivity_loadState(JNIEnv* env, jobject thiz, jint slot, jstring saveDir) {
+    const char* c_save_dir = env->GetStringUTFChars(saveDir, NULL);
+    bool result = frontend_load_state(slot, c_save_dir);
+    env->ReleaseStringUTFChars(saveDir, c_save_dir);
+    return result;
 }
 
 }

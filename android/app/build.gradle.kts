@@ -1,76 +1,123 @@
-import org.apache.tools.ant.taskdefs.condition.Os
-
 plugins {
     id("com.android.application")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
-    id("dev.flutter.flutter-gradle-plugin")
+    id("org.jetbrains.kotlin.android")
 }
 
 android {
     namespace = "dev.seven_cgpalabs.mojosnap"
-    compileSdk = 36
-    ndkVersion = flutter.ndkVersion
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
+    compileSdk = 34
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "dev.seven_cgpalabs.mojosnap"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
-        // AAudio native API requires API 26 minimum. AudioPlaybackCapture requires API 29.
         minSdk = 29
-        targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
+        targetSdk = 34
+        versionCode = 1
+        versionName = "1.0"
+        
+        externalNativeBuild {
+            cmake {
+                cppFlags += "-std=c++17"
+            }
+        }
     }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            isMinifyEnabled = false
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
-
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+    buildFeatures {
+        compose = true
+    }
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.11"
+    }
     externalNativeBuild {
         cmake {
             path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
         }
     }
 }
 
-kotlin {
-    compilerOptions {
-        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
-    }
-}
-
-flutter {
-    source = "../.."
-}
-
 dependencies {
+    implementation("androidx.core:core-ktx:1.12.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
+    implementation("androidx.activity:activity-compose:1.8.2")
+    implementation(platform("androidx.compose:compose-bom:2024.02.02"))
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-graphics")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material-icons-extended")
+    
+    // Media Router / Miracast
     implementation("androidx.mediarouter:mediarouter:1.7.0")
     implementation("com.google.android.gms:play-services-cast-framework:21.4.0")
 }
 
+import java.net.URL
+import java.io.FileOutputStream
+import java.util.zip.ZipInputStream
 
-tasks.register<Exec>("downloadLibretroCores") {
-    workingDir = file("../../")
-    if (Os.isFamily(Os.FAMILY_WINDOWS)) {
-        commandLine("cmd", "/c", "dart", "run", "scripts/download_cores.dart", "android")
-    } else {
-        commandLine("dart", "run", "scripts/download_cores.dart", "android")
+tasks.register("downloadCores") {
+    val cores = listOf(
+        "pcsx_rearmed",
+        "gambatte",
+        "mgba",
+        "dosbox_pure",
+        "fceumm",
+        "genesis_plus_gx",
+        "snes9x"
+    )
+    val baseUrl = "https://buildbot.libretro.com/nightly/android/latest/arm64-v8a"
+    val ext = "_libretro_android.so"
+    val jniLibsDir = file("src/main/jniLibs/arm64-v8a")
+    
+    outputs.dir(jniLibsDir)
+    
+    doLast {
+        if (!jniLibsDir.exists()) {
+            jniLibsDir.mkdirs()
+        }
+        
+        for (core in cores) {
+            val soName = "${core}${ext}"
+            val soFile = file("${jniLibsDir.absolutePath}/${soName}")
+            if (!soFile.exists()) {
+                println("Downloading ${core}...")
+                val zipUrl = URL("${baseUrl}/${soName}.zip")
+                try {
+                    zipUrl.openStream().use { input ->
+                        ZipInputStream(input).use { zis ->
+                            var entry = zis.nextEntry
+                            while (entry != null) {
+                                if (entry.name == soName) {
+                                    FileOutputStream(soFile).use { out ->
+                                        zis.copyTo(out)
+                                    }
+                                }
+                                entry = zis.nextEntry
+                            }
+                        }
+                    }
+                    println("Extracted ${soName}")
+                } catch (e: Exception) {
+                    println("Failed to download ${core}: ${e.message}")
+                }
+            }
+        }
     }
 }
 
-tasks.whenTaskAdded {
-    if (name == "generateDebugAssets" || name == "generateReleaseAssets" || name == "preBuild") {
-        dependsOn("downloadLibretroCores")
-    }
+tasks.named("preBuild") {
+    dependsOn("downloadCores")
 }
-

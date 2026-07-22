@@ -107,7 +107,7 @@ static bool setupEGL() {
 
     EGLint format;
     eglGetConfigAttrib(eglDisplay, config, EGL_NATIVE_VISUAL_ID, &format);
-    ANativeWindow_setBuffersGeometry(tvWindow, 0, 0, format);
+    // ANativeWindow_setBuffersGeometry is omitted to let EGL negotiate supported pixel formats for the Surface natively.
 
     eglSurface = eglCreateWindowSurface(eglDisplay, config, tvWindow, nullptr);
     if (eglSurface == EGL_NO_SURFACE) {
@@ -278,6 +278,7 @@ void miracast_video_init() {
 }
 
 void miracast_video_deinit() {
+    std::lock_guard<std::mutex> lock(renderMutex);
     tvThreadRunning = false;
     tvCondVar.notify_all();
 }
