@@ -162,7 +162,7 @@ fun RoleGateScreen(onNavigateToGamepad: (isHost: Boolean, romUri: Uri?, coreName
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 androidx.compose.foundation.Image(
-                    painter = androidx.compose.ui.res.painterResource(id = dev.seven_cgpalabs.mojosnap.R.drawable.mojo_snap_title),
+                    painter = androidx.compose.ui.res.painterResource(id = dev.seven_cgpalabs.mojosnap.R.drawable.mojo_snap_title_v2),
                     contentDescription = "Mojo Snap Console System Title",
                     modifier = Modifier
                         .fillMaxWidth()
