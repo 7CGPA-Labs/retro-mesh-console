@@ -1,3 +1,7 @@
+import java.net.URL
+import java.io.FileOutputStream
+import java.util.zip.ZipInputStream
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -63,10 +67,6 @@ dependencies {
     implementation("androidx.mediarouter:mediarouter:1.7.0")
     implementation("com.google.android.gms:play-services-cast-framework:21.4.0")
 }
-
-import java.net.URL
-import java.io.FileOutputStream
-import java.util.zip.ZipInputStream
 
 tasks.register("downloadCores") {
     val cores = listOf(
