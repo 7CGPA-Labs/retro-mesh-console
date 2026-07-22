@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.animation.core.animateFloat
 @Composable
 fun RoleGateScreen(onNavigateToGamepad: (isHost: Boolean, romUri: Uri?, coreName: String, playerName: String) -> Unit) {
     val context = LocalContext.current
@@ -100,19 +101,23 @@ fun RoleGateScreen(onNavigateToGamepad: (isHost: Boolean, romUri: Uri?, coreName
         )
     }
 
+    val titleScale = remember { androidx.compose.animation.core.Animatable(0f) }
+    LaunchedEffect(Unit) {
+        titleScale.animateTo(
+            targetValue = 1f,
+            animationSpec = androidx.compose.animation.core.tween(
+                durationMillis = 3500,
+                easing = androidx.compose.animation.core.FastOutSlowInEasing
+            )
+        )
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(
-                        Color(0xFF070714),
-                        Color(0xFF0F0F28),
-                        Color(0xFF070714)
-                    )
-                )
-            )
+            .background(Color(0xFF070714))
     ) {
+        StarfieldBackground()
         Column(
             modifier = Modifier
                 .align(Alignment.Center)
@@ -147,8 +152,16 @@ fun RoleGateScreen(onNavigateToGamepad: (isHost: Boolean, romUri: Uri?, coreName
                 )
             }
             Spacer(modifier = Modifier.height(12.dp))
-            Text("MOJO SNAP", color = Color.White, fontSize = 38.sp, fontWeight = FontWeight.Black, letterSpacing = 4.sp)
-            Text("CONSOLE SYSTEM", color = Color(0xFF00E5FF), fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 4.sp)
+            Column(
+                modifier = Modifier.graphicsLayer {
+                    scaleX = titleScale.value
+                    scaleY = titleScale.value
+                },
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("MOJO SNAP", color = Color(0xFFFFD700), fontSize = 38.sp, fontWeight = FontWeight.Black, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, letterSpacing = 4.sp)
+                Text("CONSOLE SYSTEM", color = Color(0xFF00E5FF), fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, letterSpacing = 4.sp)
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -212,6 +225,36 @@ fun RoleGateScreen(onNavigateToGamepad: (isHost: Boolean, romUri: Uri?, coreName
 
             Spacer(modifier = Modifier.height(48.dp))
             Text("Made with ♥ by 7CGPA Labs", color = Color.White.copy(alpha = 0.3f), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+        }
+    }
+}
+
+@Composable
+fun StarfieldBackground() {
+    val infiniteTransition = androidx.compose.animation.core.rememberInfiniteTransition()
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 0.2f,
+        targetValue = 1f,
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+            animation = androidx.compose.animation.core.tween(1500, easing = androidx.compose.animation.core.LinearEasing),
+            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+        )
+    )
+
+    val stars = remember {
+        List(100) {
+            androidx.compose.ui.geometry.Offset(kotlin.random.Random.nextFloat(), kotlin.random.Random.nextFloat()) to kotlin.random.Random.nextFloat() * 4f
+        }
+    }
+
+    androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+        stars.forEachIndexed { index, (pos, radius) ->
+            val starAlpha = (alpha + (index % 10) * 0.1f) % 1f
+            drawCircle(
+                color = Color.White.copy(alpha = starAlpha.coerceIn(0.2f, 1f)),
+                radius = radius,
+                center = androidx.compose.ui.geometry.Offset(pos.x * size.width, pos.y * size.height)
+            )
         }
     }
 }
