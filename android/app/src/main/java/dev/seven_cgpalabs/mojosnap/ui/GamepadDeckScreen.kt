@@ -31,6 +31,7 @@ import dev.seven_cgpalabs.mojosnap.MainActivity
 import dev.seven_cgpalabs.mojosnap.utils.ConsoleLogger
 import androidx.compose.foundation.lazy.items
 import kotlinx.coroutines.launch
+import android.widget.Toast
 
 @Composable
 fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerName: String, onExit: () -> Unit) {
