@@ -56,15 +56,24 @@ class CastingAdapter(
         var success = false
         handler.post {
             try {
-                val displays = displayManager.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION)
-                if (displays.isNotEmpty()) {
-                    val externalDisplay = displays[0]
-                    
+                var displays = displayManager.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION)
+                var externalDisplay = displays.firstOrNull()
+                
+                if (externalDisplay == null) {
+                    // Fallback: Find any display that is not the default display
+                    val allDisplays = displayManager.displays
+                    externalDisplay = allDisplays.firstOrNull { it.displayId != Display.DEFAULT_DISPLAY }
+                }
+
+                val displayToUse = externalDisplay
+                if (displayToUse != null) {
+                    if (presentationDialog != null && presentationDialog?.display?.displayId == displayToUse.displayId && presentationDialog?.isShowing == true) {
+                        return@post // Already showing
+                    }
                     if (presentationDialog != null) {
                         presentationDialog?.dismiss()
                     }
-                    
-                    presentationDialog = object : Presentation(activity, externalDisplay) {
+                    presentationDialog = object : Presentation(activity, displayToUse) {
                         override fun onCreate(savedInstanceState: Bundle?) {
                             super.onCreate(savedInstanceState)
                             
@@ -122,8 +131,13 @@ class CastingAdapter(
         }
         
         try {
-            val displays = displayManager.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION)
-            if (displays.isNotEmpty()) {
+            var displays = displayManager.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION)
+            var externalDisplay = displays.firstOrNull()
+            if (externalDisplay == null) {
+                val allDisplays = displayManager.displays
+                externalDisplay = allDisplays.firstOrNull { it.displayId != Display.DEFAULT_DISPLAY }
+            }
+            if (externalDisplay != null) {
                 success = true
             }
         } catch (e: Exception) {
@@ -131,6 +145,29 @@ class CastingAdapter(
         }
         
         return success
+    }
+    
+    private var isMonitoring = false
+    private val displayListener = object : DisplayManager.DisplayListener {
+        override fun onDisplayAdded(displayId: Int) { startTVProjection() }
+        override fun onDisplayChanged(displayId: Int) { startTVProjection() }
+        override fun onDisplayRemoved(displayId: Int) { stopTVProjection() }
+    }
+    
+    fun startMonitoring() {
+        if (!isMonitoring) {
+            displayManager.registerDisplayListener(displayListener, handler)
+            isMonitoring = true
+            startTVProjection()
+        }
+    }
+    
+    fun stopMonitoring() {
+        if (isMonitoring) {
+            displayManager.unregisterDisplayListener(displayListener)
+            isMonitoring = false
+            stopTVProjection()
+        }
     }
 
     fun stopTVProjection() {

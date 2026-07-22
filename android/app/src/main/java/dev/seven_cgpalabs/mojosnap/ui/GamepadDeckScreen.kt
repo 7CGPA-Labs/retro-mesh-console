@@ -57,7 +57,11 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
         activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE
         activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         
+        val castingAdapter = activity?.let { dev.seven_cgpalabs.mojosnap.CastingAdapter(it) }
+        castingAdapter?.startMonitoring()
+        
         onDispose {
+            castingAdapter?.stopMonitoring()
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
             activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             mainActivity?.shutdown()
@@ -274,17 +278,19 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
             ) {
                 Text(if (useAnalogStick) "ANALOG ON" else "D-PAD ON", color = if (useAnalogStick) Color(0xFFFF2E93) else Color.White.copy(0.54f), fontWeight = FontWeight.Bold)
             }
-            Spacer(Modifier.height(10.dp))
-            Box(
-                modifier = Modifier
-                    .size(160.dp, 120.dp)
-                    .background(Color(0xFF87A96B), RoundedCornerShape(4.dp))
-                    .border(2.dp, Color(0xFF1E2614), RoundedCornerShape(4.dp))
-                    .padding(4.dp)
-            ) {
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    items(ConsoleLogger.logs) { log ->
-                        Text(log, color = Color(0xFF1E2614), fontSize = 8.sp, fontWeight = FontWeight.Bold, lineHeight = 10.sp)
+            if (dev.seven_cgpalabs.mojosnap.BuildConfig.DEBUG) {
+                Spacer(Modifier.height(10.dp))
+                Box(
+                    modifier = Modifier
+                        .size(160.dp, 120.dp)
+                        .background(Color(0xFF87A96B), RoundedCornerShape(4.dp))
+                        .border(2.dp, Color(0xFF1E2614), RoundedCornerShape(4.dp))
+                        .padding(4.dp)
+                ) {
+                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        items(ConsoleLogger.logs) { log ->
+                            Text(log, color = Color(0xFF1E2614), fontSize = 8.sp, fontWeight = FontWeight.Bold, lineHeight = 10.sp)
+                        }
                     }
                 }
             }

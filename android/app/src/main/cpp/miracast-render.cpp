@@ -16,156 +16,23 @@
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
-static ANativeWindow* flutterWindow = nullptr;
 static ANativeWindow* tvWindow = nullptr;
 static std::mutex renderMutex;
 
-// EGL and GLES state
-static EGLDisplay eglDisplay = EGL_NO_DISPLAY;
-static EGLContext eglContext = EGL_NO_CONTEXT;
-static EGLSurface eglSurface = EGL_NO_SURFACE;
-static GLuint program = 0;
-static GLuint textureId = 0;
-
 static int tvWidth = 256;
 static int tvHeight = 224;
-static int physicalWidth = 0;
-static int physicalHeight = 0;
-
-static std::vector<uint32_t> tvBuffer;
+static std::vector<uint8_t> rawTvBuffer;
+static int tvPixelFormat = 0;
+static size_t tvPitch = 0;
 static std::mutex tvMutex;
 static std::condition_variable tvCondVar;
 static std::atomic<bool> tvThreadRunning{false};
 static std::atomic<bool> tvFrameReady{false};
 static std::atomic<float> thermalScale{1.0f};
 
-// Shaders
-static const char* vertexShaderCode =
-    "attribute vec4 aPosition;\n"
-    "attribute vec2 aTexCoord;\n"
-    "varying vec2 vTexCoord;\n"
-    "void main() {\n"
-    "  gl_Position = aPosition;\n"
-    "  vTexCoord = aTexCoord;\n"
-    "}\n";
-
-static const char* fragmentShaderCode =
-    "precision mediump float;\n"
-    "varying vec2 vTexCoord;\n"
-    "uniform sampler2D uTexture;\n"
-    "void main() {\n"
-    "  gl_FragColor = texture2D(uTexture, vTexCoord);\n"
-    "}\n";
-
-static GLuint loadShader(GLenum type, const char* shaderCode) {
-    GLuint shader = glCreateShader(type);
-    glShaderSource(shader, 1, &shaderCode, nullptr);
-    glCompileShader(shader);
-    GLint compiled;
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
-    if (!compiled) {
-        GLint infoLen = 0;
-        glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infoLen);
-        if (infoLen > 1) {
-            char* infoLog = new char[infoLen];
-            glGetShaderInfoLog(shader, infoLen, nullptr, infoLog);
-            LOGE("Error compiling shader:\n%s", infoLog);
-            delete[] infoLog;
-        }
-        glDeleteShader(shader);
-        return 0;
-    }
-    return shader;
-}
-
-static bool setupEGL() {
-    if (!tvWindow) return false;
-
-    eglDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-    if (eglDisplay == EGL_NO_DISPLAY) {
-        return false;
-    }
-
-    if (!eglInitialize(eglDisplay, nullptr, nullptr)) {
-        return false;
-    }
-
-    const EGLint attribs[] = {
-        EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
-        EGL_BLUE_SIZE, 8,
-        EGL_GREEN_SIZE, 8,
-        EGL_RED_SIZE, 8,
-        EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
-        EGL_NONE
-    };
-
-    EGLConfig config;
-    EGLint numConfigs;
-    if (!eglChooseConfig(eglDisplay, attribs, &config, 1, &numConfigs) || numConfigs <= 0) {
-        return false;
-    }
-
-    EGLint format;
-    eglGetConfigAttrib(eglDisplay, config, EGL_NATIVE_VISUAL_ID, &format);
-    // ANativeWindow_setBuffersGeometry is omitted to let EGL negotiate supported pixel formats for the Surface natively.
-
-    eglSurface = eglCreateWindowSurface(eglDisplay, config, tvWindow, nullptr);
-    if (eglSurface == EGL_NO_SURFACE) {
-        return false;
-    }
-
-    const EGLint contextAttribs[] = {
-        EGL_CONTEXT_CLIENT_VERSION, 2,
-        EGL_NONE
-    };
-    eglContext = eglCreateContext(eglDisplay, config, EGL_NO_CONTEXT, contextAttribs);
-    if (eglContext == EGL_NO_CONTEXT) {
-        return false;
-    }
-
-    if (!eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext)) {
-        return false;
-    }
-
-    GLuint vertexShader = loadShader(GL_VERTEX_SHADER, vertexShaderCode);
-    GLuint fragmentShader = loadShader(GL_FRAGMENT_SHADER, fragmentShaderCode);
-    
-    program = glCreateProgram();
-    glAttachShader(program, vertexShader);
-    glAttachShader(program, fragmentShader);
-    glLinkProgram(program);
-    
-    glGenTextures(1, &textureId);
-    glBindTexture(GL_TEXTURE_2D, textureId);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-    return true;
-}
-
-static void destroyEGL() {
-    if (eglDisplay != EGL_NO_DISPLAY) {
-        eglMakeCurrent(eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-        if (eglContext != EGL_NO_CONTEXT) {
-            eglDestroyContext(eglDisplay, eglContext);
-        }
-        if (eglSurface != EGL_NO_SURFACE) {
-            eglDestroySurface(eglDisplay, eglSurface);
-        }
-        eglTerminate(eglDisplay);
-    }
-    eglDisplay = EGL_NO_DISPLAY;
-    eglContext = EGL_NO_CONTEXT;
-    eglSurface = EGL_NO_SURFACE;
-}
-
 static void TvRenderWorker() {
-    bool eglReady = false;
-    int currentTexWidth = 0;
-    int currentTexHeight = 0;
     ANativeWindow* lastTvWindow = nullptr;
+    std::vector<uint8_t> localRawTvBuffer;
 
     while (tvThreadRunning) {
         std::unique_lock<std::mutex> lock(tvMutex);
@@ -173,101 +40,76 @@ static void TvRenderWorker() {
         
         if (!tvThreadRunning) break;
         
-        if (tvWindow != lastTvWindow) {
-            if (eglReady) {
-                destroyEGL();
-                eglReady = false;
-            }
-            lastTvWindow = tvWindow;
+        // Copy to local buffer to unlock mutex immediately
+        if (localRawTvBuffer.size() != rawTvBuffer.size()) {
+            localRawTvBuffer.resize(rawTvBuffer.size());
         }
-
-        if (tvWindow && !eglReady) {
-            eglReady = setupEGL();
-        }
-
-        if (eglReady && tvWindow) {
-            physicalWidth = ANativeWindow_getWidth(tvWindow);
-            physicalHeight = ANativeWindow_getHeight(tvWindow);
-            
-            float coreAspect = (float)tvWidth / (float)tvHeight;
-            float physAspect = (float)physicalWidth / (float)physicalHeight;
-            
-            int viewWidth, viewHeight;
-            int viewX, viewY;
-            
-            if (physAspect > coreAspect) {
-                viewHeight = physicalHeight;
-                viewWidth = (int)(physicalHeight * coreAspect);
-                viewX = (physicalWidth - viewWidth) / 2;
-                viewY = 0;
-            } else {
-                viewWidth = physicalWidth;
-                viewHeight = (int)(physicalWidth / coreAspect);
-                viewX = 0;
-                viewY = (physicalHeight - viewHeight) / 2;
-            }
-
-            float currentScale = thermalScale.load();
-            if (currentScale < 1.0f) {
-                viewWidth = (int)(viewWidth * currentScale);
-                viewHeight = (int)(viewHeight * currentScale);
-                viewX = (physicalWidth - viewWidth) / 2;
-                viewY = (physicalHeight - viewHeight) / 2;
-            }
-            
-            glViewport(viewX, viewY, viewWidth, viewHeight);
-            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-            glClear(GL_COLOR_BUFFER_BIT);
-
-            glUseProgram(program);
-            
-            GLfloat vertices[] = {
-                -1.0f,  1.0f, 0.0f,
-                -1.0f, -1.0f, 0.0f,
-                 1.0f,  1.0f, 0.0f,
-                 1.0f, -1.0f, 0.0f
-            };
-            GLfloat texCoords[] = {
-                0.0f, 0.0f,
-                0.0f, 1.0f,
-                1.0f, 0.0f,
-                1.0f, 1.0f
-            };
-            
-            GLuint posHandle = glGetAttribLocation(program, "aPosition");
-            GLuint texHandle = glGetAttribLocation(program, "aTexCoord");
-            
-            glEnableVertexAttribArray(posHandle);
-            glVertexAttribPointer(posHandle, 3, GL_FLOAT, GL_FALSE, 0, vertices);
-            
-            glEnableVertexAttribArray(texHandle);
-            glVertexAttribPointer(texHandle, 2, GL_FLOAT, GL_FALSE, 0, texCoords);
-            
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, textureId);
-            
-            if (currentTexWidth != tvWidth || currentTexHeight != tvHeight) {
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tvWidth, tvHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, tvBuffer.data());
-                currentTexWidth = tvWidth;
-                currentTexHeight = tvHeight;
-            } else {
-                glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, tvWidth, tvHeight, GL_RGBA, GL_UNSIGNED_BYTE, tvBuffer.data());
-            }
-            
-            lock.unlock();
-            glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-            eglSwapBuffers(eglDisplay, eglSurface);
-            lock.lock();
-        } else if (eglReady && !tvWindow) {
-            destroyEGL();
-            eglReady = false;
-        }
-
+        std::memcpy(localRawTvBuffer.data(), rawTvBuffer.data(), rawTvBuffer.size());
+        
+        int lWidth = tvWidth;
+        int lHeight = tvHeight;
+        int lPitch = tvPitch;
+        int lFormat = tvPixelFormat;
+        ANativeWindow* currentTvWindow = tvWindow;
+        
         tvFrameReady = false;
-    }
-    
-    if (eglReady) {
-        destroyEGL();
+        
+        // UNLOCK immediately! This prevents ANativeWindow_unlockAndPost (VSync) from blocking the emulator audio/video!
+        lock.unlock();
+        
+        if (currentTvWindow != lastTvWindow) {
+            lastTvWindow = currentTvWindow;
+            if (currentTvWindow) {
+                // Force window geometry to match game resolution and format (RGBA_8888)
+                ANativeWindow_setBuffersGeometry(currentTvWindow, lWidth, lHeight, WINDOW_FORMAT_RGBA_8888);
+            }
+        }
+
+        if (currentTvWindow) {
+            ANativeWindow_Buffer buffer;
+            if (ANativeWindow_lock(currentTvWindow, &buffer, nullptr) == 0) {
+                
+                // Software pixel conversion and copy directly to NativeWindow buffer
+                for (unsigned y = 0; y < lHeight; y++) {
+                    const uint8_t* rowSrc = localRawTvBuffer.data() + (y * lPitch);
+                    uint8_t* rowDst = static_cast<uint8_t*>(buffer.bits) + (y * buffer.stride * 4);
+                    
+                    if (lFormat == 1) { // XRGB8888
+                        const uint32_t* src32 = reinterpret_cast<const uint32_t*>(rowSrc);
+                        uint32_t* dst32 = reinterpret_cast<uint32_t*>(rowDst);
+                        for (unsigned x = 0; x < lWidth; x++) {
+                            uint32_t color = src32[x];
+                            uint32_t r = (color >> 16) & 0xFF;
+                            uint32_t g = (color >> 8) & 0xFF;
+                            uint32_t b = color & 0xFF;
+                            dst32[x] = (0xFFu << 24) | (b << 16) | (g << 8) | r;
+                        }
+                    } else if (lFormat == 0) { // 0RGB1555
+                        const uint16_t* src16 = reinterpret_cast<const uint16_t*>(rowSrc);
+                        uint32_t* dst32 = reinterpret_cast<uint32_t*>(rowDst);
+                        for (unsigned x = 0; x < lWidth; x++) {
+                            uint16_t color = src16[x];
+                            uint32_t r = ((color >> 10) & 0x1F) << 3;
+                            uint32_t g = ((color >> 5) & 0x1F) << 3;
+                            uint32_t b = (color & 0x1F) << 3;
+                            dst32[x] = (0xFFu << 24) | (b << 16) | (g << 8) | r;
+                        }
+                    } else { // RGB565
+                        const uint16_t* src16 = reinterpret_cast<const uint16_t*>(rowSrc);
+                        uint32_t* dst32 = reinterpret_cast<uint32_t*>(rowDst);
+                        for (unsigned x = 0; x < lWidth; x++) {
+                            uint16_t color = src16[x];
+                            uint32_t r = ((color >> 11) & 0x1F) << 3;
+                            uint32_t g = ((color >> 5) & 0x3F) << 2;
+                            uint32_t b = (color & 0x1F) << 3;
+                            dst32[x] = (0xFFu << 24) | (b << 16) | (g << 8) | r;
+                        }
+                    }
+                }
+                
+                ANativeWindow_unlockAndPost(currentTvWindow);
+            }
+        }
     }
 }
 
@@ -285,7 +127,17 @@ void miracast_video_deinit() {
 
 void miracast_video_push_frame(const void* data, unsigned width, unsigned height, size_t pitch, int pixel_format) {
     if (!data || width == 0 || height == 0) return;
-    const uint16_t* pixels = reinterpret_cast<const uint16_t*>(data);
+    
+    // Thermal CPU Throttling logic
+    float tScale = thermalScale.load();
+    if (tScale < 1.0f) {
+        static int frameCounter = 0;
+        frameCounter++;
+        // Skip frames aggressively to cool down CPU when thermal throttling kicks in
+        if (tScale < 0.6f && (frameCounter % 3) != 0) return; // Cap at ~20fps
+        else if (tScale < 0.9f && (frameCounter % 2) != 0) return; // Cap at ~30fps
+    }
+    
     std::lock_guard<std::mutex> lock(renderMutex);
     
     if (!tvThreadRunning) {
@@ -297,60 +149,17 @@ void miracast_video_push_frame(const void* data, unsigned width, unsigned height
         std::lock_guard<std::mutex> tvLock(tvMutex);
         tvWidth = width;
         tvHeight = height;
-        size_t totalPixels = width * height;
-        if (tvBuffer.size() != totalPixels) {
-            tvBuffer.resize(totalPixels);
-        }
+        tvPitch = pitch;
+        tvPixelFormat = pixel_format;
         
-        uint32_t* dst = tvBuffer.data();
-        
-        for (unsigned y = 0; y < height; y++) {
-            const uint8_t* rowSrc = reinterpret_cast<const uint8_t*>(pixels) + (y * pitch);
-            uint32_t* rowDst = dst + (y * width);
-            
-            if (pixel_format == 1) { // XRGB8888
-                const uint32_t* src32 = reinterpret_cast<const uint32_t*>(rowSrc);
-                for (unsigned x = 0; x < width; x++) {
-                    uint32_t color = src32[x];
-                    uint32_t r = (color >> 16) & 0xFF;
-                    uint32_t g = (color >> 8) & 0xFF;
-                    uint32_t b = color & 0xFF;
-                    rowDst[x] = (0xFFu << 24) | (b << 16) | (g << 8) | r;
-                }
-            } else if (pixel_format == 0) { // 0RGB1555
-                const uint16_t* src16 = reinterpret_cast<const uint16_t*>(rowSrc);
-                for (unsigned x = 0; x < width; x++) {
-                    uint16_t color = src16[x];
-                    uint32_t r = ((color >> 10) & 0x1F) << 3;
-                    uint32_t g = ((color >> 5) & 0x1F) << 3;
-                    uint32_t b = (color & 0x1F) << 3;
-                    rowDst[x] = (0xFFu << 24) | (b << 16) | (g << 8) | r;
-                }
-            } else { // RGB565
-                const uint16_t* src16 = reinterpret_cast<const uint16_t*>(rowSrc);
-                for (unsigned x = 0; x < width; x++) {
-                    uint16_t color = src16[x];
-                    uint32_t r = ((color >> 11) & 0x1F) << 3;
-                    uint32_t g = ((color >> 5) & 0x3F) << 2;
-                    uint32_t b = (color & 0x1F) << 3;
-                    rowDst[x] = (0xFFu << 24) | (b << 16) | (g << 8) | r;
-                }
-            }
+        size_t requiredSize = pitch * height;
+        if (rawTvBuffer.size() != requiredSize) {
+            rawTvBuffer.resize(requiredSize);
         }
+        std::memcpy(rawTvBuffer.data(), data, requiredSize);
         
         tvFrameReady = true;
         tvCondVar.notify_one();
-    }
-}
-
-JNIEXPORT void JNICALL Java_dev_seven_1cgpalabs_mojosnap_NativeRender_setFlutterSurface(JNIEnv* env, jclass clazz, jobject surface) {
-    std::lock_guard<std::mutex> lock(renderMutex);
-    if (flutterWindow) {
-        ANativeWindow_release(flutterWindow);
-        flutterWindow = nullptr;
-    }
-    if (surface != nullptr) {
-        flutterWindow = ANativeWindow_fromSurface(env, surface);
     }
 }
 

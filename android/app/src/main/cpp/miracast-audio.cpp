@@ -22,7 +22,7 @@ static void _init_audio_stream_locked(double sample_rate) {
     if (sample_rate > 0) {
         AAudioStreamBuilder_setSampleRate(builder, (int32_t)sample_rate);
     }
-    AAudioStreamBuilder_setPerformanceMode(builder, AAUDIO_PERFORMANCE_MODE_LOW_LATENCY);
+    AAudioStreamBuilder_setPerformanceMode(builder, AAUDIO_PERFORMANCE_MODE_NONE);
     AAudioStreamBuilder_setUsage(builder, AAUDIO_USAGE_MEDIA);
     AAudioStreamBuilder_setContentType(builder, AAUDIO_CONTENT_TYPE_MUSIC);
     AAudioStreamBuilder_setAllowedCapturePolicy(builder, AAUDIO_ALLOW_CAPTURE_BY_ALL);
@@ -74,10 +74,7 @@ void miracast_audio_push_batch(const int16_t* data, size_t frames) {
         boosted_data.resize(frames * 2);
     }
     for (size_t i = 0; i < frames * 2; ++i) {
-        int32_t sample = (int32_t)data[i] * 4;
-        if (sample > 32767) sample = 32767;
-        if (sample < -32768) sample = -32768;
-        boosted_data[i] = (int16_t)sample;
+        boosted_data[i] = data[i];
     }
     
     int64_t timeoutNanos = 1000 * 1000 * 1000;

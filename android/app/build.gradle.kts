@@ -13,8 +13,8 @@ android {
 
     defaultConfig {
         applicationId = "dev.seven_cgpalabs.mojosnap"
-        minSdk = 29
-        targetSdk = 34
+        minSdk = 30
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
         
@@ -69,8 +69,7 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     
     // Media Router / Miracast
-    implementation("androidx.mediarouter:mediarouter:1.7.0")
-    implementation("com.google.android.gms:play-services-cast-framework:21.4.0")
+    // (Removed because Native Android DisplayManager handles Miracast)
 }
 
 tasks.register("downloadCores") {

@@ -71,6 +71,5 @@ object NativeRender {
     init {
         System.loadLibrary("native_render")
     }
-    external fun setFlutterSurface(surface: android.view.Surface?)
     external fun setTvSurface(surface: android.view.Surface?)
 }
