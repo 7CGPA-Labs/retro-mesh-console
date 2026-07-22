@@ -167,6 +167,10 @@ fun RoleGateScreen(onNavigateToGamepad: (isHost: Boolean, romUri: Uri?, coreName
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(140.dp)
+                        .graphicsLayer { 
+                            rotationX = 20f
+                            cameraDistance = 8 * density
+                        }
                         .clip(RoundedCornerShape(16.dp))
                 )
             }
