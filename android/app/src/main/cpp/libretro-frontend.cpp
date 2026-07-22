@@ -7,9 +7,21 @@
 #include <stdlib.h>
 #include <string.h>
 
+extern "C" void sendLogToKotlin(const char* tag, const char* msg);
+
 #define LOG_TAG "LibretroFrontend"
-#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
-#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
+#define LOGI(...) do { \
+    __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__); \
+    char buf[512]; \
+    snprintf(buf, sizeof(buf), __VA_ARGS__); \
+    sendLogToKotlin(LOG_TAG, buf); \
+} while(0)
+#define LOGE(...) do { \
+    __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__); \
+    char buf[512]; \
+    snprintf(buf, sizeof(buf), __VA_ARGS__); \
+    sendLogToKotlin(LOG_TAG, buf); \
+} while(0)
 
 // Libretro structures & types
 struct retro_game_info {

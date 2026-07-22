@@ -172,10 +172,10 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
                     }
                 } else {
                     Box(modifier = Modifier.size(baseSize * 3)) {
-                        GamepadBtn("U", 0, baseSize, Modifier.align(Alignment.TopCenter), Color.White, mainActivity)
-                        GamepadBtn("D", 1, baseSize, Modifier.align(Alignment.BottomCenter), Color.White, mainActivity)
-                        GamepadBtn("L", 2, baseSize, Modifier.align(Alignment.CenterStart), Color.White, mainActivity)
-                        GamepadBtn("R", 3, baseSize, Modifier.align(Alignment.CenterEnd), Color.White, mainActivity)
+                        GamepadBtn("▲", 0, baseSize, Modifier.align(Alignment.TopCenter), Color.White, mainActivity)
+                        GamepadBtn("▼", 1, baseSize, Modifier.align(Alignment.BottomCenter), Color.White, mainActivity)
+                        GamepadBtn("◀", 2, baseSize, Modifier.align(Alignment.CenterStart), Color.White, mainActivity)
+                        GamepadBtn("▶", 3, baseSize, Modifier.align(Alignment.CenterEnd), Color.White, mainActivity)
                     }
                 }
             }

@@ -4,7 +4,56 @@
 #include <mutex>
 #include <chrono>
 #include "retro-bridge.h"
+#include "retro-bridge.h"
 #include "libretro-frontend.h"
+#include <android/log.h>
+
+static JavaVM* g_vm = nullptr;
+
+JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
+    g_vm = vm;
+    return JNI_VERSION_1_6;
+}
+
+extern "C" void sendLogToKotlin(const char* tag, const char* msg) {
+    if (!g_vm) return;
+    JNIEnv* env;
+    bool attached = false;
+    int status = g_vm->GetEnv((void**)&env, JNI_VERSION_1_6);
+    if (status == JNI_EDETACHED) {
+        if (g_vm->AttachCurrentThread(&env, nullptr) != 0) return;
+        attached = true;
+    } else if (status != JNI_OK) {
+        return;
+    }
+
+    jclass loggerClass = env->FindClass("dev/seven_cgpalabs/mojosnap/utils/ConsoleLogger");
+    if (loggerClass) {
+        jclass companionClass = env->FindClass("dev/seven_cgpalabs/mojosnap/utils/ConsoleLogger");
+        jfieldID instanceField = env->GetStaticFieldID(companionClass, "INSTANCE", "Ldev/seven_cgpalabs/mojosnap/utils/ConsoleLogger;");
+        if (instanceField) {
+            jobject instance = env->GetStaticObjectField(companionClass, instanceField);
+            jmethodID logMethod = env->GetMethodID(loggerClass, "log", "(Ljava/lang/String;Ljava/lang/String;)V");
+            if (logMethod) {
+                jstring jTag = env->NewStringUTF(tag);
+                jstring jMsg = env->NewStringUTF(msg);
+                env->CallVoidMethod(instance, logMethod, jTag, jMsg);
+                env->DeleteLocalRef(jTag);
+                env->DeleteLocalRef(jMsg);
+            }
+            env->DeleteLocalRef(instance);
+        }
+        env->DeleteLocalRef(loggerClass);
+        if (env->ExceptionCheck()) {
+            env->ExceptionClear();
+        }
+    }
+
+    if (attached) {
+        g_vm->DetachCurrentThread();
+    }
+}
+
 // Global state shared across modules
 std::atomic<int> g_activePixelFormat{0};
 
@@ -112,6 +161,22 @@ bool native_environment_cb(unsigned cmd, void *data) {
     } else if (cmd == 17) { // GET_VARIABLE_UPDATE
         if (data) {
             *static_cast<bool*>(data) = false;
+            return true;
+        }
+    } else if (cmd == 27) { // RETRO_ENVIRONMENT_GET_LOG_INTERFACE
+        struct retro_log_callback {
+            void (*log)(int level, const char *fmt, ...);
+        };
+        if (data) {
+            auto* cb = static_cast<retro_log_callback*>(data);
+            cb->log = [](int level, const char *fmt, ...) {
+                char buffer[1024];
+                va_list args;
+                va_start(args, fmt);
+                vsnprintf(buffer, sizeof(buffer), fmt, args);
+                va_end(args);
+                sendLogToKotlin("CoreLog", buffer);
+            };
             return true;
         }
     } else if (cmd == 15) { // GET_VARIABLE

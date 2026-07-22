@@ -1,5 +1,6 @@
-- `[x]` Update `app/build.gradle.kts` to use `URI.toURL()`
-    - `[x]` Update imports
-    - `[x]` Update `downloadCores` task
-- `[x]` Verify build script compilation
-- `[x]` Verify `downloadCores` task (optional but recommended)
+- `[/]` Upgrade AGP and Kotlin versions
+    - `[/]` Update root `build.gradle.kts`
+    - `[ ]` Update `settings.gradle.kts`
+- `[ ]` Update `app/build.gradle.kts` for Kotlin 2.x and Compose
+- `[ ]` Investigate and fix `app_icon.png` AAPT2 error
+- `[ ]` Verify build and sync
