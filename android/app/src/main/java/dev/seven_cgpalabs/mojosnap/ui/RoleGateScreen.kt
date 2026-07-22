@@ -161,8 +161,14 @@ fun RoleGateScreen(onNavigateToGamepad: (isHost: Boolean, romUri: Uri?, coreName
                 },
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("MOJO SNAP", color = Color(0xFFFFD700), fontSize = 38.sp, fontWeight = FontWeight.Black, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, letterSpacing = 4.sp)
-                Text("CONSOLE SYSTEM", color = Color(0xFF00E5FF), fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, letterSpacing = 4.sp)
+                androidx.compose.foundation.Image(
+                    painter = androidx.compose.ui.res.painterResource(id = dev.seven_cgpalabs.mojosnap.R.drawable.mojo_snap_title),
+                    contentDescription = "Mojo Snap Console System Title",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(140.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
