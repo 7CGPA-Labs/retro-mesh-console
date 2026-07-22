@@ -126,8 +126,7 @@ fun RoleGateScreen(onNavigateToGamepad: (isHost: Boolean, romUri: Uri?, coreName
                     .size(80.dp)
                     .clip(CircleShape)
                     .background(Color(0xFF070714))
-                    .shadow(30.dp, CircleShape, spotColor = Color(0xFFFF2E93).copy(alpha = 0.3f))
-                    .border(2.dp, Color(0xFFFF2E93), CircleShape),
+                    .shadow(30.dp, CircleShape, spotColor = Color(0xFFFF2E93).copy(alpha = 0.3f)),
                 contentAlignment = Alignment.Center
             ) {
                 androidx.compose.foundation.Image(

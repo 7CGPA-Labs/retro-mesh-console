@@ -28,6 +28,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import dev.seven_cgpalabs.mojosnap.MainActivity
+import dev.seven_cgpalabs.mojosnap.utils.ConsoleLogger
+import androidx.compose.foundation.lazy.items
 
 @Composable
 fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerName: String, onExit: () -> Unit) {
@@ -133,8 +135,9 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
                     .padding(4.dp)
             ) {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    item { Text("Emulator Log Started...", color = Color(0xFF1E2614), fontSize = 8.sp, fontWeight = FontWeight.Bold) }
-                    item { Text("Loaded core: $coreName", color = Color(0xFF1E2614), fontSize = 8.sp, fontWeight = FontWeight.Bold) }
+                    items(ConsoleLogger.logs) { log ->
+                        Text(log, color = Color(0xFF1E2614), fontSize = 8.sp, fontWeight = FontWeight.Bold, lineHeight = 10.sp)
+                    }
                 }
             }
         }
