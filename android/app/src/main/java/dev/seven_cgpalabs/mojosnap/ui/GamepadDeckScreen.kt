@@ -46,6 +46,30 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
         
         onDispose {
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            if (isHost) {
+                // stop host? (no method for this yet, but we could close sockets)
+            } else {
+                dev.seven_cgpalabs.mojosnap.NetworkManager.stopDiscovery()
+            }
+        }
+    }
+
+    LaunchedEffect(isHost) {
+        if (isHost) {
+            dev.seven_cgpalabs.mojosnap.NetworkManager.startHost(context, coreName, playerName)
+        } else {
+            dev.seven_cgpalabs.mojosnap.NetworkManager.onHostsDiscovered = { hosts ->
+                val targetHost = hosts.find { (it["name"] as? String)?.contains(playerName) == true }
+                if (targetHost != null) {
+                    val ip = targetHost["ip"] as? String
+                    if (ip != null) {
+                        ConsoleLogger.log("Network", "Found host '$playerName' at $ip. Connecting...")
+                        dev.seven_cgpalabs.mojosnap.NetworkManager.connectToServer(ip, 48293)
+                        dev.seven_cgpalabs.mojosnap.NetworkManager.stopDiscovery()
+                    }
+                }
+            }
+            dev.seven_cgpalabs.mojosnap.NetworkManager.startDiscovery(context, playerName)
         }
     }
 

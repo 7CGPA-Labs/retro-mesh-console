@@ -56,11 +56,13 @@ fun RoleGateScreen(onNavigateToGamepad: (isHost: Boolean, romUri: Uri?, coreName
         }
     }
 
+    var isHostSelection by remember { mutableStateOf(true) }
+
     if (showPlayerNameDialog) {
         AlertDialog(
             onDismissRequest = { showPlayerNameDialog = false },
             containerColor = Color(0xFF1E1E38),
-            title = { Text("Enter Player Name", color = Color.White) },
+            title = { Text(if (isHostSelection) "Enter Your Player Name" else "Enter Host's Name To Join", color = Color.White) },
             text = {
                 OutlinedTextField(
                     value = playerName,
@@ -78,7 +80,11 @@ fun RoleGateScreen(onNavigateToGamepad: (isHost: Boolean, romUri: Uri?, coreName
             confirmButton = {
                 TextButton(onClick = {
                     showPlayerNameDialog = false
-                    filePickerLauncher.launch(arrayOf("*/*"))
+                    if (isHostSelection) {
+                        filePickerLauncher.launch(arrayOf("*/*"))
+                    } else {
+                        onNavigateToGamepad(false, null, "client", playerName)
+                    }
                 }) {
                     Text("NEXT", color = Color(0xFF00E5FF))
                 }
@@ -169,7 +175,10 @@ fun RoleGateScreen(onNavigateToGamepad: (isHost: Boolean, romUri: Uri?, coreName
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { showPlayerNameDialog = true },
+                    .clickable { 
+                        isHostSelection = true
+                        showPlayerNameDialog = true 
+                    },
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF16162D).copy(alpha = 0.85f)),
                 shape = RoundedCornerShape(20.dp),
                 border = androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFFFF2E93).copy(alpha = 0.25f))
@@ -199,7 +208,8 @@ fun RoleGateScreen(onNavigateToGamepad: (isHost: Boolean, romUri: Uri?, coreName
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable {
-                        onNavigateToGamepad(false, null, "client", playerName)
+                        isHostSelection = false
+                        showPlayerNameDialog = true
                     },
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF16162D).copy(alpha = 0.85f)),
                 shape = RoundedCornerShape(20.dp),
