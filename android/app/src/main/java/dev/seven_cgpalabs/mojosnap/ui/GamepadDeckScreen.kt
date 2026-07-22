@@ -156,13 +156,15 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
                                 onDrag = { change, dragAmount -> 
                                     val nextPos = analogPos + dragAmount
                                     val distance = nextPos.getDistance()
-                                    analogPos = if (distance > maxRadiusPx) {
+                                    analogPos = if (maxRadiusPx > 0 && distance > maxRadiusPx) {
                                         nextPos * (maxRadiusPx / distance)
                                     } else {
                                         nextPos
                                     }
-                                    mainActivity?.setAnalogState(0, 0, 0, analogPos.x.toInt())
-                                    mainActivity?.setAnalogState(0, 0, 1, analogPos.y.toInt())
+                                    val scaledX = if (maxRadiusPx > 0) (analogPos.x / maxRadiusPx * 32767f).toInt().coerceIn(-32767, 32767) else 0
+                                    val scaledY = if (maxRadiusPx > 0) (analogPos.y / maxRadiusPx * 32767f).toInt().coerceIn(-32767, 32767) else 0
+                                    mainActivity?.setAnalogState(0, 0, 0, scaledX)
+                                    mainActivity?.setAnalogState(0, 0, 1, scaledY)
                                 }
                             )
                         }, contentAlignment = Alignment.Center) {
