@@ -42,6 +42,11 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
     
     var discoveredHosts by remember { mutableStateOf(emptyList<Map<String, Any>>()) }
     var isConnected by remember { mutableStateOf(isHost) }
+    var activeCore by remember { mutableStateOf(coreName) }
+    val hostPin = remember { (100000..999999).random().toString() }
+    
+    var showPinEntryForHost by remember { mutableStateOf<Map<String, Any>?>(null) }
+    var enteredPin by remember { mutableStateOf("") }
     
     DisposableEffect(Unit) {
         val activity = context as? Activity
@@ -59,7 +64,7 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
 
     LaunchedEffect(isHost) {
         if (isHost) {
-            dev.seven_cgpalabs.mojosnap.NetworkManager.startHost(context, coreName, playerName)
+            dev.seven_cgpalabs.mojosnap.NetworkManager.startHost(context, activeCore, playerName, hostPin)
         } else {
             dev.seven_cgpalabs.mojosnap.NetworkManager.onHostsDiscovered = { hosts ->
                 discoveredHosts = hosts
@@ -79,13 +84,13 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
                             input.copyTo(output)
                         }
                     }
-                    val coreFile = java.io.File(context.applicationInfo.nativeLibraryDir, "lib${coreName}_libretro_android.so")
+                    val coreFile = java.io.File(context.applicationInfo.nativeLibraryDir, "lib${activeCore}_libretro_android.so")
                     if (coreFile.exists()) {
                         ConsoleLogger.log("Core", "Loading core: ${coreFile.absolutePath}")
                         val success = mainActivity?.loadGame(coreFile.absolutePath, tempFile.absolutePath)
                         ConsoleLogger.log("Core", "Load game result: $success")
                     } else {
-                        ConsoleLogger.log("Core", "Core library not found: lib${coreName}_libretro_android.so")
+                        ConsoleLogger.log("Core", "Core library not found: lib${activeCore}_libretro_android.so")
                     }
                 } catch (e: Exception) {
                     ConsoleLogger.log("Core", "Failed to load ROM: ${e.message}")
@@ -113,9 +118,7 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
                             val ip = host["ip"] as? String ?: ""
                             TextButton(
                                 onClick = {
-                                    dev.seven_cgpalabs.mojosnap.NetworkManager.connectToServer(ip, 48293)
-                                    dev.seven_cgpalabs.mojosnap.NetworkManager.stopDiscovery()
-                                    isConnected = true
+                                    showPinEntryForHost = host
                                 },
                                 modifier = Modifier.fillMaxWidth()
                             ) {
@@ -128,6 +131,50 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
             confirmButton = {
                 TextButton(onClick = { onExit() }) {
                     Text("CANCEL", color = Color(0xFFEF4444))
+                }
+            }
+        )
+    }
+
+    if (showPinEntryForHost != null) {
+        AlertDialog(
+            onDismissRequest = { showPinEntryForHost = null },
+            containerColor = Color(0xFF1E1E38),
+            title = { Text("Enter 6-Digit PIN", color = Color.White) },
+            text = {
+                OutlinedTextField(
+                    value = enteredPin,
+                    onValueChange = { enteredPin = it },
+                    colors = TextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        focusedIndicatorColor = Color(0xFF00E5FF),
+                        unfocusedIndicatorColor = Color(0xFFFF2E93)
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val hostPinRequired = showPinEntryForHost!!["pin"] as? String ?: ""
+                    if (enteredPin == hostPinRequired) {
+                        val ip = showPinEntryForHost!!["ip"] as? String ?: ""
+                        dev.seven_cgpalabs.mojosnap.NetworkManager.connectToServer(ip, 48293)
+                        dev.seven_cgpalabs.mojosnap.NetworkManager.stopDiscovery()
+                        activeCore = showPinEntryForHost!!["core"] as? String ?: "nes"
+                        isConnected = true
+                        showPinEntryForHost = null
+                    } else {
+                        Toast.makeText(context, "Incorrect PIN", Toast.LENGTH_SHORT).show()
+                    }
+                }) {
+                    Text("CONNECT", color = Color(0xFF00E5FF))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPinEntryForHost = null }) {
+                    Text("CANCEL", color = Color.White.copy(alpha = 0.54f))
                 }
             }
         )
@@ -183,16 +230,16 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
         val baseSize = (maxHeight.value * 0.22f).coerceIn(40f, 100f).dp
         val maxRadiusPx = with(LocalDensity.current) { (baseSize * 1.5f).toPx() - (baseSize * 0.3f).toPx() }
         val mHeight = maxHeight
-        val isSnes = coreName.contains("snes") || coreName.contains("mgba")
-        val isPs1 = coreName.contains("pcsx")
-        val isGenesis = coreName.contains("genesis")
-        
         Text(
-            text = "Player: $playerName",
+            text = "Player: $playerName" + if (isHost) " | PIN: $hostPin" else "",
             color = Color.White.copy(alpha = 0.5f),
             fontSize = 12.sp,
             modifier = Modifier.align(Alignment.TopStart).padding(8.dp)
         )
+
+        val isSnes = activeCore.contains("snes") || activeCore.contains("mgba")
+        val isPs1 = activeCore.contains("pcsx")
+        val isGenesis = activeCore.contains("genesis")
 
         // Shoulders
         if (isSnes || isPs1) {

@@ -33,14 +33,14 @@ object NetworkManager {
     // JNI Native Function in native-render.cpp
     external fun updatePlayer2Button(buttonId: Int, pressed: Boolean)
 
-    fun startHost(context: Context, coreName: String, playerName: String) {
+    fun startHost(context: Context, coreName: String, playerName: String, pin: String) {
         nsdManager = context.getSystemService(Context.NSD_SERVICE) as NsdManager
 
         thread {
             try {
                 serverSocket = ServerSocket(PORT)
                 Log.d(TAG, "Server started on port $PORT")
-                registerService(coreName, playerName)
+                registerService(coreName, playerName, pin)
 
                 while (!serverSocket!!.isClosed) {
                     val socket = serverSocket!!.accept()
@@ -75,13 +75,14 @@ object NetworkManager {
         }
     }
 
-    private fun registerService(coreName: String, playerName: String) {
+    private fun registerService(coreName: String, playerName: String, pin: String) {
         val serviceInfo = NsdServiceInfo().apply {
             serviceName = "MojoSnap - $playerName"
             serviceType = SERVICE_TYPE
             port = PORT
             // Android API 21+ supports attributes
             setAttribute("core", coreName)
+            setAttribute("pin", pin)
         }
 
         registrationListener = object : NsdManager.RegistrationListener {
@@ -111,17 +112,23 @@ object NetworkManager {
                         override fun onServiceResolved(serviceInfo: NsdServiceInfo) {
                             val ip = serviceInfo.host.hostAddress
                             var core = "nes" // default
+                            var pin = ""
                             // Extract TXT record
                             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
                                 val coreBytes = serviceInfo.attributes["core"]
                                 if (coreBytes != null) {
                                     core = String(coreBytes)
                                 }
+                                val pinBytes = serviceInfo.attributes["pin"]
+                                if (pinBytes != null) {
+                                    pin = String(pinBytes)
+                                }
                             }
                             val hostMap = mapOf<String, Any>(
                                 "ip" to ip,
                                 "name" to serviceInfo.serviceName,
-                                "core" to core
+                                "core" to core,
+                                "pin" to pin
                             )
                             discoveredHostsList.add(hostMap)
                             onHostsDiscovered?.invoke(discoveredHostsList)
