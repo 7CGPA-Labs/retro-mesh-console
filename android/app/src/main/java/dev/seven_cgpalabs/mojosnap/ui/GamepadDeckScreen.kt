@@ -205,8 +205,11 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
                             GamepadBtn(if(isPs1) "O" else "A", 4, baseSize, Modifier.align(Alignment.CenterEnd), Color.LightGray, mainActivity)
                         }
                         else -> {
-                            GamepadBtn("B", 5, baseSize, Modifier.align(Alignment.BottomStart).padding(bottom = 20.dp, start = 20.dp), Color(0xFFE57373), mainActivity)
-                            GamepadBtn("A", 4, baseSize, Modifier.align(Alignment.TopEnd).padding(top = 20.dp, end = 20.dp), Color(0xFFE57373), mainActivity)
+                            Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                                GamepadBtn("B", 5, baseSize * 1.2f, Modifier.offset(y = 12.dp), Color(0xFFE57373), mainActivity)
+                                Spacer(modifier = Modifier.width(24.dp))
+                                GamepadBtn("A", 4, baseSize * 1.2f, Modifier.offset(y = (-12).dp), Color(0xFFE57373), mainActivity)
+                            }
                         }
                     }
                 }
