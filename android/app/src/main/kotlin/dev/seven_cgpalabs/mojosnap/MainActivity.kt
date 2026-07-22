@@ -19,13 +19,28 @@ class MainActivity : ComponentActivity() {
         setContent {
             MojoSnapTheme {
                 var currentScreen by remember { mutableStateOf("RoleGate") }
+                var isHostState by remember { mutableStateOf(false) }
+                var romUriState by remember { mutableStateOf<android.net.Uri?>(null) }
+                var coreNameState by remember { mutableStateOf("") }
+                var playerNameState by remember { mutableStateOf("") }
 
                 when (currentScreen) {
                     "RoleGate" -> RoleGateScreen(
-                        onHostSelected = { currentScreen = "GamepadDeck" },
-                        onJoinSelected = { currentScreen = "GamepadDeck" }
+                        onNavigateToGamepad = { isHost, romUri, coreName, playerName ->
+                            isHostState = isHost
+                            romUriState = romUri
+                            coreNameState = coreName
+                            playerNameState = playerName
+                            currentScreen = "GamepadDeck"
+                        }
                     )
-                    "GamepadDeck" -> GamepadDeckScreen()
+                    "GamepadDeck" -> GamepadDeckScreen(
+                        isHost = isHostState,
+                        romUri = romUriState,
+                        coreName = coreNameState,
+                        playerName = playerNameState,
+                        onExit = { currentScreen = "RoleGate" }
+                    )
                 }
             }
         }
