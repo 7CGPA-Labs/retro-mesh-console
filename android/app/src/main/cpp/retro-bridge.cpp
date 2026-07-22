@@ -145,6 +145,15 @@ void native_audio_sample_cb(int16_t left, int16_t right) {
     native_audio_sample_batch_cb(frame, 1);
 }
 
+static void core_log_cb(int level, const char *fmt, ...) {
+    char buffer[1024];
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(buffer, sizeof(buffer), fmt, args);
+    va_end(args);
+    sendLogToKotlin("CoreLog", buffer);
+}
+
 // --- Input & Environment ---
 bool native_environment_cb(unsigned cmd, void *data) {
     if (cmd == 10) { // RETRO_ENVIRONMENT_SET_PIXEL_FORMAT
@@ -169,14 +178,7 @@ bool native_environment_cb(unsigned cmd, void *data) {
         };
         if (data) {
             auto* cb = static_cast<retro_log_callback*>(data);
-            cb->log = [](int level, const char *fmt, ...) {
-                char buffer[1024];
-                va_list args;
-                va_start(args, fmt);
-                vsnprintf(buffer, sizeof(buffer), fmt, args);
-                va_end(args);
-                sendLogToKotlin("CoreLog", buffer);
-            };
+            cb->log = core_log_cb;
             return true;
         }
     } else if (cmd == 15) { // GET_VARIABLE
