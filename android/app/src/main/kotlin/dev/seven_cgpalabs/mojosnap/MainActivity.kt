@@ -18,6 +18,7 @@ class MainActivity : ComponentActivity() {
     external fun shutdown()
     external fun saveState(slot: Int, saveDir: String): Boolean
     external fun loadState(slot: Int, saveDir: String): Boolean
+    external fun loadGame(coreDir: String, romPath: String): Boolean
 
     companion object {
         init {

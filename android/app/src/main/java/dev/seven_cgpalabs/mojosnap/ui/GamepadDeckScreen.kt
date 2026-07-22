@@ -42,6 +42,33 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
     DisposableEffect(Unit) {
         val activity = context as? Activity
         activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE
+        
+        var loaded = false
+        if (romUri != null && !loaded) {
+            loaded = true
+            kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                try {
+                    val inputStream = context.contentResolver.openInputStream(romUri)
+                    val tempFile = java.io.File(context.cacheDir, "temp_rom")
+                    inputStream?.use { input ->
+                        tempFile.outputStream().use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    val coreFile = java.io.File(context.applicationInfo.nativeLibraryDir, "lib${coreName}_libretro_android.so")
+                    if (coreFile.exists()) {
+                        ConsoleLogger.log("Core", "Loading core: ${coreFile.absolutePath}")
+                        val success = mainActivity?.loadGame(coreFile.absolutePath, tempFile.absolutePath)
+                        ConsoleLogger.log("Core", "Load game result: $success")
+                    } else {
+                        ConsoleLogger.log("Core", "Core library not found: lib${coreName}_libretro_android.so")
+                    }
+                } catch (e: Exception) {
+                    ConsoleLogger.log("Core", "Failed to load ROM: ${e.message}")
+                }
+            }
+        }
+        
         onDispose {
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
