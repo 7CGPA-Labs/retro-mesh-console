@@ -276,8 +276,9 @@ fun StarfieldBackground() {
     androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
         stars.forEachIndexed { index, (pos, radius) ->
             val starAlpha = (alpha + (index % 10) * 0.1f) % 1f
+            val color = if (index % 2 == 0) Color(0xFF00E5FF) else Color(0xFFFF2E93)
             drawCircle(
-                color = Color.White.copy(alpha = starAlpha.coerceIn(0.2f, 1f)),
+                color = color.copy(alpha = starAlpha.coerceIn(0.2f, 1f)),
                 radius = radius,
                 center = androidx.compose.ui.geometry.Offset(pos.x * size.width, pos.y * size.height)
             )

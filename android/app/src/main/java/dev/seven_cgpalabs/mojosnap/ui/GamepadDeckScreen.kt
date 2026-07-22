@@ -85,13 +85,16 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
                             input.copyTo(output)
                         }
                     }
-                    val coreFile = java.io.File(context.applicationInfo.nativeLibraryDir, "lib${activeCore}_libretro_android.so")
+                    var coreFile = java.io.File(context.applicationInfo.nativeLibraryDir, "${activeCore}_libretro_android.so")
+                    if (!coreFile.exists()) {
+                        coreFile = java.io.File(context.applicationInfo.nativeLibraryDir, "lib${activeCore}_libretro_android.so")
+                    }
                     if (coreFile.exists()) {
                         ConsoleLogger.log("Core", "Loading core: ${coreFile.absolutePath}")
                         val success = mainActivity?.loadGame(coreFile.absolutePath, tempFile.absolutePath)
                         ConsoleLogger.log("Core", "Load game result: $success")
                     } else {
-                        ConsoleLogger.log("Core", "Core library not found: lib${activeCore}_libretro_android.so")
+                        ConsoleLogger.log("Core", "Core library not found: ${activeCore}_libretro_android.so")
                     }
                 } catch (e: Exception) {
                     ConsoleLogger.log("Core", "Failed to load ROM: ${e.message}")
@@ -116,7 +119,6 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
                     androidx.compose.foundation.lazy.LazyColumn {
                         items(discoveredHosts) { host ->
                             val hostName = host["name"] as? String ?: "Unknown"
-                            val ip = host["ip"] as? String ?: ""
                             TextButton(
                                 onClick = {
                                     showPinEntryForHost = host
@@ -235,7 +237,7 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
             text = "Player: $playerName" + if (isHost) " | PIN: $hostPin" else "",
             color = Color.White.copy(alpha = 0.5f),
             fontSize = 12.sp,
-            modifier = Modifier.align(Alignment.TopStart).padding(8.dp)
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 16.dp)
         )
 
         val isSnes = activeCore.contains("snes") || activeCore.contains("mgba")
@@ -269,7 +271,7 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
             Spacer(Modifier.height(10.dp))
             Box(
                 modifier = Modifier
-                    .size(120.dp, 40.dp)
+                    .size(240.dp, 180.dp)
                     .background(Color(0xFF87A96B), RoundedCornerShape(4.dp))
                     .border(2.dp, Color(0xFF1E2614), RoundedCornerShape(4.dp))
                     .padding(4.dp)

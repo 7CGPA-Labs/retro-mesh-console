@@ -98,6 +98,7 @@ object NetworkManager {
         nsdManager?.registerService(serviceInfo, NsdManager.PROTOCOL_DNS_SD, registrationListener)
     }
 
+    @Suppress("DEPRECATION")
     fun startDiscovery(context: Context) {
         discoveredHostsList.clear()
         onHostsDiscovered?.invoke(discoveredHostsList)
@@ -125,7 +126,7 @@ object NetworkManager {
                                 }
                             }
                             val hostMap = mapOf<String, Any>(
-                                "ip" to ip,
+                                "ip" to (ip ?: ""),
                                 "name" to serviceInfo.serviceName,
                                 "core" to core,
                                 "pin" to pin
