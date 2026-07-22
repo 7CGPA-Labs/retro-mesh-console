@@ -19,6 +19,12 @@ class MainActivity : ComponentActivity() {
     external fun saveState(slot: Int, saveDir: String): Boolean
     external fun loadState(slot: Int, saveDir: String): Boolean
 
+    companion object {
+        init {
+            System.loadLibrary("native_render")
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
