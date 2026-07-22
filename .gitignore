@@ -1,34 +1,33 @@
-
-# Android Specific
-android/local.properties
-android/.gradle/
-android/build/
-android/app/build/
-android/app/debug/
-android/app/profile/
-android/app/release/
-android/app/intermediates/
-android/app/outputs/
-android/app/tmp/
+# Built application files
 *.apk
 *.aar
 *.ap_
+*.aab
 
+# Local configuration file (sdk path, etc)
+local.properties
+android/local.properties
 
-# IDE & Configuration files
+# Gradle files
+.gradle/
+android/.gradle/
+build/
+android/build/
+android/app/build/
+
+# IDE files
 .idea/
+.vscode/
 *.iml
 *.ipr
 *.iws
-.vscode/
-.history
-.project
-.classpath
-.settings/
 
-# OS/Log placeholders
-*.log
-*.swp
-*.tmp
+# OS files
+.DS_Store
 Thumbs.db
+
+# Dynamically downloaded cores (prevent large binary commits)
 android/app/src/main/jniLibs/
+
+# Ensure gradle wrapper is tracked
+!gradle-wrapper.jar
