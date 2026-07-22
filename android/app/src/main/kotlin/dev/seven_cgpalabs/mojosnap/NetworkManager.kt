@@ -97,7 +97,7 @@ object NetworkManager {
         nsdManager?.registerService(serviceInfo, NsdManager.PROTOCOL_DNS_SD, registrationListener)
     }
 
-    fun startDiscovery(context: Context, targetPlayerName: String) {
+    fun startDiscovery(context: Context) {
         discoveredHostsList.clear()
         onHostsDiscovered?.invoke(discoveredHostsList)
         nsdManager = context.getSystemService(Context.NSD_SERVICE) as NsdManager
@@ -105,7 +105,7 @@ object NetworkManager {
         discoveryListener = object : NsdManager.DiscoveryListener {
             override fun onDiscoveryStarted(regType: String) {}
             override fun onServiceFound(service: NsdServiceInfo) {
-                if (service.serviceType == SERVICE_TYPE && service.serviceName.contains(targetPlayerName)) {
+                if (service.serviceType == SERVICE_TYPE && service.serviceName.contains("MojoSnap -")) {
                     nsdManager?.resolveService(service, object : NsdManager.ResolveListener {
                         override fun onResolveFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {}
                         override fun onServiceResolved(serviceInfo: NsdServiceInfo) {

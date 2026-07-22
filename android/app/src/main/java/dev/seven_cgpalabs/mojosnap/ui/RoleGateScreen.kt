@@ -62,7 +62,7 @@ fun RoleGateScreen(onNavigateToGamepad: (isHost: Boolean, romUri: Uri?, coreName
         AlertDialog(
             onDismissRequest = { showPlayerNameDialog = false },
             containerColor = Color(0xFF1E1E38),
-            title = { Text(if (isHostSelection) "Enter Your Player Name" else "Enter Host's Name To Join", color = Color.White) },
+            title = { Text("Enter Your Player Name", color = Color.White) },
             text = {
                 OutlinedTextField(
                     value = playerName,
@@ -80,11 +80,7 @@ fun RoleGateScreen(onNavigateToGamepad: (isHost: Boolean, romUri: Uri?, coreName
             confirmButton = {
                 TextButton(onClick = {
                     showPlayerNameDialog = false
-                    if (isHostSelection) {
-                        filePickerLauncher.launch(arrayOf("*/*"))
-                    } else {
-                        onNavigateToGamepad(false, null, "client", playerName)
-                    }
+                    filePickerLauncher.launch(arrayOf("*/*"))
                 }) {
                     Text("NEXT", color = Color(0xFF00E5FF))
                 }
@@ -208,8 +204,7 @@ fun RoleGateScreen(onNavigateToGamepad: (isHost: Boolean, romUri: Uri?, coreName
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable {
-                        isHostSelection = false
-                        showPlayerNameDialog = true
+                        onNavigateToGamepad(false, null, "client", "")
                     },
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF16162D).copy(alpha = 0.85f)),
                 shape = RoundedCornerShape(20.dp),

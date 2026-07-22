@@ -40,6 +40,9 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
     var showMenu by remember { mutableStateOf(false) }
     var analogPos by remember { mutableStateOf(Offset.Zero) }
     
+    var discoveredHosts by remember { mutableStateOf(emptyList<Map<String, Any>>()) }
+    var isConnected by remember { mutableStateOf(isHost) }
+    
     DisposableEffect(Unit) {
         val activity = context as? Activity
         activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE
@@ -59,17 +62,9 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
             dev.seven_cgpalabs.mojosnap.NetworkManager.startHost(context, coreName, playerName)
         } else {
             dev.seven_cgpalabs.mojosnap.NetworkManager.onHostsDiscovered = { hosts ->
-                val targetHost = hosts.find { (it["name"] as? String)?.contains(playerName) == true }
-                if (targetHost != null) {
-                    val ip = targetHost["ip"] as? String
-                    if (ip != null) {
-                        ConsoleLogger.log("Network", "Found host '$playerName' at $ip. Connecting...")
-                        dev.seven_cgpalabs.mojosnap.NetworkManager.connectToServer(ip, 48293)
-                        dev.seven_cgpalabs.mojosnap.NetworkManager.stopDiscovery()
-                    }
-                }
+                discoveredHosts = hosts
             }
-            dev.seven_cgpalabs.mojosnap.NetworkManager.startDiscovery(context, playerName)
+            dev.seven_cgpalabs.mojosnap.NetworkManager.startDiscovery(context)
         }
     }
 
@@ -97,6 +92,45 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
                 }
             }
         }
+    }
+
+    if (!isConnected) {
+        AlertDialog(
+            onDismissRequest = { onExit() },
+            containerColor = Color(0xFF1E1E38),
+            title = { Text("Select Host to Join", color = Color.White) },
+            text = {
+                if (discoveredHosts.isEmpty()) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                        CircularProgressIndicator(color = Color(0xFF00E5FF))
+                        Spacer(Modifier.height(16.dp))
+                        Text("Scanning for hosts...", color = Color.White.copy(alpha = 0.7f))
+                    }
+                } else {
+                    androidx.compose.foundation.lazy.LazyColumn {
+                        items(discoveredHosts) { host ->
+                            val hostName = host["name"] as? String ?: "Unknown"
+                            val ip = host["ip"] as? String ?: ""
+                            TextButton(
+                                onClick = {
+                                    dev.seven_cgpalabs.mojosnap.NetworkManager.connectToServer(ip, 48293)
+                                    dev.seven_cgpalabs.mojosnap.NetworkManager.stopDiscovery()
+                                    isConnected = true
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(hostName, color = Color(0xFF00E5FF), fontSize = 18.sp)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { onExit() }) {
+                    Text("CANCEL", color = Color(0xFFEF4444))
+                }
+            }
+        )
     }
 
     if (showMenu) {
