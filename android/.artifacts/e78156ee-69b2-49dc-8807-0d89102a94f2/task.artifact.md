@@ -1,0 +1,5 @@
+- `[x]` Update `app/build.gradle.kts` to use `URI.toURL()`
+    - `[x]` Update imports
+    - `[x]` Update `downloadCores` task
+- `[x]` Verify build script compilation
+- `[x]` Verify `downloadCores` task (optional but recommended)

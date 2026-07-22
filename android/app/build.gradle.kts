@@ -1,4 +1,4 @@
-import java.net.URL
+import java.net.URI
 import java.io.FileOutputStream
 import java.util.zip.ZipInputStream
 
@@ -94,7 +94,7 @@ tasks.register("downloadCores") {
             val soFile = file("${jniLibsDir.absolutePath}/${soName}")
             if (!soFile.exists()) {
                 println("Downloading ${core}...")
-                val zipUrl = URL("${baseUrl}/${soName}.zip")
+                val zipUrl = URI("${baseUrl}/${soName}.zip").toURL()
                 try {
                     zipUrl.openStream().use { input ->
                         ZipInputStream(input).use { zis ->

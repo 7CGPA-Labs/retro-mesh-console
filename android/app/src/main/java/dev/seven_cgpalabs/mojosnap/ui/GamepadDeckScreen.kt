@@ -204,13 +204,17 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
             }
         }
 
-        Row(modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            SystemBtn("CAST", Icons.Default.Cast, Color(0xFF00E5FF)) { 
-                dev.seven_cgpalabs.mojosnap.CastingAdapter(context as Activity).openSystemCastMenu() 
+        Column(modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                SystemBtn("SELECT", Icons.Default.SelectAll, Color.White.copy(0.7f), mainActivity, 13)
+                SystemBtn("START", Icons.Default.PlayArrow, Color.White, mainActivity, 12)
             }
-            SystemBtn("SELECT", Icons.Default.SelectAll, Color.White.copy(0.7f), mainActivity, 13)
-            SystemBtn("START", Icons.Default.PlayArrow, Color.White, mainActivity, 12)
-            SystemBtn("MENU", Icons.Default.Menu, Color(0xFFFF2E93)) { showMenu = true; mainActivity?.togglePause() }
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                SystemBtn("CAST", Icons.Default.Cast, Color(0xFF00E5FF)) { 
+                    dev.seven_cgpalabs.mojosnap.CastingAdapter(context as Activity).openSystemCastMenu() 
+                }
+                SystemBtn("MENU", Icons.Default.Menu, Color(0xFFFF2E93)) { showMenu = true; mainActivity?.togglePause() }
+            }
         }
     }
 }
