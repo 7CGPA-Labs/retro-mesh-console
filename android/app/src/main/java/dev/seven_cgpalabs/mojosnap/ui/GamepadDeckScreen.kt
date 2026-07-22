@@ -27,17 +27,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
-
-object JNIBridge {
-    fun sendButton(btn: String, pressed: Boolean) {
-        // Dummy JNI call for wiring
-    }
-}
+import dev.seven_cgpalabs.mojosnap.MainActivity
 
 @Composable
 fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerName: String, onExit: () -> Unit) {
     val context = LocalContext.current
-    var isConnectingTv by remember { mutableStateOf(isHost) }
+    val mainActivity = context as? MainActivity
     var useAnalogStick by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
     var analogPos by remember { mutableStateOf(Offset.Zero) }
@@ -47,13 +42,6 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
         activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE
         onDispose {
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        if (isHost) {
-            delay(1500) // Mocking TV connection wait
-            isConnectingTv = false
         }
     }
 
@@ -71,29 +59,29 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
             text = {
                 LazyColumn {
                     item {
-                        TextButton(onClick = { showMenu = false }) {
+                        TextButton(onClick = { showMenu = false; mainActivity?.togglePause() }) {
                             Text("Resume Game", color = Color.White)
                         }
                     }
                     if (isHost) {
                         item {
-                            TextButton(onClick = { showMenu = false; JNIBridge.sendButton("RESET", true) }) {
+                            TextButton(onClick = { showMenu = false; mainActivity?.resetGame() }) {
                                 Text("Reset Game", color = Color.White)
                             }
                         }
                         item {
-                            TextButton(onClick = { showMenu = false; JNIBridge.sendButton("SAVE", true) }) {
+                            TextButton(onClick = { showMenu = false; mainActivity?.saveState(1, context.filesDir.absolutePath) }) {
                                 Text("Quick Save (Slot 1)", color = Color.White)
                             }
                         }
                         item {
-                            TextButton(onClick = { showMenu = false; JNIBridge.sendButton("LOAD", true) }) {
+                            TextButton(onClick = { showMenu = false; mainActivity?.loadState(1, context.filesDir.absolutePath) }) {
                                 Text("Quick Load (Slot 1)", color = Color.White)
                             }
                         }
                     }
                     item {
-                        TextButton(onClick = { showMenu = false; onExit() }) {
+                        TextButton(onClick = { showMenu = false; mainActivity?.shutdown(); onExit() }) {
                             Text(if (isHost) "Stop Emulation & Exit" else "Disconnect", color = Color(0xFFEF4444), fontWeight = FontWeight.Bold)
                         }
                     }
@@ -101,19 +89,6 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
             },
             confirmButton = {}
         )
-    }
-
-    if (isConnectingTv) {
-        Box(modifier = Modifier.fillMaxSize().background(Color(0xFF070714)), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                CircularProgressIndicator(color = Color(0xFFFF2E93))
-                Spacer(Modifier.height(32.dp))
-                Text("WAITING FOR TELEVISION...", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(12.dp))
-                Text("Please select your wireless display or Smart TV in the system cast overlay.", color = Color.White.copy(alpha = 0.5f))
-            }
-        }
-        return
     }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize().background(Color.Black)) {
@@ -125,33 +100,43 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
         val isPs1 = coreName.contains("pcsx")
         val isGenesis = coreName.contains("genesis")
 
-        // Log UI Layer
-        Box(modifier = Modifier.fillMaxWidth().height(mHeight * 0.3f).align(Alignment.TopCenter).background(Color.Black.copy(0.4f)).padding(8.dp)) {
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                item { Text("Emulator Log Started...", color = Color.Green, fontSize = 10.sp) }
-                item { Text("Loaded core: $coreName", color = Color.White, fontSize = 10.sp) }
-            }
-        }
-
         // Shoulders
         if (isSnes || isPs1) {
-            ShoulderBtn("L" + if (isPs1) "1" else "", Modifier.padding(start = if (isPs1) 172.dp else 36.dp, top = mHeight * 0.05f))
-            ShoulderBtn("R" + if (isPs1) "1" else "", Modifier.padding(end = if (isPs1) 172.dp else 36.dp, top = mHeight * 0.05f).align(Alignment.TopEnd))
+            ShoulderBtn("L" + if (isPs1) "1" else "", 8, mainActivity, Modifier.padding(start = if (isPs1) 172.dp else 36.dp, top = mHeight * 0.05f))
+            ShoulderBtn("R" + if (isPs1) "1" else "", 9, mainActivity, Modifier.padding(end = if (isPs1) 172.dp else 36.dp, top = mHeight * 0.05f).align(Alignment.TopEnd))
         }
         if (isPs1) {
-            ShoulderBtn("L2", Modifier.padding(start = 36.dp, top = mHeight * 0.05f))
-            ShoulderBtn("R2", Modifier.padding(end = 36.dp, top = mHeight * 0.05f).align(Alignment.TopEnd))
+            ShoulderBtn("L2", 10, mainActivity, Modifier.padding(start = 36.dp, top = mHeight * 0.05f))
+            ShoulderBtn("R2", 11, mainActivity, Modifier.padding(end = 36.dp, top = mHeight * 0.05f).align(Alignment.TopEnd))
         }
 
-        // Analog toggle
-        Box(
-            modifier = Modifier.align(Alignment.TopCenter).padding(top = mHeight * 0.35f)
-                .clickable { useAnalogStick = !useAnalogStick }
-                .background(if (useAnalogStick) Color(0xFFFF2E93).copy(0.2f) else Color.White.copy(0.12f), RoundedCornerShape(20.dp))
-                .border(2.dp, if (useAnalogStick) Color(0xFFFF2E93) else Color.White.copy(0.24f), RoundedCornerShape(20.dp))
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+        // Analog toggle and Log UI
+        Column(
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = mHeight * 0.15f),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(if (useAnalogStick) "ANALOG ON" else "D-PAD ON", color = if (useAnalogStick) Color(0xFFFF2E93) else Color.White.copy(0.54f), fontWeight = FontWeight.Bold)
+            Box(
+                modifier = Modifier
+                    .clickable { useAnalogStick = !useAnalogStick }
+                    .background(if (useAnalogStick) Color(0xFFFF2E93).copy(0.2f) else Color.White.copy(0.12f), RoundedCornerShape(20.dp))
+                    .border(2.dp, if (useAnalogStick) Color(0xFFFF2E93) else Color.White.copy(0.24f), RoundedCornerShape(20.dp))
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Text(if (useAnalogStick) "ANALOG ON" else "D-PAD ON", color = if (useAnalogStick) Color(0xFFFF2E93) else Color.White.copy(0.54f), fontWeight = FontWeight.Bold)
+            }
+            Spacer(Modifier.height(10.dp))
+            Box(
+                modifier = Modifier
+                    .size(120.dp, 40.dp)
+                    .background(Color(0xFF87A96B), RoundedCornerShape(4.dp))
+                    .border(2.dp, Color(0xFF1E2614), RoundedCornerShape(4.dp))
+                    .padding(4.dp)
+            ) {
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    item { Text("Emulator Log Started...", color = Color(0xFF1E2614), fontSize = 8.sp, fontWeight = FontWeight.Bold) }
+                    item { Text("Loaded core: $coreName", color = Color(0xFF1E2614), fontSize = 8.sp, fontWeight = FontWeight.Bold) }
+                }
+            }
         }
 
         Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -160,7 +145,11 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
                     Box(modifier = Modifier.size(baseSize * 3).background(Color(0xFF1E1E38).copy(0.5f), CircleShape).border(2.dp, Color.White.copy(0.24f), CircleShape)
                         .pointerInput(Unit) {
                             detectDragGestures(
-                                onDragEnd = { analogPos = Offset.Zero },
+                                onDragEnd = { 
+                                    analogPos = Offset.Zero
+                                    mainActivity?.setAnalogState(0, 0, 0, 0)
+                                    mainActivity?.setAnalogState(0, 0, 1, 0)
+                                },
                                 onDrag = { change, dragAmount -> 
                                     val nextPos = analogPos + dragAmount
                                     val distance = nextPos.getDistance()
@@ -169,7 +158,8 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
                                     } else {
                                         nextPos
                                     }
-                                    JNIBridge.sendButton("ANALOG", true)
+                                    mainActivity?.setAnalogState(0, 0, 0, analogPos.x.toInt())
+                                    mainActivity?.setAnalogState(0, 0, 1, analogPos.y.toInt())
                                 }
                             )
                         }, contentAlignment = Alignment.Center) {
@@ -177,10 +167,10 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
                     }
                 } else {
                     Box(modifier = Modifier.size(baseSize * 3)) {
-                        GamepadBtn("U", baseSize, Modifier.align(Alignment.TopCenter), Color.White)
-                        GamepadBtn("D", baseSize, Modifier.align(Alignment.BottomCenter), Color.White)
-                        GamepadBtn("L", baseSize, Modifier.align(Alignment.CenterStart), Color.White)
-                        GamepadBtn("R", baseSize, Modifier.align(Alignment.CenterEnd), Color.White)
+                        GamepadBtn("U", 0, baseSize, Modifier.align(Alignment.TopCenter), Color.White, mainActivity)
+                        GamepadBtn("D", 1, baseSize, Modifier.align(Alignment.BottomCenter), Color.White, mainActivity)
+                        GamepadBtn("L", 2, baseSize, Modifier.align(Alignment.CenterStart), Color.White, mainActivity)
+                        GamepadBtn("R", 3, baseSize, Modifier.align(Alignment.CenterEnd), Color.White, mainActivity)
                     }
                 }
             }
@@ -189,22 +179,22 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
                 Box(modifier = Modifier.size(baseSize * 3)) {
                     when {
                         isGenesis -> {
-                            GamepadBtn("X", baseSize, Modifier.align(Alignment.TopStart).padding(start = 10.dp), Color.LightGray)
-                            GamepadBtn("Y", baseSize, Modifier.align(Alignment.TopCenter), Color.LightGray)
-                            GamepadBtn("Z", baseSize, Modifier.align(Alignment.TopEnd).padding(end = 10.dp), Color.LightGray)
-                            GamepadBtn("A", baseSize, Modifier.align(Alignment.BottomStart).padding(start = 10.dp), Color(0xFFE57373))
-                            GamepadBtn("B", baseSize, Modifier.align(Alignment.BottomCenter), Color(0xFF81C784))
-                            GamepadBtn("C", baseSize, Modifier.align(Alignment.BottomEnd).padding(end = 10.dp), Color(0xFF4FC3F7))
+                            GamepadBtn("X", 6, baseSize, Modifier.align(Alignment.TopStart).padding(start = 10.dp), Color.LightGray, mainActivity)
+                            GamepadBtn("Y", 7, baseSize, Modifier.align(Alignment.TopCenter), Color.LightGray, mainActivity)
+                            GamepadBtn("Z", 8, baseSize, Modifier.align(Alignment.TopEnd).padding(end = 10.dp), Color.LightGray, mainActivity)
+                            GamepadBtn("A", 4, baseSize, Modifier.align(Alignment.BottomStart).padding(start = 10.dp), Color(0xFFE57373), mainActivity)
+                            GamepadBtn("B", 5, baseSize, Modifier.align(Alignment.BottomCenter), Color(0xFF81C784), mainActivity)
+                            GamepadBtn("C", 9, baseSize, Modifier.align(Alignment.BottomEnd).padding(end = 10.dp), Color(0xFF4FC3F7), mainActivity)
                         }
                         isPs1 || isSnes -> {
-                            GamepadBtn(if(isPs1) "△" else "X", baseSize, Modifier.align(Alignment.TopCenter), Color.LightGray)
-                            GamepadBtn(if(isPs1) "X" else "B", baseSize, Modifier.align(Alignment.BottomCenter), Color.LightGray)
-                            GamepadBtn(if(isPs1) "□" else "Y", baseSize, Modifier.align(Alignment.CenterStart), Color.LightGray)
-                            GamepadBtn(if(isPs1) "O" else "A", baseSize, Modifier.align(Alignment.CenterEnd), Color.LightGray)
+                            GamepadBtn(if(isPs1) "△" else "X", 6, baseSize, Modifier.align(Alignment.TopCenter), Color.LightGray, mainActivity)
+                            GamepadBtn(if(isPs1) "X" else "B", 5, baseSize, Modifier.align(Alignment.BottomCenter), Color.LightGray, mainActivity)
+                            GamepadBtn(if(isPs1) "□" else "Y", 7, baseSize, Modifier.align(Alignment.CenterStart), Color.LightGray, mainActivity)
+                            GamepadBtn(if(isPs1) "O" else "A", 4, baseSize, Modifier.align(Alignment.CenterEnd), Color.LightGray, mainActivity)
                         }
                         else -> {
-                            GamepadBtn("B", baseSize, Modifier.align(Alignment.BottomStart).padding(bottom = 20.dp, start = 20.dp), Color(0xFFE57373))
-                            GamepadBtn("A", baseSize, Modifier.align(Alignment.TopEnd).padding(top = 20.dp, end = 20.dp), Color(0xFFE57373))
+                            GamepadBtn("B", 5, baseSize, Modifier.align(Alignment.BottomStart).padding(bottom = 20.dp, start = 20.dp), Color(0xFFE57373), mainActivity)
+                            GamepadBtn("A", 4, baseSize, Modifier.align(Alignment.TopEnd).padding(top = 20.dp, end = 20.dp), Color(0xFFE57373), mainActivity)
                         }
                     }
                 }
@@ -215,30 +205,37 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
             SystemBtn("CAST", Icons.Default.Cast, Color(0xFF00E5FF)) { 
                 dev.seven_cgpalabs.mojosnap.CastingAdapter(context as Activity).openSystemCastMenu() 
             }
-            SystemBtn("SELECT", Icons.Default.SelectAll, Color.White.copy(0.7f)) { JNIBridge.sendButton("SELECT", true) }
-            SystemBtn("START", Icons.Default.PlayArrow, Color.White) { JNIBridge.sendButton("START", true) }
-            SystemBtn("MENU", Icons.Default.Menu, Color(0xFFFF2E93)) { showMenu = true }
+            SystemBtn("SELECT", Icons.Default.SelectAll, Color.White.copy(0.7f), mainActivity, 13)
+            SystemBtn("START", Icons.Default.PlayArrow, Color.White, mainActivity, 12)
+            SystemBtn("MENU", Icons.Default.Menu, Color(0xFFFF2E93)) { showMenu = true; mainActivity?.togglePause() }
         }
     }
 }
 
 @Composable
-fun ShoulderBtn(label: String, modifier: Modifier) {
-    Box(modifier = modifier.size(120.dp, 48.dp).background(Color(0xFF1E1E38), RoundedCornerShape(16.dp)).border(2.dp, Color.White.copy(0.24f), RoundedCornerShape(16.dp)).pointerInput(Unit) { detectTapGestures(onPress = { JNIBridge.sendButton(label, true); tryAwaitRelease(); JNIBridge.sendButton(label, false) }) }, contentAlignment = Alignment.Center) {
+fun ShoulderBtn(label: String, buttonId: Int, mainActivity: MainActivity?, modifier: Modifier) {
+    Box(modifier = modifier.size(120.dp, 48.dp).background(Color(0xFF1E1E38), RoundedCornerShape(16.dp)).border(2.dp, Color.White.copy(0.24f), RoundedCornerShape(16.dp)).pointerInput(Unit) { detectTapGestures(onPress = { mainActivity?.setButtonState(0, buttonId, true); tryAwaitRelease(); mainActivity?.setButtonState(0, buttonId, false) }) }, contentAlignment = Alignment.Center) {
         Text(label, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
     }
 }
 
 @Composable
-fun GamepadBtn(label: String, size: androidx.compose.ui.unit.Dp, modifier: Modifier, color: Color) {
-    Box(modifier = modifier.size(size).background(color.copy(0.12f), CircleShape).border(2.5.dp, color, CircleShape).pointerInput(Unit) { detectTapGestures(onPress = { JNIBridge.sendButton(label, true); tryAwaitRelease(); JNIBridge.sendButton(label, false) }) }, contentAlignment = Alignment.Center) {
+fun GamepadBtn(label: String, buttonId: Int, size: androidx.compose.ui.unit.Dp, modifier: Modifier, color: Color, mainActivity: MainActivity?) {
+    Box(modifier = modifier.size(size).background(color.copy(0.12f), CircleShape).border(2.5.dp, color, CircleShape).pointerInput(Unit) { detectTapGestures(onPress = { mainActivity?.setButtonState(0, buttonId, true); tryAwaitRelease(); mainActivity?.setButtonState(0, buttonId, false) }) }, contentAlignment = Alignment.Center) {
         Text(label, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
     }
 }
 
 @Composable
-fun SystemBtn(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, color: Color, onClick: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { onClick() }) {
+fun SystemBtn(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, color: Color, mainActivity: MainActivity? = null, buttonId: Int = -1, onClick: (() -> Unit)? = null) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.pointerInput(Unit) {
+        detectTapGestures(onPress = {
+            if (buttonId != -1) mainActivity?.setButtonState(0, buttonId, true)
+            onClick?.invoke()
+            tryAwaitRelease()
+            if (buttonId != -1) mainActivity?.setButtonState(0, buttonId, false)
+        })
+    }) {
         Box(modifier = Modifier.size(64.dp, 32.dp).background(color.copy(0.1f), RoundedCornerShape(16.dp)).border(1.dp, color.copy(0.3f), RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
             Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
         }

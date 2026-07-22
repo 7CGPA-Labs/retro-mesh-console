@@ -27,7 +27,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
-
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.drawWithContent
 @Composable
 fun RoleGateScreen(onNavigateToGamepad: (isHost: Boolean, romUri: Uri?, coreName: String, playerName: String) -> Unit) {
     val context = LocalContext.current
@@ -130,9 +131,20 @@ fun RoleGateScreen(onNavigateToGamepad: (isHost: Boolean, romUri: Uri?, coreName
                 contentAlignment = Alignment.Center
             ) {
                 androidx.compose.foundation.Image(
-                    painter = androidx.compose.ui.res.painterResource(id = dev.seven_cgpalabs.mojosnap.R.mipmap.ic_launcher),
+                    painter = androidx.compose.ui.res.painterResource(id = dev.seven_cgpalabs.mojosnap.R.drawable.app_icon),
                     contentDescription = "App Icon",
                     modifier = Modifier.fillMaxSize()
+                        .graphicsLayer { alpha = 0.99f }
+                        .drawWithContent {
+                            drawContent()
+                            drawRect(
+                                brush = Brush.radialGradient(
+                                    colors = listOf(Color.Black, Color.Transparent),
+                                    radius = size.minDimension / 1.5f
+                                ),
+                                blendMode = androidx.compose.ui.graphics.BlendMode.DstIn
+                            )
+                        }
                 )
             }
             Spacer(modifier = Modifier.height(12.dp))

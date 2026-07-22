@@ -11,6 +11,14 @@ import dev.seven_cgpalabs.mojosnap.ui.RoleGateScreen
 class MainActivity : ComponentActivity() {
     private lateinit var thermalManager: ThermalManager
 
+    external fun setButtonState(port: Int, customButtonId: Int, pressed: Boolean)
+    external fun setAnalogState(port: Int, index: Int, id: Int, value: Int)
+    external fun togglePause()
+    external fun resetGame()
+    external fun shutdown()
+    external fun saveState(slot: Int, saveDir: String): Boolean
+    external fun loadState(slot: Int, saveDir: String): Boolean
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
