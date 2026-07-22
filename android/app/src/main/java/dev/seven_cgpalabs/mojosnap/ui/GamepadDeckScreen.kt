@@ -44,10 +44,14 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
         val activity = context as? Activity
         activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE
         
-        var loaded = false
-        if (romUri != null && !loaded) {
-            loaded = true
-            kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+        onDispose {
+            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+    }
+
+    LaunchedEffect(romUri) {
+        if (romUri != null) {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 try {
                     val inputStream = context.contentResolver.openInputStream(romUri)
                     val tempFile = java.io.File(context.cacheDir, "temp_rom")
@@ -68,10 +72,6 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
                     ConsoleLogger.log("Core", "Failed to load ROM: ${e.message}")
                 }
             }
-        }
-        
-        onDispose {
-            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
     }
 
@@ -125,10 +125,16 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
         val baseSize = (maxHeight.value * 0.22f).coerceIn(40f, 100f).dp
         val maxRadiusPx = with(LocalDensity.current) { (baseSize * 1.5f).toPx() - (baseSize * 0.3f).toPx() }
         val mHeight = maxHeight
-        val mWidth = maxWidth
         val isSnes = coreName.contains("snes") || coreName.contains("mgba")
         val isPs1 = coreName.contains("pcsx")
         val isGenesis = coreName.contains("genesis")
+        
+        Text(
+            text = "Player: $playerName",
+            color = Color.White.copy(alpha = 0.5f),
+            fontSize = 12.sp,
+            modifier = Modifier.align(Alignment.TopStart).padding(8.dp)
+        )
 
         // Shoulders
         if (isSnes || isPs1) {
@@ -181,14 +187,10 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
                                     mainActivity?.setAnalogState(0, 0, 0, 0)
                                     mainActivity?.setAnalogState(0, 0, 1, 0)
                                 },
-                                onDrag = { change, dragAmount -> 
-                                    val nextPos = analogPos + dragAmount
-                                    val distance = nextPos.getDistance()
-                                    analogPos = if (maxRadiusPx > 0 && distance > maxRadiusPx) {
-                                        nextPos * (maxRadiusPx / distance)
-                                    } else {
-                                        nextPos
-                                    }
+                                onDrag = { _, dragAmount -> 
+                                    val newPos = analogPos + dragAmount
+                                    val dist = newPos.getDistance()
+                                    analogPos = if (dist > maxRadiusPx) newPos * (maxRadiusPx / dist) else newPos
                                     val scaledX = if (maxRadiusPx > 0) (analogPos.x / maxRadiusPx * 32767f).toInt().coerceIn(-32767, 32767) else 0
                                     val scaledY = if (maxRadiusPx > 0) (analogPos.y / maxRadiusPx * 32767f).toInt().coerceIn(-32767, 32767) else 0
                                     mainActivity?.setAnalogState(0, 0, 0, scaledX)
