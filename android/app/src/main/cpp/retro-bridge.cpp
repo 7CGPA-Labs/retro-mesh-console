@@ -9,6 +9,9 @@
 #include <android/log.h>
 
 static JavaVM* g_vm = nullptr;
+static jclass g_loggerClass = nullptr;
+static jobject g_loggerInstance = nullptr;
+static jmethodID g_logMethod = nullptr;
 
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
     g_vm = vm;
@@ -16,7 +19,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
 }
 
 extern "C" void sendLogToKotlin(const char* tag, const char* msg) {
-    if (!g_vm) return;
+    if (!g_vm || !g_loggerClass || !g_loggerInstance || !g_logMethod) return;
     JNIEnv* env;
     bool attached = false;
     int status = g_vm->GetEnv((void**)&env, JNI_VERSION_1_6);
@@ -27,26 +30,14 @@ extern "C" void sendLogToKotlin(const char* tag, const char* msg) {
         return;
     }
 
-    jclass loggerClass = env->FindClass("dev/seven_cgpalabs/mojosnap/utils/ConsoleLogger");
-    if (loggerClass) {
-        jclass companionClass = env->FindClass("dev/seven_cgpalabs/mojosnap/utils/ConsoleLogger");
-        jfieldID instanceField = env->GetStaticFieldID(companionClass, "INSTANCE", "Ldev/seven_cgpalabs/mojosnap/utils/ConsoleLogger;");
-        if (instanceField) {
-            jobject instance = env->GetStaticObjectField(companionClass, instanceField);
-            jmethodID logMethod = env->GetMethodID(loggerClass, "log", "(Ljava/lang/String;Ljava/lang/String;)V");
-            if (logMethod) {
-                jstring jTag = env->NewStringUTF(tag);
-                jstring jMsg = env->NewStringUTF(msg);
-                env->CallVoidMethod(instance, logMethod, jTag, jMsg);
-                env->DeleteLocalRef(jTag);
-                env->DeleteLocalRef(jMsg);
-            }
-            env->DeleteLocalRef(instance);
-        }
-        env->DeleteLocalRef(loggerClass);
-        if (env->ExceptionCheck()) {
-            env->ExceptionClear();
-        }
+    jstring jTag = env->NewStringUTF(tag);
+    jstring jMsg = env->NewStringUTF(msg);
+    env->CallVoidMethod(g_loggerInstance, g_logMethod, jTag, jMsg);
+    env->DeleteLocalRef(jTag);
+    env->DeleteLocalRef(jMsg);
+
+    if (env->ExceptionCheck()) {
+        env->ExceptionClear();
     }
 
     if (attached) {
@@ -164,7 +155,7 @@ bool native_environment_cb(unsigned cmd, void *data) {
     } else if (cmd == 9 || cmd == 31) { // GET_SYSTEM_DIRECTORY or GET_SAVE_DIRECTORY
         if (data) {
             const char** dir = static_cast<const char**>(data);
-            *dir = "/sdcard/RetroMesh";
+            *dir = "/storage/emulated/0/Android/data/dev.seven_cgpalabs.mojosnap/files";
             return true;
         }
     } else if (cmd == 17) { // GET_VARIABLE_UPDATE
@@ -244,6 +235,24 @@ JNIEXPORT void JNICALL Java_dev_seven_1cgpalabs_mojosnap_NetworkManager_updatePl
 }
 
 JNIEXPORT jboolean JNICALL Java_dev_seven_1cgpalabs_mojosnap_MainActivity_loadGame(JNIEnv* env, jobject thiz, jstring coreDir, jstring romPath) {
+    if (!g_loggerClass) {
+        jclass localLoggerClass = env->FindClass("dev/seven_cgpalabs/mojosnap/utils/ConsoleLogger");
+        if (localLoggerClass) {
+            g_loggerClass = (jclass)env->NewGlobalRef(localLoggerClass);
+            jfieldID instanceField = env->GetStaticFieldID(localLoggerClass, "INSTANCE", "Ldev/seven_cgpalabs/mojosnap/utils/ConsoleLogger;");
+            if (instanceField) {
+                jobject instance = env->GetStaticObjectField(localLoggerClass, instanceField);
+                g_loggerInstance = env->NewGlobalRef(instance);
+                g_logMethod = env->GetMethodID(localLoggerClass, "log", "(Ljava/lang/String;Ljava/lang/String;)V");
+                env->DeleteLocalRef(instance);
+            }
+            env->DeleteLocalRef(localLoggerClass);
+        }
+        if (env->ExceptionCheck()) {
+            env->ExceptionClear();
+        }
+    }
+
     const char* c_core_dir = env->GetStringUTFChars(coreDir, NULL);
     const char* c_rom_path = env->GetStringUTFChars(romPath, NULL);
     

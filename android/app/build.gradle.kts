@@ -31,6 +31,11 @@ android {
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
@@ -90,17 +95,18 @@ tasks.register("downloadCores") {
         }
         
         for (core in cores) {
-            val soName = "${core}${ext}"
-            val soFile = file("${jniLibsDir.absolutePath}/${soName}")
+            val originalSoName = "${core}${ext}"
+            val destSoName = "lib${core}${ext}"
+            val soFile = file("${jniLibsDir.absolutePath}/${destSoName}")
             if (!soFile.exists()) {
                 println("Downloading ${core}...")
-                val zipUrl = URI("${baseUrl}/${soName}.zip").toURL()
+                val zipUrl = URI("${baseUrl}/${originalSoName}.zip").toURL()
                 try {
                     zipUrl.openStream().use { input ->
                         ZipInputStream(input).use { zis ->
                             var entry = zis.nextEntry
                             while (entry != null) {
-                                if (entry.name == soName) {
+                                if (entry.name == originalSoName) {
                                     FileOutputStream(soFile).use { out ->
                                         zis.copyTo(out)
                                     }
@@ -109,7 +115,7 @@ tasks.register("downloadCores") {
                             }
                         }
                     }
-                    println("Extracted ${soName}")
+                    println("Extracted ${destSoName}")
                 } catch (e: Exception) {
                     println("Failed to download ${core}: ${e.message}")
                 }

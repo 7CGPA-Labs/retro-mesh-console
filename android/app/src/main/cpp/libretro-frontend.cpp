@@ -105,28 +105,12 @@ extern "C" {
 }
 
 // Router Logic
-static std::string resolve_core(const std::string& rom_path) {
-    size_t last_dot = rom_path.find_last_of('.');
-    if (last_dot == std::string::npos) return "fceumm_libretro_android.so";
-    std::string ext = rom_path.substr(last_dot + 1);
-    for (auto& c : ext) c = tolower(c);
-    
-    std::string prefix = "fceumm";
-    if (ext == "smc" || ext == "sfc") prefix = "snes9x";
-    else if (ext == "md" || ext == "sms" || ext == "gg") prefix = "genesis_plus_gx";
-    else if (ext == "gba") prefix = "mgba";
-    else if (ext == "bin" || ext == "cue" || ext == "iso" || ext == "img") prefix = "pcsx_rearmed";
-    else if (ext == "exe" || ext == "bat" || ext == "com" || ext == "zip") prefix = "dosbox_pure";
-    else if (ext == "gb" || ext == "gbc") prefix = "gambatte";
-    
-    return prefix + "_libretro_android.so";
-}
+// resolve_core is no longer needed here
 
-bool frontend_init_and_load(const char* core_dir, const char* rom_path) {
+bool frontend_init_and_load(const char* core_path_ptr, const char* rom_path) {
     frontend_deinit();
 
-    std::string core_name = resolve_core(rom_path);
-    std::string core_path = std::string(core_dir) + "/" + core_name;
+    std::string core_path = core_path_ptr;
     LOGI("Loading core: %s", core_path.c_str());
 
     core_handle = dlopen(core_path.c_str(), RTLD_NOW | RTLD_LOCAL);
@@ -181,6 +165,21 @@ bool frontend_init_and_load(const char* core_dir, const char* rom_path) {
     game_info.size = 0;
     game_info.meta = nullptr;
 
+    std::vector<uint8_t> rom_buffer;
+    if (!sys_info.need_fullpath) {
+        FILE* f = fopen(rom_path, "rb");
+        if (f) {
+            fseek(f, 0, SEEK_END);
+            size_t size = ftell(f);
+            fseek(f, 0, SEEK_SET);
+            rom_buffer.resize(size);
+            fread(rom_buffer.data(), 1, size, f);
+            fclose(f);
+            game_info.data = rom_buffer.data();
+            game_info.size = size;
+        }
+    }
+
     unsigned deviceType = (current_core_name.find("pcsx") != std::string::npos) ? 5 /* RETRO_DEVICE_ANALOG */ : 1 /* RETRO_DEVICE_JOYPAD */;
     retro_set_controller_port_device(0, deviceType);
     retro_set_controller_port_device(1, deviceType);
@@ -218,6 +217,24 @@ void frontend_deinit() {
         dlclose(core_handle);
         core_handle = nullptr;
     }
+    retro_init = nullptr;
+    retro_deinit = nullptr;
+    retro_set_environment = nullptr;
+    retro_set_video_refresh = nullptr;
+    retro_set_audio_sample = nullptr;
+    retro_set_audio_sample_batch = nullptr;
+    retro_set_input_poll = nullptr;
+    retro_set_input_state = nullptr;
+    retro_get_system_info = nullptr;
+    retro_get_system_av_info = nullptr;
+    retro_set_controller_port_device = nullptr;
+    retro_load_game = nullptr;
+    retro_unload_game = nullptr;
+    retro_reset = nullptr;
+    retro_run = nullptr;
+    retro_serialize_size = nullptr;
+    retro_serialize = nullptr;
+    retro_unserialize = nullptr;
 }
 
 void frontend_reset() {

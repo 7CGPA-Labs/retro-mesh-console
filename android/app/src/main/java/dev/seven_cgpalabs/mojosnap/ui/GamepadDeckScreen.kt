@@ -31,6 +31,9 @@ import dev.seven_cgpalabs.mojosnap.MainActivity
 import dev.seven_cgpalabs.mojosnap.utils.ConsoleLogger
 import androidx.compose.foundation.lazy.items
 import kotlinx.coroutines.launch
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import android.view.WindowManager
 import android.widget.Toast
 
 @Composable
@@ -52,9 +55,12 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
     DisposableEffect(Unit) {
         val activity = context as? Activity
         activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE
+        activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         
         onDispose {
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            mainActivity?.shutdown()
             if (isHost) {
                 // stop host? (no method for this yet, but we could close sockets)
             } else {
@@ -85,16 +91,16 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
                             input.copyTo(output)
                         }
                     }
-                    var coreFile = java.io.File(context.applicationInfo.nativeLibraryDir, "${activeCore}_libretro_android.so")
-                    if (!coreFile.exists()) {
-                        coreFile = java.io.File(context.applicationInfo.nativeLibraryDir, "lib${activeCore}_libretro_android.so")
-                    }
-                    if (coreFile.exists()) {
+                    val nativeLibDir = java.io.File(context.applicationInfo.nativeLibraryDir)
+                    val regex = Regex(".*${activeCore}.*\\.so", RegexOption.IGNORE_CASE)
+                    val coreFile = nativeLibDir.listFiles()?.firstOrNull { regex.matches(it.name) }
+                    
+                    if (coreFile != null && coreFile.exists()) {
                         ConsoleLogger.log("Core", "Loading core: ${coreFile.absolutePath}")
                         val success = mainActivity?.loadGame(coreFile.absolutePath, tempFile.absolutePath)
                         ConsoleLogger.log("Core", "Load game result: $success")
                     } else {
-                        ConsoleLogger.log("Core", "Core library not found: ${activeCore}_libretro_android.so")
+                        ConsoleLogger.log("Core", "Core library not found for: $activeCore")
                     }
                 } catch (e: Exception) {
                     ConsoleLogger.log("Core", "Failed to load ROM: ${e.message}")
@@ -219,7 +225,7 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
                         }
                     }
                     item {
-                        TextButton(onClick = { showMenu = false; mainActivity?.shutdown(); onExit() }) {
+                        TextButton(onClick = { showMenu = false; onExit() }) {
                             Text(if (isHost) "Stop Emulation & Exit" else "Disconnect", color = Color(0xFFEF4444), fontWeight = FontWeight.Bold)
                         }
                     }
@@ -271,7 +277,7 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
             Spacer(Modifier.height(10.dp))
             Box(
                 modifier = Modifier
-                    .size(240.dp, 180.dp)
+                    .size(160.dp, 120.dp)
                     .background(Color(0xFF87A96B), RoundedCornerShape(4.dp))
                     .border(2.dp, Color(0xFF1E2614), RoundedCornerShape(4.dp))
                     .padding(4.dp)
@@ -356,8 +362,8 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
 
         Column(modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                SystemBtn("SELECT", Icons.Default.SelectAll, Color.White.copy(0.7f), mainActivity, 13)
-                SystemBtn("START", Icons.Default.PlayArrow, Color.White, mainActivity, 12)
+                SystemBtn("SELECT", Icons.Default.SelectAll, Color.White.copy(0.7f), mainActivity, 10)
+                SystemBtn("START", Icons.Default.PlayArrow, Color.White, mainActivity, 9)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 SystemBtn("CAST", Icons.Default.Cast, Color(0xFF00E5FF)) { 
@@ -371,22 +377,26 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
 
 @Composable
 fun ShoulderBtn(label: String, buttonId: Int, mainActivity: MainActivity?, modifier: Modifier) {
-    Box(modifier = modifier.size(120.dp, 48.dp).background(Color(0xFF1E1E38), RoundedCornerShape(16.dp)).border(2.dp, Color.White.copy(0.24f), RoundedCornerShape(16.dp)).pointerInput(Unit) { detectTapGestures(onPress = { mainActivity?.setButtonState(0, buttonId, true); tryAwaitRelease(); mainActivity?.setButtonState(0, buttonId, false) }) }, contentAlignment = Alignment.Center) {
+    val context = LocalContext.current
+    Box(modifier = modifier.size(120.dp, 48.dp).background(Color(0xFF1E1E38), RoundedCornerShape(16.dp)).border(2.dp, Color.White.copy(0.24f), RoundedCornerShape(16.dp)).pointerInput(Unit) { detectTapGestures(onPress = { triggerStrongVibration(context); mainActivity?.setButtonState(0, buttonId, true); tryAwaitRelease(); mainActivity?.setButtonState(0, buttonId, false) }) }, contentAlignment = Alignment.Center) {
         Text(label, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
     }
 }
 
 @Composable
 fun GamepadBtn(label: String, buttonId: Int, size: androidx.compose.ui.unit.Dp, modifier: Modifier, color: Color, mainActivity: MainActivity?) {
-    Box(modifier = modifier.size(size).background(color.copy(0.12f), CircleShape).border(2.5.dp, color, CircleShape).pointerInput(Unit) { detectTapGestures(onPress = { mainActivity?.setButtonState(0, buttonId, true); tryAwaitRelease(); mainActivity?.setButtonState(0, buttonId, false) }) }, contentAlignment = Alignment.Center) {
+    val context = LocalContext.current
+    Box(modifier = modifier.size(size).background(color.copy(0.12f), CircleShape).border(2.5.dp, color, CircleShape).pointerInput(Unit) { detectTapGestures(onPress = { triggerStrongVibration(context); mainActivity?.setButtonState(0, buttonId, true); tryAwaitRelease(); mainActivity?.setButtonState(0, buttonId, false) }) }, contentAlignment = Alignment.Center) {
         Text(label, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
     }
 }
 
 @Composable
 fun SystemBtn(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, color: Color, mainActivity: MainActivity? = null, buttonId: Int = -1, onClick: (() -> Unit)? = null) {
+    val context = LocalContext.current
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.pointerInput(Unit) {
         detectTapGestures(onPress = {
+            triggerStrongVibration(context)
             if (buttonId != -1) mainActivity?.setButtonState(0, buttonId, true)
             onClick?.invoke()
             tryAwaitRelease()
@@ -399,4 +409,16 @@ fun SystemBtn(label: String, icon: androidx.compose.ui.graphics.vector.ImageVect
         Spacer(Modifier.height(4.dp))
         Text(label, color = color, fontSize = 12.sp, fontWeight = FontWeight.Bold)
     }
+}
+
+@Suppress("DEPRECATION")
+fun triggerStrongVibration(context: android.content.Context) {
+    try {
+        val vibrator = context.getSystemService(android.content.Context.VIBRATOR_SERVICE) as android.os.Vibrator
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            vibrator.vibrate(android.os.VibrationEffect.createOneShot(70, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+        } else {
+            vibrator.vibrate(70)
+        }
+    } catch (e: Exception) {}
 }
