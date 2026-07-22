@@ -129,7 +129,11 @@ fun RoleGateScreen(onNavigateToGamepad: (isHost: Boolean, romUri: Uri?, coreName
                     .border(2.dp, Color(0xFFFF2E93), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Text("M", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold)
+                androidx.compose.foundation.Image(
+                    painter = androidx.compose.ui.res.painterResource(id = dev.seven_cgpalabs.mojosnap.R.mipmap.ic_launcher),
+                    contentDescription = "App Icon",
+                    modifier = Modifier.fillMaxSize()
+                )
             }
             Spacer(modifier = Modifier.height(12.dp))
             Text("MOJO SNAP", color = Color.White, fontSize = 38.sp, fontWeight = FontWeight.Black, letterSpacing = 4.sp)
