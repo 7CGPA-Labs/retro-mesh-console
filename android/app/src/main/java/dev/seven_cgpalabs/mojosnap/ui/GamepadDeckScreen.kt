@@ -184,12 +184,19 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
                 Box(modifier = Modifier.size(baseSize * 3)) {
                     when {
                         isGenesis -> {
-                            GamepadBtn("X", 6, baseSize, Modifier.align(Alignment.TopStart).padding(start = 10.dp), Color.LightGray, mainActivity)
-                            GamepadBtn("Y", 7, baseSize, Modifier.align(Alignment.TopCenter), Color.LightGray, mainActivity)
-                            GamepadBtn("Z", 8, baseSize, Modifier.align(Alignment.TopEnd).padding(end = 10.dp), Color.LightGray, mainActivity)
-                            GamepadBtn("A", 4, baseSize, Modifier.align(Alignment.BottomStart).padding(start = 10.dp), Color(0xFFE57373), mainActivity)
-                            GamepadBtn("B", 5, baseSize, Modifier.align(Alignment.BottomCenter), Color(0xFF81C784), mainActivity)
-                            GamepadBtn("C", 9, baseSize, Modifier.align(Alignment.BottomEnd).padding(end = 10.dp), Color(0xFF4FC3F7), mainActivity)
+                            Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.offset(x = (-12).dp)) {
+                                    GamepadBtn("X", 6, baseSize * 0.85f, Modifier, Color.LightGray, mainActivity)
+                                    GamepadBtn("Y", 7, baseSize * 0.85f, Modifier, Color.LightGray, mainActivity)
+                                    GamepadBtn("Z", 8, baseSize * 0.85f, Modifier, Color.LightGray, mainActivity)
+                                }
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.offset(x = 12.dp)) {
+                                    GamepadBtn("A", 4, baseSize * 0.85f, Modifier, Color(0xFFE57373), mainActivity)
+                                    GamepadBtn("B", 5, baseSize * 0.85f, Modifier, Color(0xFF81C784), mainActivity)
+                                    GamepadBtn("C", 9, baseSize * 0.85f, Modifier, Color(0xFF4FC3F7), mainActivity)
+                                }
+                            }
                         }
                         isPs1 || isSnes -> {
                             GamepadBtn(if(isPs1) "△" else "X", 6, baseSize, Modifier.align(Alignment.TopCenter), Color.LightGray, mainActivity)
