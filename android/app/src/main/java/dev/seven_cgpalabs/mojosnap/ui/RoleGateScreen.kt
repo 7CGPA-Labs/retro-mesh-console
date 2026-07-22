@@ -170,6 +170,17 @@ fun RoleGateScreen(onNavigateToGamepad: (isHost: Boolean, romUri: Uri?, coreName
                         .graphicsLayer { 
                             rotationX = 20f
                             cameraDistance = 8 * density
+                            alpha = 0.99f // Required for BlendMode.DstIn to work
+                        }
+                        .drawWithContent {
+                            drawContent()
+                            drawRect(
+                                brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                                    colors = listOf(Color.Black, Color.Transparent),
+                                    radius = size.maxDimension / 1.6f
+                                ),
+                                blendMode = androidx.compose.ui.graphics.BlendMode.DstIn
+                            )
                         }
                         .clip(RoundedCornerShape(16.dp))
                 )
