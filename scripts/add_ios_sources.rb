@@ -6,10 +6,15 @@ target = project.targets.find { |t| t.name == 'Runner' }
 group = project.main_group.find_subpath('Runner', true)
 
 files_to_add = [
+  'ThermalManager.swift',
   'NetworkManager.swift',
   'CastingAdapter.swift',
+  'miracast-audio.mm',
+  'miracast-render.mm',
   'native-render.mm',
-  'native-audio.mm'
+  'native-audio.mm',
+  'retro-bridge.h',
+  'retro-bridge.mm'
 ]
 
 files_to_add.each do |file_name|
