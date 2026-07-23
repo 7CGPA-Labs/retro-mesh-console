@@ -9,14 +9,14 @@ std::atomic<int> g_activePixelFormat{2};
 std::atomic<bool> ios_button_states[2][16];
 std::atomic<int16_t> ios_analog_states[2][2][2]; // [port][index][id (0=X, 1=Y)]
 
-extern "C" {
-
 #include <thread>
 #include <chrono>
 
 static std::atomic<bool> emulator_running{false};
 static std::atomic<bool> emulator_paused{false};
 static std::thread emulator_thread;
+
+extern "C" {
 
 // Removed rumble interface
 
