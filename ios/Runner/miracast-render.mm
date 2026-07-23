@@ -31,7 +31,7 @@ static void RenderWorker() {
             std::unique_lock<std::mutex> lock(renderMutex);
             renderCv.wait(lock, [] { return frameReady.load() || !tvThreadRunning.load(); });
             if (!tvThreadRunning.load()) break;
-            std::swap(frontBuffer, readyBuffer);
+            frontBuffer = readyBuffer.exchange(frontBuffer);
             frameReady = false;
         }
 
@@ -159,7 +159,7 @@ extern "C" {
 
         {
             std::lock_guard<std::mutex> lock(renderMutex);
-            std::swap(backBuffer, readyBuffer);
+            backBuffer = readyBuffer.exchange(backBuffer);
             frameReady = true;
         }
         renderCv.notify_one();
