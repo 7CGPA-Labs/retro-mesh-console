@@ -177,14 +177,18 @@ object NetworkManager {
         }
     }
 
+    private val sendExecutor = java.util.concurrent.Executors.newSingleThreadExecutor()
+    private val packetBuffer = ByteArray(2)
+
     fun sendInput(buttonId: Int, pressed: Boolean) {
-        thread {
+        sendExecutor.execute {
             try {
-                val packet = ByteArray(2)
-                packet[0] = if (pressed) 1 else 2
-                packet[1] = buttonId.toByte()
-                outputStream?.write(packet)
-                outputStream?.flush()
+                synchronized(packetBuffer) {
+                    packetBuffer[0] = if (pressed) 1 else 2
+                    packetBuffer[1] = buttonId.toByte()
+                    outputStream?.write(packetBuffer)
+                    outputStream?.flush()
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to send input", e)
             }
