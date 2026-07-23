@@ -10,6 +10,8 @@ import AVKit
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
+    ThermalManager.shared.startMonitoring()
+    
     let controller = window?.rootViewController as! FlutterViewController
     if let registrar = self.registrar(forPlugin: "CastingAdapter") {
         CastingAdapter.register(with: registrar)
