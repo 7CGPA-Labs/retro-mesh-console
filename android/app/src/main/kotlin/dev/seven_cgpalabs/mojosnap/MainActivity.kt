@@ -42,6 +42,20 @@ class MainActivity : FlutterActivity() {
         }
         // No texture rendering on Flutter side anymore
 
+        val systemChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "dev.seven_cgpalabs.mojosnap/system")
+        
+        NetworkManager.onHostsDiscovered = { hosts ->
+            runOnUiThread {
+                systemChannel.invokeMethod("onHostsDiscovered", hosts)
+            }
+        }
+        
+        NetworkManager.onHostDisconnected = {
+            runOnUiThread {
+                systemChannel.invokeMethod("onHostDisconnected", null)
+            }
+        }
+
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "dev.seven_cgpalabs.mojosnap/system").setMethodCallHandler { call, result ->
             when (call.method) {
                 "startHost" -> {

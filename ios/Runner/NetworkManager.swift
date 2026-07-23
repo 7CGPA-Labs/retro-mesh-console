@@ -112,14 +112,21 @@ class NetworkManager: NSObject, NetServiceDelegate {
         }
     }
     
+    private let sendQueue = DispatchQueue(label: "dev.seven_cgpalabs.mojosnap.sendQueue")
+    private var sendBuffer = [UInt8](repeating: 0, count: 2)
+
     func sendInput(buttonId: Int, pressed: Bool) {
-        let bytes: [UInt8] = [pressed ? 1 : 2, UInt8(buttonId)]
-        let data = Data(bytes)
-        clientConnection?.send(content: data, completion: .contentProcessed({ error in
-            if let error = error {
-                print("Failed to send input: \(error)")
-            }
-        }))
+        sendQueue.async { [weak self] in
+            guard let self = self else { return }
+            self.sendBuffer[0] = pressed ? 1 : 2
+            self.sendBuffer[1] = UInt8(buttonId)
+            let data = Data(self.sendBuffer)
+            self.clientConnection?.send(content: data, completion: .contentProcessed({ error in
+                if let error = error {
+                    print("Failed to send input: \(error)")
+                }
+            }))
+        }
     }
     
     func stop() {
