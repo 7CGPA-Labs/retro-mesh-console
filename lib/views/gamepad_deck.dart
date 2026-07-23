@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import '../utils/logger.dart';
 import 'package:flutter/material.dart';
 import '../emulation/libretro.dart';
@@ -892,8 +893,10 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _buildDebugTerminal(),
-        const SizedBox(height: 24),
+        if (!kReleaseMode) ...[
+          _buildDebugTerminal(),
+          const SizedBox(height: 24),
+        ],
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
