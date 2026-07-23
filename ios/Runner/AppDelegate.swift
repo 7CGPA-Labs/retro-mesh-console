@@ -141,9 +141,18 @@ import AVKit
       guard UIScreen.screens.count > 1 else { return }
       let secondaryScreen = UIScreen.screens[1]
       
-      let windowFrame = secondaryScreen.bounds
-      let extWindow = UIWindow(frame: windowFrame)
-      extWindow.screen = secondaryScreen
+      let windowScene = UIApplication.shared.connectedScenes
+          .compactMap { $0 as? UIWindowScene }
+          .first { $0.screen == secondaryScreen }
+      
+      let extWindow: UIWindow
+      if let scene = windowScene {
+          extWindow = UIWindow(windowScene: scene)
+      } else {
+          let windowFrame = secondaryScreen.bounds
+          extWindow = UIWindow(frame: windowFrame)
+          extWindow.setValue(secondaryScreen, forKey: "screen")
+      }
       
       let externalViewController = UIViewController()
       externalViewController.view.backgroundColor = .black

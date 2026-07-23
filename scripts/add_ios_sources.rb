@@ -6,6 +6,7 @@ target = project.targets.find { |t| t.name == 'Runner' }
 group = project.main_group.find_subpath('Runner', true)
 
 files_to_add = [
+  'ThermalManager.swift',
   'NetworkManager.swift',
   'CastingAdapter.swift',
   'native-render.mm',

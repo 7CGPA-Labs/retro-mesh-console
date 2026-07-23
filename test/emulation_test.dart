@@ -42,6 +42,7 @@ void main() {
     });
 
     test('Libretro ID mapper translates to custom buttons correctly', () {
+      engine.initializeCore('');
       // Button mapping verification
       // 0 (Libretro B) -> 6 (Custom B)
       expect(engine.p1ButtonStates[6], isNull);
