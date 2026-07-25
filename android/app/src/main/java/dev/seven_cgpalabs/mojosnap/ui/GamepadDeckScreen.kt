@@ -254,19 +254,10 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
         val isPs1 = activeCore.contains("pcsx")
         val isGenesis = activeCore.contains("genesis")
 
-        // Shoulders
-        if (isSnes || isPs1) {
-            ShoulderBtn("L" + if (isPs1) "1" else "", 8, mainActivity, Modifier.padding(start = if (isPs1) 172.dp else 36.dp, top = mHeight * 0.05f))
-            ShoulderBtn("R" + if (isPs1) "1" else "", 9, mainActivity, Modifier.padding(end = if (isPs1) 172.dp else 36.dp, top = mHeight * 0.05f).align(Alignment.TopEnd))
-        }
-        if (isPs1) {
-            ShoulderBtn("L2", 10, mainActivity, Modifier.padding(start = 36.dp, top = mHeight * 0.05f))
-            ShoulderBtn("R2", 11, mainActivity, Modifier.padding(end = 36.dp, top = mHeight * 0.05f).align(Alignment.TopEnd))
-        }
 
         // Analog toggle and Log UI
         Column(
-            modifier = Modifier.align(Alignment.TopCenter).padding(top = mHeight * 0.15f),
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = mHeight * 0.08f),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
@@ -297,70 +288,104 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
         }
 
         Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Box(modifier = Modifier.weight(1f).padding(start = 36.dp, top = if (isSnes || isPs1) mHeight * 0.15f else 0.dp), contentAlignment = Alignment.CenterStart) {
-                if (useAnalogStick) {
-                    Box(modifier = Modifier.size(baseSize * 3).background(Color(0xFF1E1E38).copy(0.5f), CircleShape).border(2.dp, Color.White.copy(0.24f), CircleShape)
-                        .pointerInput(Unit) {
-                            detectDragGestures(
-                                onDragEnd = { 
-                                    analogPos = Offset.Zero
-                                    mainActivity?.setAnalogState(0, 0, 0, 0)
-                                    mainActivity?.setAnalogState(0, 0, 1, 0)
-                                },
-                                onDrag = { _, dragAmount -> 
-                                    val newPos = analogPos + dragAmount
-                                    val dist = newPos.getDistance()
-                                    analogPos = if (dist > maxRadiusPx) newPos * (maxRadiusPx / dist) else newPos
-                                    val scaledX = if (maxRadiusPx > 0) (analogPos.x / maxRadiusPx * 32767f).toInt().coerceIn(-32767, 32767) else 0
-                                    val scaledY = if (maxRadiusPx > 0) (analogPos.y / maxRadiusPx * 32767f).toInt().coerceIn(-32767, 32767) else 0
-                                    mainActivity?.setAnalogState(0, 0, 0, scaledX)
-                                    mainActivity?.setAnalogState(0, 0, 1, scaledY)
-                                }
-                            )
-                        }, contentAlignment = Alignment.Center) {
-                        Box(modifier = Modifier.offset(x = with(LocalDensity.current) { analogPos.x.toDp() }, y = with(LocalDensity.current) { analogPos.y.toDp() }).size(baseSize * 0.6f).background(Color(0xFF14142B), CircleShape).border(3.dp, Color(0xFFFF2E93), CircleShape))
+            // LEFT SIDE: L1/L2 shoulder column + D-pad or Analog stick
+            Row(
+                modifier = Modifier.weight(1f).padding(start = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start
+            ) {
+                if (isSnes || isPs1) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        ShoulderBtn("L" + if (isPs1) "1" else "", 12, mainActivity, Modifier)
+                        if (isPs1) ShoulderBtn("L2", 14, mainActivity, Modifier)
                     }
-                } else {
-                    Box(modifier = Modifier.size(baseSize * 3)) {
-                        GamepadBtn("▲", 0, baseSize, Modifier.align(Alignment.TopCenter), Color.White, mainActivity)
-                        GamepadBtn("▼", 1, baseSize, Modifier.align(Alignment.BottomCenter), Color.White, mainActivity)
-                        GamepadBtn("◀", 2, baseSize, Modifier.align(Alignment.CenterStart), Color.White, mainActivity)
-                        GamepadBtn("▶", 3, baseSize, Modifier.align(Alignment.CenterEnd), Color.White, mainActivity)
+                }
+                Box(modifier = Modifier.padding(start = 16.dp), contentAlignment = Alignment.CenterStart) {
+                    if (useAnalogStick) {
+                        Box(modifier = Modifier.size(baseSize * 3).background(Color(0xFF1E1E38).copy(0.5f), CircleShape).border(2.dp, Color.White.copy(0.24f), CircleShape)
+                            .pointerInput(Unit) {
+                                detectDragGestures(
+                                    onDragEnd = { 
+                                        analogPos = Offset.Zero
+                                        mainActivity?.setAnalogState(0, 0, 0, 0)
+                                        mainActivity?.setAnalogState(0, 0, 1, 0)
+                                    },
+                                    onDrag = { _, dragAmount -> 
+                                        val newPos = analogPos + dragAmount
+                                        val dist = newPos.getDistance()
+                                        analogPos = if (dist > maxRadiusPx) newPos * (maxRadiusPx / dist) else newPos
+                                        val scaledX = if (maxRadiusPx > 0) (analogPos.x / maxRadiusPx * 32767f).toInt().coerceIn(-32767, 32767) else 0
+                                        val scaledY = if (maxRadiusPx > 0) (analogPos.y / maxRadiusPx * 32767f).toInt().coerceIn(-32767, 32767) else 0
+                                        mainActivity?.setAnalogState(0, 0, 0, scaledX)
+                                        mainActivity?.setAnalogState(0, 0, 1, scaledY)
+                                    }
+                                )
+                            }, contentAlignment = Alignment.Center) {
+                            Box(modifier = Modifier.offset(x = with(LocalDensity.current) { analogPos.x.toDp() }, y = with(LocalDensity.current) { analogPos.y.toDp() }).size(baseSize * 0.8f).background(Color(0xFF14142B), CircleShape).border(3.dp, Color(0xFFFF2E93), CircleShape))
+                        }
+                    } else {
+                        Box(modifier = Modifier.size(baseSize * 3)) {
+                            GamepadBtn("▲", 0, baseSize, Modifier.align(Alignment.TopCenter), Color.White, mainActivity)
+                            GamepadBtn("▼", 1, baseSize, Modifier.align(Alignment.BottomCenter), Color.White, mainActivity)
+                            GamepadBtn("◀", 2, baseSize, Modifier.align(Alignment.CenterStart), Color.White, mainActivity)
+                            GamepadBtn("▶", 3, baseSize, Modifier.align(Alignment.CenterEnd), Color.White, mainActivity)
+                        }
                     }
                 }
             }
 
-            Box(modifier = Modifier.weight(1f).padding(end = 36.dp, top = if (isSnes || isPs1) mHeight * 0.15f else 0.dp), contentAlignment = Alignment.CenterEnd) {
-                Box(modifier = Modifier.size(baseSize * 3)) {
-                    when {
-                        isGenesis -> {
-                            Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-                                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.offset(x = (-12).dp)) {
-                                    GamepadBtn("X", 6, baseSize * 0.85f, Modifier, Color.LightGray, mainActivity)
-                                    GamepadBtn("Y", 7, baseSize * 0.85f, Modifier, Color.LightGray, mainActivity)
-                                    GamepadBtn("Z", 8, baseSize * 0.85f, Modifier, Color.LightGray, mainActivity)
+            // RIGHT SIDE: Action buttons + R1/R2 shoulder column
+            Row(
+                modifier = Modifier.weight(1f).padding(end = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.End
+            ) {
+                Box(modifier = Modifier.padding(end = 16.dp), contentAlignment = Alignment.CenterEnd) {
+                    Box(modifier = Modifier.size(baseSize * 3)) {
+                        when {
+                            isGenesis -> {
+                                Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.offset(x = (-12).dp)) {
+                                        GamepadBtn("X", 6, baseSize * 0.85f, Modifier, Color.LightGray, mainActivity)
+                                        GamepadBtn("Y", 7, baseSize * 0.85f, Modifier, Color.LightGray, mainActivity)
+                                        GamepadBtn("Z", 8, baseSize * 0.85f, Modifier, Color.LightGray, mainActivity)
+                                    }
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.offset(x = 12.dp)) {
+                                        GamepadBtn("A", 4, baseSize * 0.85f, Modifier, Color(0xFFE57373), mainActivity)
+                                        GamepadBtn("B", 5, baseSize * 0.85f, Modifier, Color(0xFF81C784), mainActivity)
+                                        GamepadBtn("C", 9, baseSize * 0.85f, Modifier, Color(0xFF4FC3F7), mainActivity)
+                                    }
                                 }
-                                Spacer(modifier = Modifier.height(12.dp))
-                                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.offset(x = 12.dp)) {
-                                    GamepadBtn("A", 4, baseSize * 0.85f, Modifier, Color(0xFFE57373), mainActivity)
-                                    GamepadBtn("B", 5, baseSize * 0.85f, Modifier, Color(0xFF81C784), mainActivity)
-                                    GamepadBtn("C", 9, baseSize * 0.85f, Modifier, Color(0xFF4FC3F7), mainActivity)
+                            }
+                            isPs1 || isSnes -> {
+                                GamepadBtn(if(isPs1) "△" else "X", 6, baseSize, Modifier.align(Alignment.TopCenter), Color.LightGray, mainActivity)
+                                GamepadBtn(if(isPs1) "X" else "B", 5, baseSize, Modifier.align(Alignment.BottomCenter), Color.LightGray, mainActivity)
+                                GamepadBtn(if(isPs1) "□" else "Y", 7, baseSize, Modifier.align(Alignment.CenterStart), Color.LightGray, mainActivity)
+                                GamepadBtn(if(isPs1) "O" else "A", 4, baseSize, Modifier.align(Alignment.CenterEnd), Color.LightGray, mainActivity)
+                            }
+                            else -> {
+                                Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                                    GamepadBtn("B", 5, baseSize * 1.2f, Modifier.offset(y = 12.dp), Color(0xFFE57373), mainActivity)
+                                    Spacer(modifier = Modifier.width(24.dp))
+                                    GamepadBtn("A", 4, baseSize * 1.2f, Modifier.offset(y = (-12).dp), Color(0xFFE57373), mainActivity)
                                 }
                             }
                         }
-                        isPs1 || isSnes -> {
-                            GamepadBtn(if(isPs1) "△" else "X", 6, baseSize, Modifier.align(Alignment.TopCenter), Color.LightGray, mainActivity)
-                            GamepadBtn(if(isPs1) "X" else "B", 5, baseSize, Modifier.align(Alignment.BottomCenter), Color.LightGray, mainActivity)
-                            GamepadBtn(if(isPs1) "□" else "Y", 7, baseSize, Modifier.align(Alignment.CenterStart), Color.LightGray, mainActivity)
-                            GamepadBtn(if(isPs1) "O" else "A", 4, baseSize, Modifier.align(Alignment.CenterEnd), Color.LightGray, mainActivity)
-                        }
-                        else -> {
-                            Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                                GamepadBtn("B", 5, baseSize * 1.2f, Modifier.offset(y = 12.dp), Color(0xFFE57373), mainActivity)
-                                Spacer(modifier = Modifier.width(24.dp))
-                                GamepadBtn("A", 4, baseSize * 1.2f, Modifier.offset(y = (-12).dp), Color(0xFFE57373), mainActivity)
-                            }
-                        }
+                    }
+                }
+                if (isSnes || isPs1) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(start = 8.dp)
+                    ) {
+                        ShoulderBtn("R" + if (isPs1) "1" else "", 13, mainActivity, Modifier)
+                        if (isPs1) ShoulderBtn("R2", 15, mainActivity, Modifier)
                     }
                 }
             }
@@ -384,7 +409,7 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
 @Composable
 fun ShoulderBtn(label: String, buttonId: Int, mainActivity: MainActivity?, modifier: Modifier) {
     val context = LocalContext.current
-    Box(modifier = modifier.size(120.dp, 48.dp).background(Color(0xFF1E1E38), RoundedCornerShape(16.dp)).border(2.dp, Color.White.copy(0.24f), RoundedCornerShape(16.dp)).pointerInput(Unit) { detectTapGestures(onPress = { triggerStrongVibration(context); mainActivity?.setButtonState(0, buttonId, true); tryAwaitRelease(); mainActivity?.setButtonState(0, buttonId, false) }) }, contentAlignment = Alignment.Center) {
+    Box(modifier = modifier.size(48.dp, 80.dp).background(Color(0xFF1E1E38), RoundedCornerShape(16.dp)).border(2.dp, Color.White.copy(0.24f), RoundedCornerShape(16.dp)).pointerInput(Unit) { detectTapGestures(onPress = { triggerStrongVibration(context); mainActivity?.setButtonState(0, buttonId, true); tryAwaitRelease(); mainActivity?.setButtonState(0, buttonId, false) }) }, contentAlignment = Alignment.Center) {
         Text(label, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
     }
 }
