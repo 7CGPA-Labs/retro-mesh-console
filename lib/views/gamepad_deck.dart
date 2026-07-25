@@ -535,36 +535,38 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
               child: Container(color: Colors.black),
             ),
 
-            // Shoulder buttons for SNES, GBA, PS1 (Triggers)
-            if (isSnes || isPs1) ...[
+            // Left shoulder buttons (L1/L2) — beside D-pad
+            if (isSnes || isPs1)
               Positioned(
-                left: isPs1 ? 172.0 : 36.0,
-                top: constraints.maxHeight * 0.05,
-                child: _buildShoulderButton(label: isPs1 ? 'L1' : 'L', buttonId: 12),
+                left: 12,
+                top: constraints.maxHeight * 0.35,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildShoulderButton(label: isPs1 ? 'L1' : 'L', buttonId: 12),
+                    if (isPs1) const SizedBox(height: 8),
+                    if (isPs1) _buildShoulderButton(label: 'L2', buttonId: 14),
+                  ],
+                ),
               ),
+            // Right shoulder buttons (R1/R2) — beside action buttons
+            if (isSnes || isPs1)
               Positioned(
-                right: isPs1 ? 172.0 : 36.0,
-                top: constraints.maxHeight * 0.05,
-                child: _buildShoulderButton(label: isPs1 ? 'R1' : 'R', buttonId: 13),
+                right: 12,
+                top: constraints.maxHeight * 0.35,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildShoulderButton(label: isPs1 ? 'R1' : 'R', buttonId: 13),
+                    if (isPs1) const SizedBox(height: 8),
+                    if (isPs1) _buildShoulderButton(label: 'R2', buttonId: 15),
+                  ],
+                ),
               ),
-            ],
-            // Extra triggers for PS1 (placed on the outer edges beside L1/R1)
-            if (isPs1) ...[
-              Positioned(
-                left: 36,
-                top: constraints.maxHeight * 0.05,
-                child: _buildShoulderButton(label: 'L2', buttonId: 14),
-              ),
-              Positioned(
-                right: 36,
-                top: constraints.maxHeight * 0.05,
-                child: _buildShoulderButton(label: 'R2', buttonId: 15),
-              ),
-            ],
 
             // Analog toggle
             Positioned(
-              top: constraints.maxHeight * 0.15,
+              top: constraints.maxHeight * 0.08,
               left: constraints.maxWidth / 2 - 80,
               child: _buildAnalogToggle(),
             ),
@@ -576,7 +578,7 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
                 children: [
                   // Left Side: D-pad or Analog
                   Padding(
-                    padding: EdgeInsets.only(left: 36, top: (isSnes || isPs1) ? constraints.maxHeight * 0.15 : 0),
+                    padding: const EdgeInsets.only(left: 36),
                     child: Center(
                       child: _useAnalogStick 
                           ? _buildAnalogStick(baseSize * 3) 
@@ -585,7 +587,7 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
                   ),
                   // Right Side: Dynamic Action Cluster
                   Padding(
-                    padding: EdgeInsets.only(right: 36, top: (isSnes || isPs1) ? constraints.maxHeight * 0.15 : 0),
+                    padding: const EdgeInsets.only(right: 36),
                     child: Center(
                       child: isGenesis ? _buildGenesisCluster(baseSize) :
                              isPs1 ? _buildPs1Cluster(baseSize) :
@@ -624,8 +626,8 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
         _handleButtonEvent(buttonId, false);
       },
       child: Container(
-        width: 120,
-        height: 48,
+        width: 48,
+        height: 80,
         decoration: BoxDecoration(
           color: const Color(0xFF1E1E38),
           borderRadius: BorderRadius.circular(16),
