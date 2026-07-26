@@ -207,6 +207,26 @@ class NativeBridge {
     }
   }
 
+  /// Sends a JSON text frame to the host signalling that the MENU button was
+  /// pressed on this controller. The host (Jellyfin display page) listens for
+  /// this event and toggles its in-game overlay menu.
+  ///
+  /// This is intentionally a text frame (not binary) so hosts that don't
+  /// understand it can safely ignore it, and it is never forwarded to the
+  /// libretro core.
+  static Future<void> sendMenuToggle() async {
+    try {
+      if (_wsChannel != null) {
+        final payload = jsonEncode({
+          'event': 'menu_toggle',
+          'player': playerIndex,
+        });
+        _wsChannel!.sink.add(payload);
+      }
+    } catch (e) {
+      debugPrint('Failed to send menu toggle: $e');
+    }
+  }
 
   static Future<void> keepScreenOn(bool enable) async {
     try {

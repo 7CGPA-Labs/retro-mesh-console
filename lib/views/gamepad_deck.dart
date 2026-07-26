@@ -226,7 +226,7 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
       HapticFeedback.lightImpact();
     }
     
-    if (buttonId == MOJO_VIRTUAL_MENU) { // MENU (ID 16) — app-internal, never forwarded to core
+    if (buttonId == MOJO_VIRTUAL_MENU) { // MENU (ID 16) — app-internal, never forwarded as binary to core
       if (_isPhysicalControllerActive) {
         setState(() {
           _isPhysicalControllerActive = false;
@@ -235,6 +235,7 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
       
       if (pressed) {
         if (widget.isHost) {
+          // Host: toggle pause + open Flutter menu overlay
           if (_isMenuOpen) {
             Navigator.of(context, rootNavigator: true).pop();
           } else {
@@ -244,6 +245,11 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
             }
           }
         } else {
+          // Client: send menu_toggle JSON to host (Jellyfin display page listens
+          // for this and opens its in-game overlay; desktop host ignores it safely)
+          NativeBridge.sendMenuToggle();
+
+          // Also show local client overlay (connection info / disconnect button)
           if (_isMenuOpen) {
             Navigator.of(context, rootNavigator: true).pop();
           } else {
