@@ -24,6 +24,10 @@ const int RETRO_DEVICE_ID_JOYPAD_L = 10;
 const int RETRO_DEVICE_ID_JOYPAD_R = 11;
 const int RETRO_DEVICE_ID_JOYPAD_L2 = 12;
 const int RETRO_DEVICE_ID_JOYPAD_R2 = 13;
+const int RETRO_DEVICE_ID_JOYPAD_L3 = 14;
+const int RETRO_DEVICE_ID_JOYPAD_R3 = 15;
+// Ecosystem-reserved: not forwarded to core
+const int MOJO_VIRTUAL_MENU = 16;
 
 const int retro_hw_frame_buffer_valid = -1; // -1 casted to pointer is (void*)-1
 
@@ -536,30 +540,31 @@ class LibretroEngine {
 
     // Render visual feedback representing buttons being pressed
     // P1 (Host) Gamepad Indicators - Red Glowing Chips
-    if (p1ButtonStates[1] ?? false) _drawMockSquare(rgbaData, 45, 30, 255, 0, 100);  // UP
-    if (p1ButtonStates[2] ?? false) _drawMockSquare(rgbaData, 45, 60, 255, 0, 100);  // DOWN
-    if (p1ButtonStates[3] ?? false) _drawMockSquare(rgbaData, 30, 45, 255, 0, 100);  // LEFT
-    if (p1ButtonStates[4] ?? false) _drawMockSquare(rgbaData, 60, 45, 255, 0, 100);  // RIGHT
-    if (p1ButtonStates[5] ?? false) _drawMockSquare(rgbaData, 90, 50, 0, 255, 120);  // A
-    if (p1ButtonStates[6] ?? false) _drawMockSquare(rgbaData, 105, 50, 0, 255, 120); // B
-    if (p1ButtonStates[7] ?? false) _drawMockSquare(rgbaData, 90, 35, 0, 255, 120);  // X
-    if (p1ButtonStates[8] ?? false) _drawMockSquare(rgbaData, 105, 35, 0, 255, 120); // Y
+    // Using canonical RETRO_DEVICE_ID_JOYPAD_* IDs (see SHARED_INPUT_PROTOCOL.md)
+    if (p1ButtonStates[RETRO_DEVICE_ID_JOYPAD_UP]    ?? false) _drawMockSquare(rgbaData, 45, 30,  255, 0,   100); // UP    = 4
+    if (p1ButtonStates[RETRO_DEVICE_ID_JOYPAD_DOWN]  ?? false) _drawMockSquare(rgbaData, 45, 60,  255, 0,   100); // DOWN  = 5
+    if (p1ButtonStates[RETRO_DEVICE_ID_JOYPAD_LEFT]  ?? false) _drawMockSquare(rgbaData, 30, 45,  255, 0,   100); // LEFT  = 6
+    if (p1ButtonStates[RETRO_DEVICE_ID_JOYPAD_RIGHT] ?? false) _drawMockSquare(rgbaData, 60, 45,  255, 0,   100); // RIGHT = 7
+    if (p1ButtonStates[RETRO_DEVICE_ID_JOYPAD_A]     ?? false) _drawMockSquare(rgbaData, 90, 50,  0,   255, 120); // A     = 8
+    if (p1ButtonStates[RETRO_DEVICE_ID_JOYPAD_B]     ?? false) _drawMockSquare(rgbaData, 105, 50, 0,   255, 120); // B     = 0
+    if (p1ButtonStates[RETRO_DEVICE_ID_JOYPAD_X]     ?? false) _drawMockSquare(rgbaData, 90, 35,  0,   255, 120); // X     = 9
+    if (p1ButtonStates[RETRO_DEVICE_ID_JOYPAD_Y]     ?? false) _drawMockSquare(rgbaData, 105, 35, 0,   255, 120); // Y     = 1
 
     // P2 (Client) Gamepad Indicators - Blue Glowing Chips
-    if (p2ButtonStates[1] ?? false) _drawMockSquare(rgbaData, 195, 30, 0, 100, 255);  // UP
-    if (p2ButtonStates[2] ?? false) _drawMockSquare(rgbaData, 195, 60, 0, 100, 255);  // DOWN
-    if (p2ButtonStates[3] ?? false) _drawMockSquare(rgbaData, 180, 45, 0, 100, 255);  // LEFT
-    if (p2ButtonStates[4] ?? false) _drawMockSquare(rgbaData, 210, 45, 0, 100, 255);  // RIGHT
-    if (p2ButtonStates[5] ?? false) _drawMockSquare(rgbaData, 240, 50, 255, 200, 0);  // A
-    if (p2ButtonStates[6] ?? false) _drawMockSquare(rgbaData, 255, 50, 255, 200, 0);  // B
-    if (p2ButtonStates[7] ?? false) _drawMockSquare(rgbaData, 240, 35, 255, 200, 0);  // X
-    if (p2ButtonStates[8] ?? false) _drawMockSquare(rgbaData, 255, 35, 255, 200, 0);  // Y
+    if (p2ButtonStates[RETRO_DEVICE_ID_JOYPAD_UP]    ?? false) _drawMockSquare(rgbaData, 195, 30, 0,   100, 255); // UP    = 4
+    if (p2ButtonStates[RETRO_DEVICE_ID_JOYPAD_DOWN]  ?? false) _drawMockSquare(rgbaData, 195, 60, 0,   100, 255); // DOWN  = 5
+    if (p2ButtonStates[RETRO_DEVICE_ID_JOYPAD_LEFT]  ?? false) _drawMockSquare(rgbaData, 180, 45, 0,   100, 255); // LEFT  = 6
+    if (p2ButtonStates[RETRO_DEVICE_ID_JOYPAD_RIGHT] ?? false) _drawMockSquare(rgbaData, 210, 45, 0,   100, 255); // RIGHT = 7
+    if (p2ButtonStates[RETRO_DEVICE_ID_JOYPAD_A]     ?? false) _drawMockSquare(rgbaData, 240, 50, 255, 200, 0);   // A     = 8
+    if (p2ButtonStates[RETRO_DEVICE_ID_JOYPAD_B]     ?? false) _drawMockSquare(rgbaData, 255, 50, 255, 200, 0);   // B     = 0
+    if (p2ButtonStates[RETRO_DEVICE_ID_JOYPAD_X]     ?? false) _drawMockSquare(rgbaData, 240, 35, 255, 200, 0);   // X     = 9
+    if (p2ButtonStates[RETRO_DEVICE_ID_JOYPAD_Y]     ?? false) _drawMockSquare(rgbaData, 255, 35, 255, 200, 0);   // Y     = 1
 
     // Start/Select HUD markers
-    if (p1ButtonStates[9] ?? false) _drawMockSquare(rgbaData, 130, 180, 0, 255, 255);  // P1 START
-    if (p1ButtonStates[10] ?? false) _drawMockSquare(rgbaData, 110, 180, 0, 255, 255); // P1 SELECT
-    if (p2ButtonStates[9] ?? false) _drawMockSquare(rgbaData, 150, 180, 255, 0, 255);  // P2 START
-    if (p2ButtonStates[10] ?? false) _drawMockSquare(rgbaData, 170, 180, 255, 0, 255); // P2 SELECT
+    if (p1ButtonStates[RETRO_DEVICE_ID_JOYPAD_START]  ?? false) _drawMockSquare(rgbaData, 130, 180, 0,   255, 255); // P1 START  = 3
+    if (p1ButtonStates[RETRO_DEVICE_ID_JOYPAD_SELECT] ?? false) _drawMockSquare(rgbaData, 110, 180, 0,   255, 255); // P1 SELECT = 2
+    if (p2ButtonStates[RETRO_DEVICE_ID_JOYPAD_START]  ?? false) _drawMockSquare(rgbaData, 150, 180, 255, 0,   255); // P2 START  = 3
+    if (p2ButtonStates[RETRO_DEVICE_ID_JOYPAD_SELECT] ?? false) _drawMockSquare(rgbaData, 170, 180, 255, 0,   255); // P2 SELECT = 2
 
     // Bouncing Ball
     if (!isPaused) {

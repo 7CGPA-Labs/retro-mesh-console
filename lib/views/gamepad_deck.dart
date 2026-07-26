@@ -232,7 +232,7 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
       });
     }
 
-    if (buttonId == 11) { // MENU
+    if (buttonId == MOJO_VIRTUAL_MENU) { // MENU (ID 16) — app-internal, never forwarded to core
       if (pressed) {
         if (widget.isHost) {
           if (_isMenuOpen) {
@@ -273,21 +273,26 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
     if (event.type == KeyType.button) {
       int? buttonId;
       final k = event.key.toLowerCase();
-      if (k.contains('dpad-up') || k.contains('dpad_up') || k == 'up') buttonId = 1;
-      else if (k.contains('dpad-down') || k.contains('dpad_down') || k == 'down') buttonId = 2;
-      else if (k.contains('dpad-left') || k.contains('dpad_left') || k == 'left') buttonId = 3;
-      else if (k.contains('dpad-right') || k.contains('dpad_right') || k == 'right') buttonId = 4;
-      else if (k.contains('button-a') || k.contains('button_a') || k == 'a') buttonId = 5;
-      else if (k.contains('button-b') || k.contains('button_b') || k == 'b') buttonId = 6;
-      else if (k.contains('button-x') || k.contains('button_x') || k == 'x') buttonId = 7;
-      else if (k.contains('button-y') || k.contains('button_y') || k == 'y') buttonId = 8;
-      else if (k.contains('start')) buttonId = 9;
-      else if (k.contains('select')) buttonId = 10;
-      else if (k.contains('mode') || k.contains('menu')) buttonId = 11;
-      else if (k.contains('l1')) buttonId = 12;
-      else if (k.contains('r1')) buttonId = 13;
-      else if (k.contains('l2')) buttonId = 14;
-      else if (k.contains('r2')) buttonId = 15;
+      // Physical gamepad button IDs follow RETRO_DEVICE_ID_JOYPAD_* (see SHARED_INPUT_PROTOCOL.md)
+      // Positional mapping: regardless of Xbox/PS/Switch branding
+      if      (k.contains('dpad-up')    || k.contains('dpad_up')    || k == 'up')    buttonId = RETRO_DEVICE_ID_JOYPAD_UP;     // 4
+      else if (k.contains('dpad-down')  || k.contains('dpad_down')  || k == 'down')  buttonId = RETRO_DEVICE_ID_JOYPAD_DOWN;   // 5
+      else if (k.contains('dpad-left')  || k.contains('dpad_left')  || k == 'left')  buttonId = RETRO_DEVICE_ID_JOYPAD_LEFT;   // 6
+      else if (k.contains('dpad-right') || k.contains('dpad_right') || k == 'right') buttonId = RETRO_DEVICE_ID_JOYPAD_RIGHT;  // 7
+      // Face buttons: positional (bottom=B, right=A, left=Y, top=X)
+      else if (k.contains('button-a') || k.contains('button_a') || k == 'a') buttonId = RETRO_DEVICE_ID_JOYPAD_B;    // 0 — bottom face
+      else if (k.contains('button-b') || k.contains('button_b') || k == 'b') buttonId = RETRO_DEVICE_ID_JOYPAD_A;    // 8 — right face
+      else if (k.contains('button-x') || k.contains('button_x') || k == 'x') buttonId = RETRO_DEVICE_ID_JOYPAD_Y;    // 1 — left face
+      else if (k.contains('button-y') || k.contains('button_y') || k == 'y') buttonId = RETRO_DEVICE_ID_JOYPAD_X;    // 9 — top face
+      else if (k.contains('start'))                                           buttonId = RETRO_DEVICE_ID_JOYPAD_START;  // 3
+      else if (k.contains('select'))                                          buttonId = RETRO_DEVICE_ID_JOYPAD_SELECT; // 2
+      else if (k.contains('mode') || k.contains('menu'))                     buttonId = MOJO_VIRTUAL_MENU;             // 16 — app-internal
+      else if (k.contains('l1') || k.contains('leftshoulder'))               buttonId = RETRO_DEVICE_ID_JOYPAD_L;     // 10
+      else if (k.contains('r1') || k.contains('rightshoulder'))              buttonId = RETRO_DEVICE_ID_JOYPAD_R;     // 11
+      else if (k.contains('l2') || k.contains('lefttrigger'))                buttonId = RETRO_DEVICE_ID_JOYPAD_L2;    // 12
+      else if (k.contains('r2') || k.contains('righttrigger'))               buttonId = RETRO_DEVICE_ID_JOYPAD_R2;    // 13
+      else if (k.contains('l3') || k.contains('leftstick'))                  buttonId = RETRO_DEVICE_ID_JOYPAD_L3;    // 14
+      else if (k.contains('r3') || k.contains('rightstick'))                 buttonId = RETRO_DEVICE_ID_JOYPAD_R3;    // 15
 
       if (buttonId != null) {
         final pressed = event.value > 0.5;
@@ -331,23 +336,24 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
       final pressed = event is KeyDownEvent;
       final key = event.logicalKey;
       int? buttonId;
-      
-      if (key == LogicalKeyboardKey.arrowUp) {
-        buttonId = 1;
-      } else if (key == LogicalKeyboardKey.arrowDown) { buttonId = 2;
-      } else if (key == LogicalKeyboardKey.arrowLeft) { buttonId = 3;
-      } else if (key == LogicalKeyboardKey.arrowRight) { buttonId = 4;
-      } else if (key == LogicalKeyboardKey.gameButtonA || key == LogicalKeyboardKey.keyX) { buttonId = 5;
-      } else if (key == LogicalKeyboardKey.gameButtonB || key == LogicalKeyboardKey.keyZ) { buttonId = 6;
-      } else if (key == LogicalKeyboardKey.gameButtonX || key == LogicalKeyboardKey.keyS) { buttonId = 7;
-      } else if (key == LogicalKeyboardKey.gameButtonY || key == LogicalKeyboardKey.keyA) { buttonId = 8;
-      } else if (key == LogicalKeyboardKey.gameButtonStart || key == LogicalKeyboardKey.enter) { buttonId = 9;
-      } else if (key == LogicalKeyboardKey.gameButtonSelect || key == LogicalKeyboardKey.space) { buttonId = 10;
-      } else if (key == LogicalKeyboardKey.gameButtonMode || key == LogicalKeyboardKey.escape) { buttonId = 11;
-      } else if (key == LogicalKeyboardKey.gameButtonLeft1 || key == LogicalKeyboardKey.keyQ) { buttonId = 12;
-      } else if (key == LogicalKeyboardKey.gameButtonRight1 || key == LogicalKeyboardKey.keyE) { buttonId = 13;
-      } else if (key == LogicalKeyboardKey.gameButtonLeft2 || key == LogicalKeyboardKey.digit1) { buttonId = 14;
-      } else if (key == LogicalKeyboardKey.gameButtonRight2 || key == LogicalKeyboardKey.digit3) { buttonId = 15;
+
+      // Keyboard → RetroPad mapping (retroarch.cfg standard)
+      // See SHARED_INPUT_PROTOCOL.md §3 for full table
+      if      (key == LogicalKeyboardKey.arrowUp)                                               { buttonId = RETRO_DEVICE_ID_JOYPAD_UP;     // 4
+      } else if (key == LogicalKeyboardKey.arrowDown)                                           { buttonId = RETRO_DEVICE_ID_JOYPAD_DOWN;   // 5
+      } else if (key == LogicalKeyboardKey.arrowLeft)                                           { buttonId = RETRO_DEVICE_ID_JOYPAD_LEFT;   // 6
+      } else if (key == LogicalKeyboardKey.arrowRight)                                          { buttonId = RETRO_DEVICE_ID_JOYPAD_RIGHT;  // 7
+      } else if (key == LogicalKeyboardKey.gameButtonA || key == LogicalKeyboardKey.keyZ)       { buttonId = RETRO_DEVICE_ID_JOYPAD_B;     // 0 — Z = B (bottom)
+      } else if (key == LogicalKeyboardKey.gameButtonB || key == LogicalKeyboardKey.keyX)       { buttonId = RETRO_DEVICE_ID_JOYPAD_A;     // 8 — X = A (right)
+      } else if (key == LogicalKeyboardKey.gameButtonX || key == LogicalKeyboardKey.keyA)       { buttonId = RETRO_DEVICE_ID_JOYPAD_Y;     // 1 — A = Y (left)
+      } else if (key == LogicalKeyboardKey.gameButtonY || key == LogicalKeyboardKey.keyS)       { buttonId = RETRO_DEVICE_ID_JOYPAD_X;     // 9 — S = X (top)
+      } else if (key == LogicalKeyboardKey.gameButtonStart  || key == LogicalKeyboardKey.enter) { buttonId = RETRO_DEVICE_ID_JOYPAD_START;  // 3
+      } else if (key == LogicalKeyboardKey.gameButtonSelect || key == LogicalKeyboardKey.shiftRight) { buttonId = RETRO_DEVICE_ID_JOYPAD_SELECT; // 2 — Right Shift = Select
+      } else if (key == LogicalKeyboardKey.gameButtonMode   || key == LogicalKeyboardKey.escape) { buttonId = MOJO_VIRTUAL_MENU;            // 16 — app-internal
+      } else if (key == LogicalKeyboardKey.gameButtonLeft1  || key == LogicalKeyboardKey.keyQ)  { buttonId = RETRO_DEVICE_ID_JOYPAD_L;    // 10 — Q = L1
+      } else if (key == LogicalKeyboardKey.gameButtonRight1 || key == LogicalKeyboardKey.keyW)  { buttonId = RETRO_DEVICE_ID_JOYPAD_R;    // 11 — W = R1
+      } else if (key == LogicalKeyboardKey.gameButtonLeft2  || key == LogicalKeyboardKey.keyE)  { buttonId = RETRO_DEVICE_ID_JOYPAD_L2;   // 12 — E = L2
+      } else if (key == LogicalKeyboardKey.gameButtonRight2 || key == LogicalKeyboardKey.keyR)  { buttonId = RETRO_DEVICE_ID_JOYPAD_R2;   // 13 — R = R2
       }
       
       if (buttonId != null) {
@@ -919,16 +925,16 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
       
       int? newX;
       if (x < -threshold) {
-        newX = 3; // LEFT
+        newX = RETRO_DEVICE_ID_JOYPAD_LEFT;  // 6
       } else if (x > threshold) {
-        newX = 4; // RIGHT
+        newX = RETRO_DEVICE_ID_JOYPAD_RIGHT; // 7
       }
-      
+
       int? newY;
       if (y < -threshold) {
-        newY = 1; // UP
+        newY = RETRO_DEVICE_ID_JOYPAD_UP;    // 4
       } else if (y > threshold) {
-        newY = 2; // DOWN
+        newY = RETRO_DEVICE_ID_JOYPAD_DOWN;  // 5
       }
       
       // Release old buttons if they changed
@@ -958,29 +964,29 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
       height: size * 3,
       child: Stack(
         children: [
-          // UP
+          // UP — RETRO_DEVICE_ID_JOYPAD_UP = 4
           Positioned(
             left: size,
             top: 0,
-            child: _buildDPadDirection(label: '▲', buttonId: 1, width: size, height: size),
+            child: _buildDPadDirection(label: '▲', buttonId: RETRO_DEVICE_ID_JOYPAD_UP, width: size, height: size),
           ),
-          // DOWN
+          // DOWN — RETRO_DEVICE_ID_JOYPAD_DOWN = 5
           Positioned(
             left: size,
             top: size * 2,
-            child: _buildDPadDirection(label: '▼', buttonId: 2, width: size, height: size),
+            child: _buildDPadDirection(label: '▼', buttonId: RETRO_DEVICE_ID_JOYPAD_DOWN, width: size, height: size),
           ),
-          // LEFT
+          // LEFT — RETRO_DEVICE_ID_JOYPAD_LEFT = 6
           Positioned(
             left: 0,
             top: size,
-            child: _buildDPadDirection(label: '◀', buttonId: 3, width: size, height: size),
+            child: _buildDPadDirection(label: '◀', buttonId: RETRO_DEVICE_ID_JOYPAD_LEFT, width: size, height: size),
           ),
-          // RIGHT
+          // RIGHT — RETRO_DEVICE_ID_JOYPAD_RIGHT = 7
           Positioned(
             left: size * 2,
             top: size,
-            child: _buildDPadDirection(label: '▶', buttonId: 4, width: size, height: size),
+            child: _buildDPadDirection(label: '▶', buttonId: RETRO_DEVICE_ID_JOYPAD_RIGHT, width: size, height: size),
           ),
           // CENTER CAP (Dead Zone)
           Positioned(
@@ -1048,9 +1054,11 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _buildSystemButton(label: isGenesis ? 'MODE' : 'SELECT', buttonId: 10),
+            // SELECT = RETRO_DEVICE_ID_JOYPAD_SELECT (2)
+            _buildSystemButton(label: isGenesis ? 'MODE' : 'SELECT', buttonId: RETRO_DEVICE_ID_JOYPAD_SELECT),
             const SizedBox(width: 16),
-            _buildSystemButton(label: 'START', buttonId: 9),
+            // START = RETRO_DEVICE_ID_JOYPAD_START (3)
+            _buildSystemButton(label: 'START', buttonId: RETRO_DEVICE_ID_JOYPAD_START),
           ],
         ),
         const SizedBox(height: 12),
@@ -1058,7 +1066,8 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildSystemButton(label: 'MENU', buttonId: 11, isHotKey: true),
+              // MENU = MOJO_VIRTUAL_MENU (16) — app-internal only, never sent to core
+              _buildSystemButton(label: 'MENU', buttonId: MOJO_VIRTUAL_MENU, isHotKey: true),
             ],
           ),
       ],
@@ -1153,8 +1162,10 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
       height: size * 1.5,
       child: Stack(
         children: [
-          Positioned(left: 0, top: size * 0.5, child: _buildGamepadButton(label: 'B', buttonId: 6, color: const Color(0xFFE57373), size: size)),
-          Positioned(left: size * 1.2, top: 0, child: _buildGamepadButton(label: 'A', buttonId: 5, color: const Color(0xFF81C784), size: size)),
+          // NES B → RetroPad B (bottom face) = 0
+          Positioned(left: 0, top: size * 0.5, child: _buildGamepadButton(label: 'B', buttonId: RETRO_DEVICE_ID_JOYPAD_B, color: const Color(0xFFE57373), size: size)),
+          // NES A → RetroPad A (right face) = 8
+          Positioned(left: size * 1.2, top: 0, child: _buildGamepadButton(label: 'A', buttonId: RETRO_DEVICE_ID_JOYPAD_A, color: const Color(0xFF81C784), size: size)),
         ],
       ),
     );
@@ -1167,10 +1178,14 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
       height: size + spacing,
       child: Stack(
         children: [
-          Positioned(left: 0, top: spacing / 2, child: _buildGamepadButton(label: 'Y', buttonId: 8, color: const Color(0xFF81C784), size: size)), // SNES Y
-          Positioned(left: spacing / 2, top: 0, child: _buildGamepadButton(label: 'X', buttonId: 7, color: const Color(0xFF4FC3F7), size: size)), // SNES X
-          Positioned(left: spacing, top: spacing / 2, child: _buildGamepadButton(label: 'A', buttonId: 5, color: const Color(0xFFE57373), size: size)), // SNES A
-          Positioned(left: spacing / 2, top: spacing, child: _buildGamepadButton(label: 'B', buttonId: 6, color: const Color(0xFFFFD54F), size: size)), // SNES B
+          // SNES Y (left face)   → RetroPad Y = 1
+          Positioned(left: 0, top: spacing / 2, child: _buildGamepadButton(label: 'Y', buttonId: RETRO_DEVICE_ID_JOYPAD_Y, color: const Color(0xFF81C784), size: size)),
+          // SNES X (top face)    → RetroPad X = 9
+          Positioned(left: spacing / 2, top: 0, child: _buildGamepadButton(label: 'X', buttonId: RETRO_DEVICE_ID_JOYPAD_X, color: const Color(0xFF4FC3F7), size: size)),
+          // SNES A (right face)  → RetroPad A = 8
+          Positioned(left: spacing, top: spacing / 2, child: _buildGamepadButton(label: 'A', buttonId: RETRO_DEVICE_ID_JOYPAD_A, color: const Color(0xFFE57373), size: size)),
+          // SNES B (bottom face) → RetroPad B = 0
+          Positioned(left: spacing / 2, top: spacing, child: _buildGamepadButton(label: 'B', buttonId: RETRO_DEVICE_ID_JOYPAD_B, color: const Color(0xFFFFD54F), size: size)),
         ],
       ),
     );
@@ -1183,10 +1198,14 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
       height: size + spacing,
       child: Stack(
         children: [
-          Positioned(left: 0, top: spacing / 2, child: _buildGamepadButton(label: '□', buttonId: 8, color: const Color(0xFFE91E63), size: size)), // Square = Y
-          Positioned(left: spacing / 2, top: 0, child: _buildGamepadButton(label: '△', buttonId: 7, color: const Color(0xFF4CAF50), size: size)), // Triangle = X
-          Positioned(left: spacing, top: spacing / 2, child: _buildGamepadButton(label: '○', buttonId: 5, color: const Color(0xFFF44336), size: size)), // Circle = A
-          Positioned(left: spacing / 2, top: spacing, child: _buildGamepadButton(label: '✕', buttonId: 6, color: const Color(0xFF2196F3), size: size)), // Cross = B
+          // □ Square (left face)    → RetroPad Y = 1
+          Positioned(left: 0, top: spacing / 2, child: _buildGamepadButton(label: '□', buttonId: RETRO_DEVICE_ID_JOYPAD_Y, color: const Color(0xFFE91E63), size: size)),
+          // △ Triangle (top face)   → RetroPad X = 9
+          Positioned(left: spacing / 2, top: 0, child: _buildGamepadButton(label: '△', buttonId: RETRO_DEVICE_ID_JOYPAD_X, color: const Color(0xFF4CAF50), size: size)),
+          // ○ Circle (right face)   → RetroPad A = 8
+          Positioned(left: spacing, top: spacing / 2, child: _buildGamepadButton(label: '○', buttonId: RETRO_DEVICE_ID_JOYPAD_A, color: const Color(0xFFF44336), size: size)),
+          // ✕ Cross (bottom face)   → RetroPad B = 0
+          Positioned(left: spacing / 2, top: spacing, child: _buildGamepadButton(label: '✕', buttonId: RETRO_DEVICE_ID_JOYPAD_B, color: const Color(0xFF2196F3), size: size)),
         ],
       ),
     );
@@ -1200,14 +1219,20 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
       height: size + ySpacing,
       child: Stack(
         children: [
-          // Top Row: X, Y, Z (mapped to SNES L, X, R)
-          Positioned(left: 0, top: 0, child: _buildGamepadButton(label: 'X', buttonId: 12, color: Colors.grey.shade400, size: size)), // L
-          Positioned(left: xSpacing, top: 0, child: _buildGamepadButton(label: 'Y', buttonId: 7, color: Colors.grey.shade400, size: size)), // X
-          Positioned(left: xSpacing * 2, top: 0, child: _buildGamepadButton(label: 'Z', buttonId: 13, color: Colors.grey.shade400, size: size)), // R
-          // Bottom Row: A, B, C (mapped to SNES Y, B, A)
-          Positioned(left: 0, top: ySpacing, child: _buildGamepadButton(label: 'A', buttonId: 8, color: const Color(0xFFE57373), size: size)), // Y
-          Positioned(left: xSpacing, top: ySpacing, child: _buildGamepadButton(label: 'B', buttonId: 6, color: const Color(0xFF81C784), size: size)), // B
-          Positioned(left: xSpacing * 2, top: ySpacing, child: _buildGamepadButton(label: 'C', buttonId: 5, color: const Color(0xFF4FC3F7), size: size)), // A
+          // Top Row: X, Y, Z — Genesis top 3 buttons
+          // Genesis X → RetroPad L1 = 10
+          Positioned(left: 0, top: 0, child: _buildGamepadButton(label: 'X', buttonId: RETRO_DEVICE_ID_JOYPAD_L, color: Colors.grey.shade400, size: size)),
+          // Genesis Y → RetroPad X (top face) = 9
+          Positioned(left: xSpacing, top: 0, child: _buildGamepadButton(label: 'Y', buttonId: RETRO_DEVICE_ID_JOYPAD_X, color: Colors.grey.shade400, size: size)),
+          // Genesis Z → RetroPad R1 = 11
+          Positioned(left: xSpacing * 2, top: 0, child: _buildGamepadButton(label: 'Z', buttonId: RETRO_DEVICE_ID_JOYPAD_R, color: Colors.grey.shade400, size: size)),
+          // Bottom Row: A, B, C — Genesis main face buttons
+          // Genesis A → RetroPad Y (left face) = 1
+          Positioned(left: 0, top: ySpacing, child: _buildGamepadButton(label: 'A', buttonId: RETRO_DEVICE_ID_JOYPAD_Y, color: const Color(0xFFE57373), size: size)),
+          // Genesis B → RetroPad B (bottom face) = 0
+          Positioned(left: xSpacing, top: ySpacing, child: _buildGamepadButton(label: 'B', buttonId: RETRO_DEVICE_ID_JOYPAD_B, color: const Color(0xFF81C784), size: size)),
+          // Genesis C → RetroPad A (right face) = 8
+          Positioned(left: xSpacing * 2, top: ySpacing, child: _buildGamepadButton(label: 'C', buttonId: RETRO_DEVICE_ID_JOYPAD_A, color: const Color(0xFF4FC3F7), size: size)),
         ],
       ),
     );
