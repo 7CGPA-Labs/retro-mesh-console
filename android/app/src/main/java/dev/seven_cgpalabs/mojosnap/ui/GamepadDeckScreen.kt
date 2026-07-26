@@ -300,8 +300,8 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.padding(end = 8.dp)
                     ) {
-                        ShoulderBtn("L" + if (isPs1) "1" else "", 12, mainActivity, Modifier)
-                        if (isPs1) ShoulderBtn("L2", 14, mainActivity, Modifier)
+                        ShoulderBtn("L" + if (isPs1) "1" else "", 10, mainActivity, Modifier) // RETRO_DEVICE_ID_JOYPAD_L
+                        if (isPs1) ShoulderBtn("L2", 12, mainActivity, Modifier) // RETRO_DEVICE_ID_JOYPAD_L2
                     }
                 }
                 Box(modifier = Modifier.padding(start = 16.dp), contentAlignment = Alignment.CenterStart) {
@@ -329,10 +329,10 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
                         }
                     } else {
                         Box(modifier = Modifier.size(baseSize * 3)) {
-                            GamepadBtn("▲", 0, baseSize, Modifier.align(Alignment.TopCenter), Color.White, mainActivity)
-                            GamepadBtn("▼", 1, baseSize, Modifier.align(Alignment.BottomCenter), Color.White, mainActivity)
-                            GamepadBtn("◀", 2, baseSize, Modifier.align(Alignment.CenterStart), Color.White, mainActivity)
-                            GamepadBtn("▶", 3, baseSize, Modifier.align(Alignment.CenterEnd), Color.White, mainActivity)
+                            GamepadBtn("▲", 4, baseSize, Modifier.align(Alignment.TopCenter), Color.White, mainActivity) // RETRO_DEVICE_ID_JOYPAD_UP
+                            GamepadBtn("▼", 5, baseSize, Modifier.align(Alignment.BottomCenter), Color.White, mainActivity) // RETRO_DEVICE_ID_JOYPAD_DOWN
+                            GamepadBtn("◀", 6, baseSize, Modifier.align(Alignment.CenterStart), Color.White, mainActivity) // RETRO_DEVICE_ID_JOYPAD_LEFT
+                            GamepadBtn("▶", 7, baseSize, Modifier.align(Alignment.CenterEnd), Color.White, mainActivity) // RETRO_DEVICE_ID_JOYPAD_RIGHT
                         }
                     }
                 }
@@ -350,29 +350,29 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
                             isGenesis -> {
                                 Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
                                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.offset(x = (-12).dp)) {
-                                        GamepadBtn("X", 6, baseSize * 0.85f, Modifier, Color.LightGray, mainActivity)
-                                        GamepadBtn("Y", 7, baseSize * 0.85f, Modifier, Color.LightGray, mainActivity)
-                                        GamepadBtn("Z", 8, baseSize * 0.85f, Modifier, Color.LightGray, mainActivity)
+                                        GamepadBtn("X", 10, baseSize * 0.85f, Modifier, Color.LightGray, mainActivity) // Genesis X → RETRO_DEVICE_ID_JOYPAD_L
+                                        GamepadBtn("Y", 9, baseSize * 0.85f, Modifier, Color.LightGray, mainActivity) // Genesis Y → RETRO_DEVICE_ID_JOYPAD_X
+                                        GamepadBtn("Z", 11, baseSize * 0.85f, Modifier, Color.LightGray, mainActivity) // Genesis Z → RETRO_DEVICE_ID_JOYPAD_R
                                     }
                                     Spacer(modifier = Modifier.height(12.dp))
                                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.offset(x = 12.dp)) {
-                                        GamepadBtn("A", 4, baseSize * 0.85f, Modifier, Color(0xFFE57373), mainActivity)
-                                        GamepadBtn("B", 5, baseSize * 0.85f, Modifier, Color(0xFF81C784), mainActivity)
-                                        GamepadBtn("C", 9, baseSize * 0.85f, Modifier, Color(0xFF4FC3F7), mainActivity)
+                                        GamepadBtn("A", 1, baseSize * 0.85f, Modifier, Color(0xFFE57373), mainActivity) // Genesis A → RETRO_DEVICE_ID_JOYPAD_Y
+                                        GamepadBtn("B", 0, baseSize * 0.85f, Modifier, Color(0xFF81C784), mainActivity) // Genesis B → RETRO_DEVICE_ID_JOYPAD_B
+                                        GamepadBtn("C", 8, baseSize * 0.85f, Modifier, Color(0xFF4FC3F7), mainActivity) // Genesis C → RETRO_DEVICE_ID_JOYPAD_A
                                     }
                                 }
                             }
                             isPs1 || isSnes -> {
-                                GamepadBtn(if(isPs1) "△" else "X", 6, baseSize, Modifier.align(Alignment.TopCenter), Color.LightGray, mainActivity)
-                                GamepadBtn(if(isPs1) "X" else "B", 5, baseSize, Modifier.align(Alignment.BottomCenter), Color.LightGray, mainActivity)
-                                GamepadBtn(if(isPs1) "□" else "Y", 7, baseSize, Modifier.align(Alignment.CenterStart), Color.LightGray, mainActivity)
-                                GamepadBtn(if(isPs1) "O" else "A", 4, baseSize, Modifier.align(Alignment.CenterEnd), Color.LightGray, mainActivity)
+                                GamepadBtn(if(isPs1) "△" else "X", 9, baseSize, Modifier.align(Alignment.TopCenter), Color.LightGray, mainActivity) // RETRO_DEVICE_ID_JOYPAD_X
+                                GamepadBtn(if(isPs1) "✕" else "B", 0, baseSize, Modifier.align(Alignment.BottomCenter), Color.LightGray, mainActivity) // RETRO_DEVICE_ID_JOYPAD_B
+                                GamepadBtn(if(isPs1) "□" else "Y", 1, baseSize, Modifier.align(Alignment.CenterStart), Color.LightGray, mainActivity) // RETRO_DEVICE_ID_JOYPAD_Y
+                                GamepadBtn(if(isPs1) "○" else "A", 8, baseSize, Modifier.align(Alignment.CenterEnd), Color.LightGray, mainActivity) // RETRO_DEVICE_ID_JOYPAD_A
                             }
                             else -> {
                                 Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                                    GamepadBtn("B", 5, baseSize * 1.2f, Modifier.offset(y = 12.dp), Color(0xFFE57373), mainActivity)
+                                    GamepadBtn("B", 0, baseSize * 1.2f, Modifier.offset(y = 12.dp), Color(0xFFE57373), mainActivity) // RETRO_DEVICE_ID_JOYPAD_B
                                     Spacer(modifier = Modifier.width(24.dp))
-                                    GamepadBtn("A", 4, baseSize * 1.2f, Modifier.offset(y = (-12).dp), Color(0xFFE57373), mainActivity)
+                                    GamepadBtn("A", 8, baseSize * 1.2f, Modifier.offset(y = (-12).dp), Color(0xFFE57373), mainActivity) // RETRO_DEVICE_ID_JOYPAD_A
                                 }
                             }
                         }
@@ -384,8 +384,8 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.padding(start = 8.dp)
                     ) {
-                        ShoulderBtn("R" + if (isPs1) "1" else "", 13, mainActivity, Modifier)
-                        if (isPs1) ShoulderBtn("R2", 15, mainActivity, Modifier)
+                        ShoulderBtn("R" + if (isPs1) "1" else "", 11, mainActivity, Modifier) // RETRO_DEVICE_ID_JOYPAD_R
+                        if (isPs1) ShoulderBtn("R2", 13, mainActivity, Modifier) // RETRO_DEVICE_ID_JOYPAD_R2
                     }
                 }
             }
@@ -393,8 +393,8 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
 
         Column(modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                SystemBtn("SELECT", Icons.Default.SelectAll, Color.White.copy(0.7f), mainActivity, 10)
-                SystemBtn("START", Icons.Default.PlayArrow, Color.White, mainActivity, 9)
+                SystemBtn("SELECT", Icons.Default.SelectAll, Color.White.copy(0.7f), mainActivity, 2) // RETRO_DEVICE_ID_JOYPAD_SELECT
+                SystemBtn("START", Icons.Default.PlayArrow, Color.White, mainActivity, 3) // RETRO_DEVICE_ID_JOYPAD_START
             }
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 SystemBtn("CAST", Icons.Default.Cast, Color(0xFF00E5FF)) { 
