@@ -24,6 +24,10 @@ class NativeBridge {
   static int _hostUdpPort = 55444;
   static bool _isLocalLan = true;
 
+  /// Which player slot this client occupies: 1 = Player 1, 2 = Player 2.
+  /// Set before calling connectToHost(). Defaults to 2 (guest / P2 client).
+  static int playerIndex = 2;
+
   static void init() {
     _channel.setMethodCallHandler((call) async {
       if (call.method == 'onHostDisconnected') {
@@ -102,13 +106,24 @@ class NativeBridge {
     }
   }
 
-  static Future<void> connectToHost(String hostIp, {int port = 8080, bool isLocal = true}) async {
+  /// Connect to a host as a specific player slot.
+  /// [playerSlot] must be 1 (Player 1 client) or 2 (Player 2 client / default).
+  static Future<void> connectToHost(
+    String hostIp, {
+    int port = 8080,
+    bool isLocal = true,
+    int playerSlot = 2,
+  }) async {
     try {
+      playerIndex = playerSlot.clamp(1, 2);
       _isLocalLan = isLocal;
       _hostIpAddress = InternetAddress(hostIp);
-      
+
       // TCP / WebSocket (for State, Sync, and Long-Range WAN)
-      _wsChannel = WebSocketChannel.connect(Uri.parse('ws://$hostIp:$port/controller'));
+      // Path encodes the player slot so the host can route immediately.
+      _wsChannel = WebSocketChannel.connect(
+        Uri.parse('ws://$hostIp:$port/controller?player=$playerIndex'),
+      );
       _wsChannel!.stream.listen(
         (message) {
           if (message is String) {
@@ -143,21 +158,20 @@ class NativeBridge {
     try {
       if (_wsChannel != null || _udpSocket != null) {
         final payload = Uint8List(3);
-        payload[0] = 2; // Player 2
+        payload[0] = playerIndex; // 1 = Player 1, 2 = Player 2
         payload[1] = pressed ? 1 : 2; // 1 = BUTTON_DOWN, 2 = BUTTON_UP
         payload[2] = buttonId;
 
         if (_isLocalLan && _udpSocket != null && _hostIpAddress != null) {
-          // Fire ultra-fast UDP packet (no handshake, no ACKs)
           _udpSocket!.send(payload, _hostIpAddress!, _hostUdpPort);
         } else if (_wsChannel != null) {
-          // Fallback to TCP WebSocket for WAN / long-range
           _wsChannel!.sink.add(payload);
         }
       } else {
         await _channel.invokeMethod('sendInput', {
           'buttonId': buttonId,
           'pressed': pressed,
+          'playerIndex': playerIndex,
         });
       }
     } catch (e) {
@@ -169,7 +183,7 @@ class NativeBridge {
     try {
       if (_wsChannel != null || _udpSocket != null) {
         final payload = Uint8List(6);
-        payload[0] = 2; // Player 2
+        payload[0] = playerIndex; // 1 = Player 1, 2 = Player 2
         payload[1] = 3; // 3 = ANALOG
         payload[2] = index;
         payload[3] = id;
@@ -185,6 +199,7 @@ class NativeBridge {
           'index': index,
           'id': id,
           'value': value,
+          'playerIndex': playerIndex,
         });
       }
     } catch (e) {

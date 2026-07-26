@@ -149,62 +149,103 @@ class RoleGate extends StatelessWidget {
     
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: const Color(0xFF1E1E38),
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) {
-        return Container(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('Available Consoles', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold, fontFamily: 'Outfit')),
-              const SizedBox(height: 20),
-              StreamBuilder<List<Map<String, dynamic>>>(
-                stream: NativeBridge.discoveredHosts,
-                builder: (context, snapshot) {
-                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return const Padding(
-                      padding: EdgeInsets.all(32.0),
-                      child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00E5FF))),
-                    );
-                  }
-                  
-                  return ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: snapshot.data!.length,
-                    itemBuilder: (context, index) {
-                      final host = snapshot.data![index];
-                      return ListTile(
-                        leading: Icon(
-                          host['hostType'] == 'desktop' ? Icons.desktop_windows :
-                          host['hostType'] == 'webos' ? Icons.tv : Icons.videogame_asset,
-                          color: const Color(0xFF00E5FF)
-                        ),
-                        title: Text(host['name'], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                        subtitle: Text('IP: ${host['ip']} | System: ${host['core'].toString().toUpperCase()}', style: const TextStyle(color: Colors.white70)),
-                        onTap: () {
-                          NativeBridge.stopDiscovery();
-                          NativeBridge.connectToHost(host['ip'], port: host['port'] ?? 8080);
-                          Navigator.pop(ctx);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => GamepadDeck(
-                                isHost: false,
-                                romName: 'Connected to ${host['name']}',
-                                coreName: host['core'],
-                                hostType: host['hostType'] ?? 'unknown',
+        return DraggableScrollableSheet(
+          initialChildSize: 0.5,
+          minChildSize: 0.3,
+          maxChildSize: 0.85,
+          expand: false,
+          builder: (_, scrollController) => Container(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              children: [
+                Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
+                const Text('Available Consoles', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold, fontFamily: 'Outfit')),
+                const SizedBox(height: 8),
+                const Text('Tap a console, then choose your player slot', style: TextStyle(color: Colors.white54, fontSize: 13)),
+                const SizedBox(height: 20),
+                Expanded(
+                  child: StreamBuilder<List<Map<String, dynamic>>>(
+                    stream: NativeBridge.discoveredHosts,
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                        return const Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00E5FF))),
+                              SizedBox(height: 16),
+                              Text('Scanning network...', style: TextStyle(color: Colors.white54, fontFamily: 'Outfit')),
+                            ],
+                          ),
+                        );
+                      }
+                      
+                      return ListView.separated(
+                        controller: scrollController,
+                        itemCount: snapshot.data!.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        itemBuilder: (context, index) {
+                          final host = snapshot.data![index];
+                          final IconData hostIcon = host['hostType'] == 'desktop'
+                              ? Icons.desktop_windows_rounded
+                              : host['hostType'] == 'webos'
+                              ? Icons.tv_rounded
+                              : Icons.videogame_asset_rounded;
+                          return Material(
+                            color: const Color(0xFF00E5FF).withValues(alpha: 0.05),
+                            borderRadius: BorderRadius.circular(14),
+                            child: InkWell(
+                              onTap: () {
+                                NativeBridge.stopDiscovery();
+                                Navigator.pop(ctx);
+                                _pickPlayerSlotAndConnect(context, host);
+                              },
+                              borderRadius: BorderRadius.circular(14),
+                              splashColor: const Color(0xFF00E5FF).withValues(alpha: 0.15),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: const Color(0xFF00E5FF).withValues(alpha: 0.2)),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF00E5FF).withValues(alpha: 0.12),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Icon(hostIcon, color: const Color(0xFF00E5FF), size: 22),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(host['name'], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontFamily: 'Outfit')),
+                                          const SizedBox(height: 3),
+                                          Text(
+                                            '${host['core'].toString().toUpperCase()} · ${host['ip']}',
+                                            style: const TextStyle(color: Colors.white54, fontSize: 12),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const Icon(Icons.chevron_right_rounded, color: Colors.white38),
+                                  ],
+                                ),
                               ),
                             ),
                           );
                         },
                       );
                     },
-                  );
-                },
-              ),
-              const SizedBox(height: 20),
-              TextButton(
                 onPressed: () {
                   NativeBridge.stopDiscovery();
                   Navigator.pop(ctx);
@@ -302,12 +343,12 @@ class RoleGate extends StatelessWidget {
 
                   const SizedBox(height: 28),
 
-                  // Card 2: JOIN CONTROLLER (Player 2)
+                  // Card 2: JOIN CONTROLLER (Player 1 or 2 Client)
                   _buildCard(
                     title: 'JOIN ACTIVE CONSOLE',
-                    role: 'PLAYER 2 / WIRELESS CLIENT',
+                    role: 'PLAYER 1 OR 2 / WIRELESS CLIENT',
                     description:
-                        'Join an active game console session on the local network to play together as Player 2.',
+                        'Join an active game console on the local network. Choose your player slot — P1 or P2 — after selecting the host.',
                     icon: Icons.wifi_find_rounded,
                     glowColor: const Color(0xFF00E5FF),
                     onTap: () => _handleJoinSelection(context),
