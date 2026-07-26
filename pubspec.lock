@@ -145,6 +145,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "12.0.0-beta.7"
+  fixnum:
+    dependency: transitive
+    description:
+      name: fixnum
+      sha256: b6dc7065e46c974bc7c5f143080a6764ec7a4be6da1285ececdc37be96de53be
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.1.1"
   flutter:
     dependency: "direct main"
     description: flutter
@@ -184,6 +192,70 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  gamepads:
+    dependency: "direct main"
+    description:
+      name: gamepads
+      sha256: bc2b4368f7f01e0390187f63c063f1fa26f420224e159fed1aaa2c449f5a1125
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.10+5"
+  gamepads_android:
+    dependency: transitive
+    description:
+      name: gamepads_android
+      sha256: "8d8430deab5c35bafee3124bec0db19d3df605bb8f42da9ba188e826fda551e2"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.8+2"
+  gamepads_darwin:
+    dependency: transitive
+    description:
+      name: gamepads_darwin
+      sha256: a7668dc17f2e4b95c29c54e961c3ef6e34e3997718383e96dd0bdf5a5c3b03c8
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.2+4"
+  gamepads_ios:
+    dependency: transitive
+    description:
+      name: gamepads_ios
+      sha256: "514a37d4b1b17bf47fe911ee1b750eca6be2b8abbdb71f200b9ad3186014d413"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.3+3"
+  gamepads_linux:
+    dependency: transitive
+    description:
+      name: gamepads_linux
+      sha256: "80bf70df6da6185926e6d8b2feb98e725e6fe99290afafaea91dba471e8c1c1e"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.2"
+  gamepads_platform_interface:
+    dependency: transitive
+    description:
+      name: gamepads_platform_interface
+      sha256: "9ddb3b61c780284a17739d759929d2e32b912d12d9145ee493ffe2b43fc6256a"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.3"
+  gamepads_web:
+    dependency: transitive
+    description:
+      name: gamepads_web
+      sha256: "860eb4f11fdb6dfcf18f793a491282747007909075d161373df7f067dfddb9a4"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.1+1"
+  gamepads_windows:
+    dependency: transitive
+    description:
+      name: gamepads_windows
+      sha256: "650b68a4bc5d729abf12f0d2d3a53c05e4070a288c7e5575edfd485774550d8c"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.3.0+1"
   hooks:
     dependency: transitive
     description:
@@ -288,6 +360,62 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.18.0"
+  nested:
+    dependency: transitive
+    description:
+      name: nested
+      sha256: "03bac4c528c64c95c722ec99280375a6f2fc708eec17c7b3f07253b626cd2a20"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.0"
+  nsd:
+    dependency: "direct main"
+    description:
+      name: nsd
+      sha256: "2551fec29f6032459815a577f385f89e18099a3ca1c545b5dfb1e1a64b5705ec"
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.0.1"
+  nsd_android:
+    dependency: transitive
+    description:
+      name: nsd_android
+      sha256: "96d2d451c5db0319c37b1b2a38f2d55eb56ae54c0b0d3144c03c19c97436de4a"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.2.0"
+  nsd_ios:
+    dependency: transitive
+    description:
+      name: nsd_ios
+      sha256: "57a4b8b218860346eba7e2d629c6fce1fa89a97645350130a15c45babb4b1324"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.0.1"
+  nsd_macos:
+    dependency: transitive
+    description:
+      name: nsd_macos
+      sha256: cca373ee5f28ea22140d595b5cd06e83ebc2d6e4ee3e17d7fa1fd6564e4cb352
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.0.1"
+  nsd_platform_interface:
+    dependency: transitive
+    description:
+      name: nsd_platform_interface
+      sha256: b1a5ace6f01ea2ce37f373e52c3b7af4fd7c11de2582ddcc89f4fc00615d9dff
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.2.0"
+  nsd_windows:
+    dependency: transitive
+    description:
+      name: nsd_windows
+      sha256: "68b4a256b0be258dbbad0ae789f2e8838d0935a353dac86b17c14c1a05df4ecd"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.0.1"
   objective_c:
     dependency: transitive
     description:
@@ -392,6 +520,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.5.0"
+  provider:
+    dependency: transitive
+    description:
+      name: provider
+      sha256: "4e82183fa20e5ca25703ead7e05de9e4cceed1fbd1eadc1ac3cb6f565a09f272"
+      url: "https://pub.dev"
+    source: hosted
+    version: "6.1.5+1"
   pub_semver:
     dependency: transitive
     description:
@@ -469,6 +605,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.0"
+  uuid:
+    dependency: transitive
+    description:
+      name: uuid
+      sha256: "9b129329f58692f6e6578329498a8fe9fbe98f090beb764ffbb8ee2eadd01dcd"
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.6.0"
   vector_math:
     dependency: transitive
     description:
@@ -493,6 +637,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.1.1"
+  web_socket:
+    dependency: transitive
+    description:
+      name: web_socket
+      sha256: "34d64019aa8e36bf9842ac014bb5d2f5586ca73df5e4d9bf5c936975cae6982c"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.1"
+  web_socket_channel:
+    dependency: "direct main"
+    description:
+      name: web_socket_channel
+      sha256: d645757fb0f4773d602444000a8131ff5d48c9e47adfe9772652dd1a4f2d45c8
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.0.3"
   win32:
     dependency: transitive
     description:
@@ -527,4 +687,4 @@ packages:
     version: "3.1.3"
 sdks:
   dart: ">=3.12.2 <4.0.0"
-  flutter: ">=3.38.4"
+  flutter: ">=3.41.0"
