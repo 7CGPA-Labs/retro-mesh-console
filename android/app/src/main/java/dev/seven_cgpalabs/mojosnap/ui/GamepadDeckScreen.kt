@@ -271,12 +271,11 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
     ) {
         val baseSize = (maxHeight.value * 0.22f).coerceIn(40f, 100f).dp
         val maxRadiusPx = with(LocalDensity.current) { (baseSize * 1.5f).toPx() - (baseSize * 0.3f).toPx() }
-        val mHeight = maxHeight
         Text(
             text = "Player: $playerName" + if (isHost) " | PIN: $hostPin" else "",
             color = Color.White.copy(alpha = 0.5f),
             fontSize = 12.sp,
-            modifier = Modifier.align(Alignment.TopStart).padding(start = 16.dp, top = 16.dp)
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 16.dp)
         )
 
         val isSnes = activeCore.contains("snes") || activeCore.contains("mgba")
@@ -286,7 +285,7 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
 
         // Analog toggle and Log UI
         Column(
-            modifier = Modifier.align(Alignment.TopCenter).padding(top = mHeight * 0.08f),
+            modifier = Modifier.align(Alignment.Center),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
@@ -431,13 +430,23 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
             }
         }
 
-        Row(
-            modifier = Modifier.align(Alignment.TopEnd).padding(end = 16.dp, top = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        // CAST to top-left
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(start = 16.dp, top = 16.dp)
         ) {
             SystemBtn("CAST", Icons.Default.Cast, Color(0xFF00E5FF)) { 
                 dev.seven_cgpalabs.mojosnap.CastingAdapter(context as Activity).openSystemCastMenu() 
             }
+        }
+
+        // MENU to top-right
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(end = 16.dp, top = 16.dp)
+        ) {
             SystemBtn("MENU", Icons.Default.Menu, Color(0xFFFF2E93)) { showMenu = true; mainActivity?.togglePause() }
         }
 
