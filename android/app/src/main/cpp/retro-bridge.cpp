@@ -4,7 +4,6 @@
 #include <mutex>
 #include <chrono>
 #include "retro-bridge.h"
-#include "retro-bridge.h"
 #include "libretro-frontend.h"
 #include <android/log.h>
 

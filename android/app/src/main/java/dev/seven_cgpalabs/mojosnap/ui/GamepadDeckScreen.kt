@@ -30,9 +30,6 @@ import kotlinx.coroutines.delay
 import dev.seven_cgpalabs.mojosnap.MainActivity
 import dev.seven_cgpalabs.mojosnap.utils.ConsoleLogger
 import androidx.compose.foundation.lazy.items
-import kotlinx.coroutines.launch
-import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.compose.ui.focus.FocusRequester
