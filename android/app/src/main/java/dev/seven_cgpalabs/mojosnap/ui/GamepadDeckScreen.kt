@@ -555,7 +555,7 @@ fun PinInput(
         )
 
         Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             for (i in 0 until maxLength) {
@@ -577,7 +577,7 @@ fun PinInput(
 
                 Box(
                     modifier = Modifier
-                        .size(42.dp)
+                        .size(34.dp)
                         .then(glowModifier)
                         .background(Color(0xFF13132B), RoundedCornerShape(8.dp))
                         .border(
@@ -590,7 +590,7 @@ fun PinInput(
                     Text(
                         text = text,
                         color = Color.White,
-                        fontSize = 18.sp,
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center
                     )
