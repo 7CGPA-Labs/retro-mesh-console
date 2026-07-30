@@ -33,7 +33,7 @@ class NativeBridge {
   static WebSocketChannel? _wsChannel;
   static RawDatagramSocket? _udpSocket;
   static InternetAddress? _hostIpAddress;
-  static int _hostUdpPort = 55444;
+  static const int _hostUdpPort = 55444;
   static bool _isLocalLan = true;
 
   /// Which player slot this client occupies: 1 = Player 1, 2 = Player 2.

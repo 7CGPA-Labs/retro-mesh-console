@@ -188,7 +188,7 @@ class RoleGate extends StatelessWidget {
                       return ListView.separated(
                         controller: scrollController,
                         itemCount: snapshot.data!.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        separatorBuilder: (context, index) => const SizedBox(height: 8),
                         itemBuilder: (context, index) {
                           final host = snapshot.data![index];
                           final IconData hostIcon = host['hostType'] == 'desktop'
@@ -297,6 +297,7 @@ class RoleGate extends StatelessWidget {
   void _connectAndNavigate(BuildContext context, Map<String, dynamic> host, int playerSlot) {
     // Listen for PIN challenges
     final pinSubscription = NativeBridge.onPinPrompt.listen((_) {
+      if (!context.mounted) return;
       // Show PIN entry dialog
       showDialog(
         context: context,
@@ -343,6 +344,7 @@ class RoleGate extends StatelessWidget {
       playerSlot: playerSlot,
     ).then((_) {
       pinSubscription.cancel();
+      if (!context.mounted) return;
       Navigator.pop(context); // Dismiss loading
       Navigator.push(
         context,
@@ -357,6 +359,7 @@ class RoleGate extends StatelessWidget {
       );
     }).catchError((err) {
       pinSubscription.cancel();
+      if (!context.mounted) return;
       Navigator.pop(context); // Dismiss loading
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to connect: $err')),
@@ -720,7 +723,7 @@ class _OtpInputFieldState extends State<OtpInputField> {
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: isFocused
-                      ? const Color(0xFF00E5FF).withOpacity(0.05)
+                      ? const Color(0xFF00E5FF).withValues(alpha: 0.05)
                       : const Color(0xFF1E1E38),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
@@ -734,7 +737,7 @@ class _OtpInputFieldState extends State<OtpInputField> {
                   boxShadow: isFocused
                       ? [
                           BoxShadow(
-                            color: const Color(0xFF00E5FF).withOpacity(0.2),
+                            color: const Color(0xFF00E5FF).withValues(alpha: 0.2),
                             blurRadius: 6,
                             spreadRadius: 1,
                           )
