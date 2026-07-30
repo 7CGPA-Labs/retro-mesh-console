@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:nsd/nsd.dart' as nsd;
@@ -16,6 +17,17 @@ class NativeBridge {
 
   static final StreamController<String> _coreChangedController = StreamController.broadcast();
   static Stream<String> get onCoreChanged => _coreChangedController.stream;
+
+  static final StreamController<void> _pinPromptController = StreamController.broadcast();
+  static Stream<void> get onPinPrompt => _pinPromptController.stream;
+
+  static Completer<void>? _connectCompleter;
+
+  static void submitPin(String pin) {
+    if (_wsChannel != null) {
+      _wsChannel!.sink.add(jsonEncode({'event': 'pin_auth', 'pin': pin}));
+    }
+  }
 
   static nsd.Discovery? _discovery;
   static WebSocketChannel? _wsChannel;
@@ -119,6 +131,8 @@ class NativeBridge {
       _isLocalLan = isLocal;
       _hostIpAddress = InternetAddress(hostIp);
 
+      _connectCompleter = Completer<void>();
+
       // TCP / WebSocket (for State, Sync, and Long-Range WAN)
       // Path encodes the player slot so the host can route immediately.
       _wsChannel = WebSocketChannel.connect(
@@ -131,6 +145,12 @@ class NativeBridge {
               final json = jsonDecode(message);
               if (json['event'] == 'core_loaded') {
                 _coreChangedController.add(json['core'] as String);
+              } else if (json['event'] == 'pin_challenge') {
+                _pinPromptController.add(null);
+              } else if (json['event'] == 'pin_success') {
+                _connectCompleter?.complete();
+              } else if (json['event'] == 'pin_fail') {
+                _connectCompleter?.completeError(json['reason'] ?? 'Incorrect PIN');
               }
             } catch (_) {}
           }
@@ -138,12 +158,20 @@ class NativeBridge {
         onDone: () {
           _wsChannel = null;
           _disconnectController.add(null);
+          if (_connectCompleter != null && !_connectCompleter!.isCompleted) {
+            _connectCompleter!.completeError('Connection closed');
+          }
         },
         onError: (error) {
           _wsChannel = null;
           _disconnectController.add(null);
+          if (_connectCompleter != null && !_connectCompleter!.isCompleted) {
+            _connectCompleter!.completeError(error.toString());
+          }
         },
       );
+
+      await _connectCompleter!.future;
 
       // UDP / Datagram (for Ultra-Low Latency Inputs on LAN)
       if (_isLocalLan) {
@@ -151,6 +179,7 @@ class NativeBridge {
       }
     } catch (e) {
       debugPrint('Failed to connect to host: $e');
+      rethrow;
     }
   }
 

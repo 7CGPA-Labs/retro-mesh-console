@@ -246,18 +246,125 @@ class RoleGate extends StatelessWidget {
                         },
                       );
                     },
-                onPressed: () {
-                  NativeBridge.stopDiscovery();
-                  Navigator.pop(ctx);
-                },
-                child: const Text('CANCEL', style: TextStyle(color: Colors.white54, fontFamily: 'Outfit')),
-              )
-            ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextButton(
+                  onPressed: () {
+                    NativeBridge.stopDiscovery();
+                    Navigator.pop(ctx);
+                  },
+                  child: const Text('CANCEL', style: TextStyle(color: Colors.white54, fontFamily: 'Outfit')),
+                ),
+              ],
+            ),
           ),
         );
-      }
+      },
     ).then((_) {
       NativeBridge.stopDiscovery();
+    });
+  }
+
+  void _pickPlayerSlotAndConnect(BuildContext context, Map<String, dynamic> host) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF16162D),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Choose Player Slot', style: TextStyle(color: Colors.white, fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
+        content: const Text('Select player slot to connect to the console.', style: TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _connectAndNavigate(context, host, 1);
+            },
+            child: const Text('PLAYER 1', style: TextStyle(color: Color(0xFFFF2E93), fontWeight: FontWeight.bold, fontFamily: 'Outfit')),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _connectAndNavigate(context, host, 2);
+            },
+            child: const Text('PLAYER 2', style: TextStyle(color: Color(0xFF00E5FF), fontWeight: FontWeight.bold, fontFamily: 'Outfit')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _connectAndNavigate(BuildContext context, Map<String, dynamic> host, int playerSlot) {
+    // Listen for PIN challenges
+    final pinSubscription = NativeBridge.onPinPrompt.listen((_) {
+      // Show PIN entry dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogCtx) {
+          final controller = TextEditingController();
+          return AlertDialog(
+            backgroundColor: const Color(0xFF16162D),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Text('Enter Pairing PIN', style: TextStyle(color: Colors.white, fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Please enter the 4-digit pairing PIN shown on the host screen.', style: TextStyle(color: Colors.white70)),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: controller,
+                  keyboardType: TextInputType.number,
+                  maxLength: 4,
+                  style: const TextStyle(color: Colors.white, fontSize: 24, letterSpacing: 8, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                  decoration: const InputDecoration(
+                    counterText: '',
+                    enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF00E5FF))),
+                    focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFFF2E93))),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(dialogCtx);
+                  NativeBridge.submitPin(controller.text);
+                },
+                child: const Text('SUBMIT', style: TextStyle(color: Color(0xFF00E5FF), fontWeight: FontWeight.bold, fontFamily: 'Outfit')),
+              ),
+            ],
+          );
+        },
+      );
+    });
+
+    _showLoading(context, 'Connecting as Player $playerSlot...');
+    NativeBridge.connectToHost(
+      host['ip'],
+      port: host['port'] ?? 8080,
+      playerSlot: playerSlot,
+    ).then((_) {
+      pinSubscription.cancel();
+      Navigator.pop(context); // Dismiss loading
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => GamepadDeck(
+            isHost: false,
+            romName: 'Connected to ${host['name']}',
+            coreName: host['core'],
+            hostType: host['hostType'] ?? 'unknown',
+          ),
+        ),
+      );
+    }).catchError((err) {
+      pinSubscription.cancel();
+      Navigator.pop(context); // Dismiss loading
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to connect: $err')),
+      );
     });
   }
 
