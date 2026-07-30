@@ -394,15 +394,15 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
                             isGenesis -> {
                                 Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
                                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.offset(x = (-12).dp)) {
-                                        GamepadBtn("X", 10, baseSize * 0.85f, Modifier, Color.LightGray, mainActivity) // Genesis X → RETRO_DEVICE_ID_JOYPAD_L
-                                        GamepadBtn("Y", 9, baseSize * 0.85f, Modifier, Color.LightGray, mainActivity) // Genesis Y → RETRO_DEVICE_ID_JOYPAD_X
-                                        GamepadBtn("Z", 11, baseSize * 0.85f, Modifier, Color.LightGray, mainActivity) // Genesis Z → RETRO_DEVICE_ID_JOYPAD_R
+                                        GamepadBtn("X", 10, baseSize * 0.85f, Modifier, Color(0xFFEF5350), mainActivity) // Genesis X → Lighter Red
+                                        GamepadBtn("Y", 9, baseSize * 0.85f, Modifier, Color(0xFFFFCA28), mainActivity) // Genesis Y → Lighter Yellow
+                                        GamepadBtn("Z", 11, baseSize * 0.85f, Modifier, Color(0xFF42A5F5), mainActivity) // Genesis Z → Lighter Blue
                                     }
                                     Spacer(modifier = Modifier.height(12.dp))
                                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.offset(x = 12.dp)) {
-                                        GamepadBtn("A", 1, baseSize * 0.85f, Modifier, Color(0xFFE57373), mainActivity) // Genesis A → RETRO_DEVICE_ID_JOYPAD_Y
-                                        GamepadBtn("B", 0, baseSize * 0.85f, Modifier, Color(0xFF81C784), mainActivity) // Genesis B → RETRO_DEVICE_ID_JOYPAD_B
-                                        GamepadBtn("C", 8, baseSize * 0.85f, Modifier, Color(0xFF4FC3F7), mainActivity) // Genesis C → RETRO_DEVICE_ID_JOYPAD_A
+                                        GamepadBtn("A", 1, baseSize * 0.85f, Modifier, Color(0xFFE53935), mainActivity) // Genesis A → Red
+                                        GamepadBtn("B", 0, baseSize * 0.85f, Modifier, Color(0xFFFFB300), mainActivity) // Genesis B → Yellow/Orange
+                                        GamepadBtn("C", 8, baseSize * 0.85f, Modifier, Color(0xFF1E88E5), mainActivity) // Genesis C → Blue
                                     }
                                 }
                             }
@@ -413,16 +413,16 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
                                 GamepadBtn("○", 8, baseSize, Modifier.align(Alignment.CenterEnd), Color(0xFFF44336), mainActivity) // Circle - Red
                             }
                             isSnes -> {
-                                GamepadBtn("X", 9, baseSize, Modifier.align(Alignment.TopCenter), Color.LightGray, mainActivity)
-                                GamepadBtn("B", 0, baseSize, Modifier.align(Alignment.BottomCenter), Color.LightGray, mainActivity)
-                                GamepadBtn("Y", 1, baseSize, Modifier.align(Alignment.CenterStart), Color.LightGray, mainActivity)
-                                GamepadBtn("A", 8, baseSize, Modifier.align(Alignment.CenterEnd), Color.LightGray, mainActivity)
+                                GamepadBtn("X", 9, baseSize, Modifier.align(Alignment.TopCenter), Color(0xFF1E88E5), mainActivity) // SNES X - Blue
+                                GamepadBtn("B", 0, baseSize, Modifier.align(Alignment.BottomCenter), Color(0xFFFFEB3B), mainActivity) // SNES B - Yellow
+                                GamepadBtn("Y", 1, baseSize, Modifier.align(Alignment.CenterStart), Color(0xFF4CAF50), mainActivity) // SNES Y - Green
+                                GamepadBtn("A", 8, baseSize, Modifier.align(Alignment.CenterEnd), Color(0xFFE53935), mainActivity) // SNES A - Red
                             }
                             else -> {
                                 Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                                    GamepadBtn("B", 0, baseSize * 1.2f, Modifier.offset(y = 12.dp), Color(0xFFE57373), mainActivity) // RETRO_DEVICE_ID_JOYPAD_B
+                                    GamepadBtn("B", 0, baseSize * 1.2f, Modifier.offset(y = 12.dp), Color(0xFFE53935), mainActivity) // NES B → Classic Red
                                     Spacer(modifier = Modifier.width(24.dp))
-                                    GamepadBtn("A", 8, baseSize * 1.2f, Modifier.offset(y = (-12).dp), Color(0xFFE57373), mainActivity) // RETRO_DEVICE_ID_JOYPAD_A
+                                    GamepadBtn("A", 8, baseSize * 1.2f, Modifier.offset(y = (-12).dp), Color(0xFFE53935), mainActivity) // NES A → Classic Red
                                 }
                             }
                         }
