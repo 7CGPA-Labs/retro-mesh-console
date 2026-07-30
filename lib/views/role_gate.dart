@@ -309,20 +309,16 @@ class RoleGate extends StatelessWidget {
             title: const Text('Enter Pairing PIN', style: TextStyle(color: Colors.white, fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
             content: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text('Please enter the 4-digit pairing PIN shown on the host screen.', style: TextStyle(color: Colors.white70)),
-                const SizedBox(height: 16),
-                TextField(
+                const Text('Please enter the 6-digit pairing PIN shown on the host screen.', style: TextStyle(color: Colors.white70)),
+                const SizedBox(height: 24),
+                OtpInputField(
                   controller: controller,
-                  keyboardType: TextInputType.number,
-                  maxLength: 4,
-                  style: const TextStyle(color: Colors.white, fontSize: 24, letterSpacing: 8, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                  decoration: const InputDecoration(
-                    counterText: '',
-                    enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF00E5FF))),
-                    focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFFF2E93))),
-                  ),
+                  onSubmitted: () {
+                    Navigator.pop(dialogCtx);
+                    NativeBridge.submitPin(controller.text);
+                  },
                 ),
               ],
             ),
@@ -646,6 +642,118 @@ class RoleGate extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class OtpInputField extends StatefulWidget {
+  final TextEditingController controller;
+  final VoidCallback onSubmitted;
+  const OtpInputField({super.key, required this.controller, required this.onSubmitted});
+
+  @override
+  State<OtpInputField> createState() => _OtpInputFieldState();
+}
+
+class _OtpInputFieldState extends State<OtpInputField> {
+  final FocusNode _focusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focusNode.requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        _focusNode.requestFocus();
+      },
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Positioned.fill(
+            child: Opacity(
+              opacity: 0.0,
+              child: TextField(
+                controller: widget.controller,
+                focusNode: _focusNode,
+                keyboardType: TextInputType.number,
+                maxLength: 6,
+                decoration: const InputDecoration(
+                  counterText: '',
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                ),
+                onChanged: (val) {
+                  setState(() {});
+                  if (val.length == 6) {
+                    widget.onSubmitted();
+                  }
+                },
+              ),
+            ),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: List.generate(6, (index) {
+              final text = widget.controller.text;
+              final char = index < text.length ? text[index] : '';
+              final isFocused = _focusNode.hasFocus && index == text.length;
+              final isFilled = index < text.length;
+
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                width: 38,
+                height: 48,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: isFocused
+                      ? const Color(0xFF00E5FF).withOpacity(0.05)
+                      : const Color(0xFF1E1E38),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isFocused
+                        ? const Color(0xFF00E5FF)
+                        : isFilled
+                            ? const Color(0xFFFF2E93)
+                            : const Color(0xFF2C2C4E),
+                    width: isFocused ? 2 : 1.5,
+                  ),
+                  boxShadow: isFocused
+                      ? [
+                          BoxShadow(
+                            color: const Color(0xFF00E5FF).withOpacity(0.2),
+                            blurRadius: 6,
+                            spreadRadius: 1,
+                          )
+                        ]
+                      : [],
+                ),
+                child: Text(
+                  char,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Outfit',
+                  ),
+                ),
+              );
+            }),
+          ),
+        ],
       ),
     );
   }

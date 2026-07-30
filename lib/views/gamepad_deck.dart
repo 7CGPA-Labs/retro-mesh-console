@@ -548,6 +548,38 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
     Navigator.pop(context); // Redirect back to main page (RoleGate)
   }
 
+  void _showExitConfirmation(BuildContext context) {
+    _isMenuOpen = true;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF16162D),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Exit Gameplay?', style: TextStyle(color: Colors.white, fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
+        content: const Text('Do you want to end the current game session and disconnect?', style: TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(
+            onPressed: () {
+              _isMenuOpen = false;
+              Navigator.pop(ctx);
+            },
+            child: const Text('CANCEL', style: TextStyle(color: Colors.white54, fontFamily: 'Outfit')),
+          ),
+          TextButton(
+            onPressed: () {
+              _isMenuOpen = false;
+              Navigator.pop(ctx); // Close dialog
+              _exitGame(context); // Exit game
+            },
+            child: const Text('EXIT', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold, fontFamily: 'Outfit')),
+          ),
+        ],
+      ),
+    ).then((_) {
+      _isMenuOpen = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.isHost && _isConnectingTV) {
@@ -600,9 +632,16 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
       );
     }
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF070714),
-      body: widget.isHost ? _buildHostLayout() : _buildClientLayout(),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _showExitConfirmation(context);
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFF070714),
+        body: widget.isHost ? _buildHostLayout() : _buildClientLayout(),
+      ),
     );
   }
 
@@ -685,91 +724,97 @@ class _GamepadDeckState extends State<GamepadDeck> with WidgetsBindingObserver {
     bool isSnes = cName.contains('snes') || cName.contains('mgba');
     bool isPs1 = cName.contains('pcsx');
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final double baseSize = (constraints.maxHeight * 0.22).clamp(40.0, 100.0);
-        return Stack(
-          children: [
-            // Solid black background for pure controller experience
-            Positioned.fill(
-              child: Container(color: Colors.black),
-            ),
+    return SafeArea(
+      left: true,
+      right: true,
+      top: false,
+      bottom: false,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final double baseSize = (constraints.maxHeight * 0.22).clamp(40.0, 100.0);
+          return Stack(
+            children: [
+              // Solid black background for pure controller experience
+              Positioned.fill(
+                child: Container(color: Colors.black),
+              ),
 
-            // Left shoulder buttons (L1/L2) — beside D-pad
-            if (isSnes || isPs1)
+              // Left shoulder buttons (L1/L2) — beside D-pad
+              if (isSnes || isPs1)
+                Positioned(
+                  left: 24,
+                  top: constraints.maxHeight * 0.35,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildShoulderButton(label: isPs1 ? 'L1' : 'L', buttonId: 10), // RETRO_DEVICE_ID_JOYPAD_L
+                      if (isPs1) const SizedBox(height: 8),
+                      if (isPs1) _buildShoulderButton(label: 'L2', buttonId: 12), // RETRO_DEVICE_ID_JOYPAD_L2
+                    ],
+                  ),
+                ),
+              // Right shoulder buttons (R1/R2) — beside action buttons
+              if (isSnes || isPs1)
+                Positioned(
+                  right: 24,
+                  top: constraints.maxHeight * 0.35,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildShoulderButton(label: isPs1 ? 'R1' : 'R', buttonId: 11), // RETRO_DEVICE_ID_JOYPAD_R
+                      if (isPs1) const SizedBox(height: 8),
+                      if (isPs1) _buildShoulderButton(label: 'R2', buttonId: 13), // RETRO_DEVICE_ID_JOYPAD_R2
+                    ],
+                  ),
+                ),
+
+              // Analog toggle
               Positioned(
-                left: 12,
-                top: constraints.maxHeight * 0.35,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
+                top: constraints.maxHeight * 0.08,
+                left: constraints.maxWidth / 2 - 80,
+                child: _buildAnalogToggle(),
+              ),
+
+              // Left & Right Controls
+              Positioned.fill(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildShoulderButton(label: isPs1 ? 'L1' : 'L', buttonId: 10), // RETRO_DEVICE_ID_JOYPAD_L
-                    if (isPs1) const SizedBox(height: 8),
-                    if (isPs1) _buildShoulderButton(label: 'L2', buttonId: 12), // RETRO_DEVICE_ID_JOYPAD_L2
+                    // Left Side: D-pad or Analog
+                    Padding(
+                      padding: const EdgeInsets.only(left: 48),
+                      child: Center(
+                        child: _useAnalogStick 
+                            ? _buildAnalogStick(baseSize * 3) 
+                            : _buildDPad(baseSize),
+                      ),
+                    ),
+                    // Right Side: Dynamic Action Cluster
+                    Padding(
+                      padding: const EdgeInsets.only(right: 48),
+                      child: Center(
+                        child: isGenesis ? _buildGenesisCluster(baseSize) :
+                               isPs1 ? _buildPs1Cluster(baseSize) :
+                               isSnes ? _buildSnesCluster(baseSize) :
+                               _buildNesCluster(baseSize),
+                      ),
+                    ),
                   ],
                 ),
               ),
-            // Right shoulder buttons (R1/R2) — beside action buttons
-            if (isSnes || isPs1)
-              Positioned(
-                right: 12,
-                top: constraints.maxHeight * 0.35,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildShoulderButton(label: isPs1 ? 'R1' : 'R', buttonId: 11), // RETRO_DEVICE_ID_JOYPAD_R
-                    if (isPs1) const SizedBox(height: 8),
-                    if (isPs1) _buildShoulderButton(label: 'R2', buttonId: 13), // RETRO_DEVICE_ID_JOYPAD_R2
-                  ],
+
+              // Center: System Keys (SELECT/MODE / START / MENU)
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 24),
+                  child: _buildSystemPanel(isGenesis),
                 ),
               ),
-
-            // Analog toggle
-            Positioned(
-              top: constraints.maxHeight * 0.08,
-              left: constraints.maxWidth / 2 - 80,
-              child: _buildAnalogToggle(),
-            ),
-
-            // Left & Right Controls
-            Positioned.fill(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Left Side: D-pad or Analog
-                  Padding(
-                    padding: const EdgeInsets.only(left: 36),
-                    child: Center(
-                      child: _useAnalogStick 
-                          ? _buildAnalogStick(baseSize * 3) 
-                          : _buildDPad(baseSize),
-                    ),
-                  ),
-                  // Right Side: Dynamic Action Cluster
-                  Padding(
-                    padding: const EdgeInsets.only(right: 36),
-                    child: Center(
-                      child: isGenesis ? _buildGenesisCluster(baseSize) :
-                             isPs1 ? _buildPs1Cluster(baseSize) :
-                             isSnes ? _buildSnesCluster(baseSize) :
-                             _buildNesCluster(baseSize),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Center: System Keys (SELECT/MODE / START / MENU)
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 24),
-                child: _buildSystemPanel(isGenesis),
-              ),
-            ),
-          ],
-        );
-      },
+            ],
+          );
+        },
+      ),
     );
   }
 
