@@ -406,11 +406,17 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
                                     }
                                 }
                             }
-                            isPs1 || isSnes -> {
-                                GamepadBtn(if(isPs1) "△" else "X", 9, baseSize, Modifier.align(Alignment.TopCenter), Color.LightGray, mainActivity) // RETRO_DEVICE_ID_JOYPAD_X
-                                GamepadBtn(if(isPs1) "✕" else "B", 0, baseSize, Modifier.align(Alignment.BottomCenter), Color.LightGray, mainActivity) // RETRO_DEVICE_ID_JOYPAD_B
-                                GamepadBtn(if(isPs1) "□" else "Y", 1, baseSize, Modifier.align(Alignment.CenterStart), Color.LightGray, mainActivity) // RETRO_DEVICE_ID_JOYPAD_Y
-                                GamepadBtn(if(isPs1) "○" else "A", 8, baseSize, Modifier.align(Alignment.CenterEnd), Color.LightGray, mainActivity) // RETRO_DEVICE_ID_JOYPAD_A
+                            isPs1 -> {
+                                GamepadBtn("△", 9, baseSize, Modifier.align(Alignment.TopCenter), Color(0xFF4CAF50), mainActivity) // Triangle - Green
+                                GamepadBtn("✕", 0, baseSize, Modifier.align(Alignment.BottomCenter), Color(0xFF2196F3), mainActivity) // Cross - Blue
+                                GamepadBtn("□", 1, baseSize, Modifier.align(Alignment.CenterStart), Color(0xFFE91E63), mainActivity) // Square - Pink
+                                GamepadBtn("○", 8, baseSize, Modifier.align(Alignment.CenterEnd), Color(0xFFF44336), mainActivity) // Circle - Red
+                            }
+                            isSnes -> {
+                                GamepadBtn("X", 9, baseSize, Modifier.align(Alignment.TopCenter), Color.LightGray, mainActivity)
+                                GamepadBtn("B", 0, baseSize, Modifier.align(Alignment.BottomCenter), Color.LightGray, mainActivity)
+                                GamepadBtn("Y", 1, baseSize, Modifier.align(Alignment.CenterStart), Color.LightGray, mainActivity)
+                                GamepadBtn("A", 8, baseSize, Modifier.align(Alignment.CenterEnd), Color.LightGray, mainActivity)
                             }
                             else -> {
                                 Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
