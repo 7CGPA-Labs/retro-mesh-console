@@ -431,17 +431,23 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
             }
         }
 
-        Column(modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                SystemBtn("SELECT", Icons.Default.SelectAll, Color.White.copy(0.7f), mainActivity, 2) // RETRO_DEVICE_ID_JOYPAD_SELECT
-                SystemBtn("START", Icons.Default.PlayArrow, Color.White, mainActivity, 3) // RETRO_DEVICE_ID_JOYPAD_START
+        Row(
+            modifier = Modifier.align(Alignment.TopEnd).padding(end = 16.dp, top = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            SystemBtn("CAST", Icons.Default.Cast, Color(0xFF00E5FF)) { 
+                dev.seven_cgpalabs.mojosnap.CastingAdapter(context as Activity).openSystemCastMenu() 
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                SystemBtn("CAST", Icons.Default.Cast, Color(0xFF00E5FF)) { 
-                    dev.seven_cgpalabs.mojosnap.CastingAdapter(context as Activity).openSystemCastMenu() 
-                }
-                SystemBtn("MENU", Icons.Default.Menu, Color(0xFFFF2E93)) { showMenu = true; mainActivity?.togglePause() }
-            }
+            SystemBtn("MENU", Icons.Default.Menu, Color(0xFFFF2E93)) { showMenu = true; mainActivity?.togglePause() }
+        }
+
+        Row(
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(24.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            SystemBtn("SELECT", Icons.Default.SelectAll, Color.White.copy(0.7f), mainActivity, 2) // RETRO_DEVICE_ID_JOYPAD_SELECT
+            SystemBtn("START", Icons.Default.PlayArrow, Color.White, mainActivity, 3) // RETRO_DEVICE_ID_JOYPAD_START
         }
     }
 }
