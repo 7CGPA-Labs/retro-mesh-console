@@ -29,9 +29,11 @@ static std::condition_variable tvCondVar;
 static std::atomic<bool> tvThreadRunning{false};
 static std::atomic<bool> tvFrameReady{false};
 static std::atomic<float> thermalScale{1.0f};
+static std::thread tvThread;
 
 static void TvRenderWorker() {
     ANativeWindow* lastTvWindow = nullptr;
+    int lastFormat = -1;
     std::vector<uint8_t> localRawTvBuffer;
 
     while (tvThreadRunning) {
@@ -51,40 +53,55 @@ static void TvRenderWorker() {
         int lPitch = tvPitch;
         int lFormat = tvPixelFormat;
         ANativeWindow* currentTvWindow = tvWindow;
+        if (currentTvWindow) {
+            ANativeWindow_acquire(currentTvWindow);
+        }
         
         tvFrameReady = false;
         
         // UNLOCK immediately! This prevents ANativeWindow_unlockAndPost (VSync) from blocking the emulator audio/video!
         lock.unlock();
-        
-        if (currentTvWindow != lastTvWindow) {
-            lastTvWindow = currentTvWindow;
-            if (currentTvWindow) {
-                // Force window geometry to match game resolution and format (RGBA_8888)
-                ANativeWindow_setBuffersGeometry(currentTvWindow, lWidth, lHeight, WINDOW_FORMAT_RGBA_8888);
-            }
-        }
 
         if (currentTvWindow) {
+            if (currentTvWindow != lastTvWindow || lFormat != lastFormat) {
+                lastTvWindow = currentTvWindow;
+                lastFormat = lFormat;
+                // Set native format: RGB_565 (4) for RGB565, RGBA_8888 (1) for XRGB8888 / 0RGB1555
+                int targetFormat = (lFormat == 2) ? WINDOW_FORMAT_RGB_565 : WINDOW_FORMAT_RGBA_8888;
+                ANativeWindow_setBuffersGeometry(currentTvWindow, lWidth, lHeight, targetFormat);
+            }
+
             ANativeWindow_Buffer buffer;
             if (ANativeWindow_lock(currentTvWindow, &buffer, nullptr) == 0) {
                 
                 // Software pixel conversion and copy directly to NativeWindow buffer
-                for (unsigned y = 0; y < lHeight; y++) {
-                    const uint8_t* rowSrc = localRawTvBuffer.data() + (y * lPitch);
-                    uint8_t* rowDst = static_cast<uint8_t*>(buffer.bits) + (y * buffer.stride * 4);
-                    
-                    if (lFormat == 1) { // XRGB8888
+                if (lFormat == 2) { // RGB565
+                    // Direct fast copy
+                    for (unsigned y = 0; y < lHeight; y++) {
+                        const uint8_t* rowSrc = localRawTvBuffer.data() + (y * lPitch);
+                        uint8_t* rowDst = static_cast<uint8_t*>(buffer.bits) + (y * buffer.stride * 2);
+                        std::memcpy(rowDst, rowSrc, lWidth * 2);
+                    }
+                } else if (lFormat == 1) { // XRGB8888
+                    // Fast optimized byte-swapping copy
+                    for (unsigned y = 0; y < lHeight; y++) {
+                        const uint8_t* rowSrc = localRawTvBuffer.data() + (y * lPitch);
+                        uint8_t* rowDst = static_cast<uint8_t*>(buffer.bits) + (y * buffer.stride * 4);
+                        
                         const uint32_t* src32 = reinterpret_cast<const uint32_t*>(rowSrc);
                         uint32_t* dst32 = reinterpret_cast<uint32_t*>(rowDst);
                         for (unsigned x = 0; x < lWidth; x++) {
                             uint32_t color = src32[x];
-                            uint32_t r = (color >> 16) & 0xFF;
-                            uint32_t g = (color >> 8) & 0xFF;
-                            uint32_t b = color & 0xFF;
-                            dst32[x] = (0xFFu << 24) | (b << 16) | (g << 8) | r;
+                            // Swapping R and B using __builtin_bswap32
+                            dst32[x] = (__builtin_bswap32(color) >> 8) | 0xFF000000;
                         }
-                    } else if (lFormat == 0) { // 0RGB1555
+                    }
+                } else if (lFormat == 0) { // 0RGB1555
+                    // Keep original slow fallback format if needed
+                    for (unsigned y = 0; y < lHeight; y++) {
+                        const uint8_t* rowSrc = localRawTvBuffer.data() + (y * lPitch);
+                        uint8_t* rowDst = static_cast<uint8_t*>(buffer.bits) + (y * buffer.stride * 4);
+                        
                         const uint16_t* src16 = reinterpret_cast<const uint16_t*>(rowSrc);
                         uint32_t* dst32 = reinterpret_cast<uint32_t*>(rowDst);
                         for (unsigned x = 0; x < lWidth; x++) {
@@ -94,21 +111,12 @@ static void TvRenderWorker() {
                             uint32_t b = (color & 0x1F) << 3;
                             dst32[x] = (0xFFu << 24) | (b << 16) | (g << 8) | r;
                         }
-                    } else { // RGB565
-                        const uint16_t* src16 = reinterpret_cast<const uint16_t*>(rowSrc);
-                        uint32_t* dst32 = reinterpret_cast<uint32_t*>(rowDst);
-                        for (unsigned x = 0; x < lWidth; x++) {
-                            uint16_t color = src16[x];
-                            uint32_t r = ((color >> 11) & 0x1F) << 3;
-                            uint32_t g = ((color >> 5) & 0x3F) << 2;
-                            uint32_t b = (color & 0x1F) << 3;
-                            dst32[x] = (0xFFu << 24) | (b << 16) | (g << 8) | r;
-                        }
                     }
                 }
                 
                 ANativeWindow_unlockAndPost(currentTvWindow);
             }
+            ANativeWindow_release(currentTvWindow);
         }
     }
 }
@@ -120,9 +128,14 @@ void miracast_video_init() {
 }
 
 void miracast_video_deinit() {
-    std::lock_guard<std::mutex> lock(renderMutex);
-    tvThreadRunning = false;
-    tvCondVar.notify_all();
+    {
+        std::lock_guard<std::mutex> lock(tvMutex);
+        tvThreadRunning = false;
+        tvCondVar.notify_all();
+    }
+    if (tvThread.joinable()) {
+        tvThread.join();
+    }
 }
 
 void miracast_video_push_frame(const void* data, unsigned width, unsigned height, size_t pitch, int pixel_format) {
@@ -142,7 +155,10 @@ void miracast_video_push_frame(const void* data, unsigned width, unsigned height
     
     if (!tvThreadRunning) {
         tvThreadRunning = true;
-        std::thread(TvRenderWorker).detach();
+        if (tvThread.joinable()) {
+            tvThread.join();
+        }
+        tvThread = std::thread(TvRenderWorker);
     }
     
     if (tvWindow) {

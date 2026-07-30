@@ -186,6 +186,7 @@ bool frontend_init_and_load(const char* core_path_ptr, const char* rom_path) {
 
     if (retro_load_game(&game_info)) {
         is_game_loaded = true;
+        retro_reset();
         struct retro_system_av_info av_info = {0};
         retro_get_system_av_info(&av_info);
         double fps = av_info.timing.fps;

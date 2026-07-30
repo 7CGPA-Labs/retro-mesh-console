@@ -35,6 +35,11 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import android.view.WindowManager
 import android.widget.Toast
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.text.style.TextAlign
 
 @Composable
 fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerName: String, onExit: () -> Unit) {
@@ -51,6 +56,7 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
     
     var showPinEntryForHost by remember { mutableStateOf<Map<String, Any>?>(null) }
     var enteredPin by remember { mutableStateOf("") }
+    var hasVibratedAtEdge by remember { mutableStateOf(false) }
     
     DisposableEffect(Unit) {
         val activity = context as? Activity
@@ -151,47 +157,64 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
 
     if (showPinEntryForHost != null) {
         AlertDialog(
-            onDismissRequest = { showPinEntryForHost = null },
+            onDismissRequest = { 
+                showPinEntryForHost = null
+                enteredPin = ""
+            },
             containerColor = Color(0xFF1E1E38),
-            title = { Text("Enter 6-Digit PIN", color = Color.White) },
+            title = { 
+                Text(
+                    text = "Enter 6-Digit PIN", 
+                    color = Color.White,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                    fontWeight = FontWeight.Bold
+                ) 
+            },
             text = {
-                OutlinedTextField(
-                    value = enteredPin,
-                    onValueChange = { enteredPin = it },
-                    colors = TextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        focusedContainerColor = Color.Transparent,
-                        unfocusedContainerColor = Color.Transparent,
-                        focusedIndicatorColor = Color(0xFF00E5FF),
-                        unfocusedIndicatorColor = Color(0xFFFF2E93)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)
+                ) {
+                    PinInput(
+                        pin = enteredPin,
+                        onPinChange = { enteredPin = it }
                     )
-                )
+                }
             },
             confirmButton = {
-                TextButton(onClick = {
-                    val hostPinRequired = showPinEntryForHost!!["pin"] as? String ?: ""
-                    if (enteredPin == hostPinRequired) {
-                        val ip = showPinEntryForHost!!["ip"] as? String ?: ""
-                        dev.seven_cgpalabs.mojosnap.NetworkManager.connectToServer(ip, 48293)
-                        dev.seven_cgpalabs.mojosnap.NetworkManager.stopDiscovery()
-                        activeCore = showPinEntryForHost!!["core"] as? String ?: "nes"
-                        isConnected = true
-                        showPinEntryForHost = null
-                    } else {
-                        Toast.makeText(context, "Incorrect PIN", Toast.LENGTH_SHORT).show()
-                    }
-                }) {
-                    Text("CONNECT", color = Color(0xFF00E5FF))
+                TextButton(
+                    onClick = {
+                        val hostPinRequired = showPinEntryForHost!!["pin"] as? String ?: ""
+                        if (enteredPin == hostPinRequired) {
+                            val ip = showPinEntryForHost!!["ip"] as? String ?: ""
+                            dev.seven_cgpalabs.mojosnap.NetworkManager.connectToServer(ip, 48293)
+                            dev.seven_cgpalabs.mojosnap.NetworkManager.stopDiscovery()
+                            activeCore = showPinEntryForHost!!["core"] as? String ?: "nes"
+                            isConnected = true
+                            showPinEntryForHost = null
+                            enteredPin = ""
+                        } else {
+                            Toast.makeText(context, "Incorrect PIN", Toast.LENGTH_SHORT).show()
+                            enteredPin = ""
+                        }
+                    },
+                    enabled = enteredPin.length == 6
+                ) {
+                    Text("CONNECT", color = if (enteredPin.length == 6) Color(0xFF00E5FF) else Color.Gray)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showPinEntryForHost = null }) {
+                TextButton(onClick = { 
+                    showPinEntryForHost = null
+                    enteredPin = ""
+                }) {
                     Text("CANCEL", color = Color.White.copy(alpha = 0.54f))
                 }
             }
         )
     }
+
 
     if (showMenu) {
         AlertDialog(
@@ -239,7 +262,13 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
         )
     }
 
-    BoxWithConstraints(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .safeDrawingPadding()
+            .padding(horizontal = 24.dp, vertical = 8.dp)
+    ) {
         val baseSize = (maxHeight.value * 0.22f).coerceIn(40f, 100f).dp
         val maxRadiusPx = with(LocalDensity.current) { (baseSize * 1.5f).toPx() - (baseSize * 0.3f).toPx() }
         val mHeight = maxHeight
@@ -247,7 +276,7 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
             text = "Player: $playerName" + if (isHost) " | PIN: $hostPin" else "",
             color = Color.White.copy(alpha = 0.5f),
             fontSize = 12.sp,
-            modifier = Modifier.align(Alignment.TopCenter).padding(top = 16.dp)
+            modifier = Modifier.align(Alignment.TopStart).padding(start = 16.dp, top = 16.dp)
         )
 
         val isSnes = activeCore.contains("snes") || activeCore.contains("mgba")
@@ -311,12 +340,23 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
                                 detectDragGestures(
                                     onDragEnd = { 
                                         analogPos = Offset.Zero
+                                        hasVibratedAtEdge = false
                                         mainActivity?.setAnalogState(0, 0, 0, 0)
                                         mainActivity?.setAnalogState(0, 0, 1, 0)
                                     },
                                     onDrag = { _, dragAmount -> 
                                         val newPos = analogPos + dragAmount
                                         val dist = newPos.getDistance()
+                                        
+                                        if (dist >= maxRadiusPx) {
+                                            if (!hasVibratedAtEdge) {
+                                                triggerStrongVibration(context)
+                                                hasVibratedAtEdge = true
+                                            }
+                                        } else if (dist < maxRadiusPx * 0.9f) {
+                                            hasVibratedAtEdge = false
+                                        }
+                                        
                                         analogPos = if (dist > maxRadiusPx) newPos * (maxRadiusPx / dist) else newPos
                                         val scaledX = if (maxRadiusPx > 0) (analogPos.x / maxRadiusPx * 32767f).toInt().coerceIn(-32767, 32767) else 0
                                         val scaledY = if (maxRadiusPx > 0) (analogPos.y / maxRadiusPx * 32767f).toInt().coerceIn(-32767, 32767) else 0
@@ -452,4 +492,89 @@ fun triggerStrongVibration(context: android.content.Context) {
             vibrator.vibrate(70)
         }
     } catch (e: Exception) {}
+}
+
+@Composable
+fun PinInput(
+    pin: String,
+    onPinChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val maxLength = 6
+    val focusRequester = remember { FocusRequester() }
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(
+                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                indication = null
+            ) { focusRequester.requestFocus() },
+        contentAlignment = Alignment.Center
+    ) {
+        androidx.compose.foundation.text.BasicTextField(
+            value = pin,
+            onValueChange = { newVal ->
+                if (newVal.length <= maxLength && newVal.all { it.isDigit() }) {
+                    onPinChange(newVal)
+                }
+            },
+            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+            ),
+            modifier = Modifier
+                .size(1.dp)
+                .focusRequester(focusRequester)
+                .graphicsLayer { alpha = 0f }
+        )
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            for (i in 0 until maxLength) {
+                val isFocused = i == pin.length
+                val char = pin.getOrNull(i)
+                val text = if (char != null) char.toString() else ""
+
+                val borderColor = when {
+                    isFocused -> Color(0xFF00E5FF)
+                    text.isNotEmpty() -> Color(0xFFFF2E93).copy(alpha = 0.8f)
+                    else -> Color.White.copy(alpha = 0.15f)
+                }
+
+                val glowModifier = if (isFocused) {
+                    Modifier.shadow(8.dp, RoundedCornerShape(8.dp), spotColor = Color(0xFF00E5FF))
+                } else {
+                    Modifier
+                }
+
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .then(glowModifier)
+                        .background(Color(0xFF13132B), RoundedCornerShape(8.dp))
+                        .border(
+                            width = if (isFocused) 2.dp else 1.5.dp,
+                            color = borderColor,
+                            shape = RoundedCornerShape(8.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = text,
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        delay(300)
+        focusRequester.requestFocus()
+    }
 }
