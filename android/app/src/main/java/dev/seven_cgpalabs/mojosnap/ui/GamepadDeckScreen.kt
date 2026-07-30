@@ -122,7 +122,7 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
     if (!isConnected) {
         AlertDialog(
             onDismissRequest = { onExit() },
-            containerColor = Color(0xFF1E1E38),
+            containerColor = Color.Black,
             title = { Text("Select Host to Join", color = Color.White) },
             text = {
                 if (discoveredHosts.isEmpty()) {
@@ -161,7 +161,7 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
                 showPinEntryForHost = null
                 enteredPin = ""
             },
-            containerColor = Color(0xFF1E1E38),
+            containerColor = Color.Black,
             title = { 
                 Text(
                     text = "Enter 6-Digit PIN", 
@@ -219,7 +219,7 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
     if (showMenu) {
         AlertDialog(
             onDismissRequest = { showMenu = false },
-            containerColor = Color(0xFF1E1E38),
+            containerColor = Color.Black,
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Menu, contentDescription = null, tint = if (isHost) Color(0xFFFF2E93) else Color(0xFF00E5FF))
@@ -442,23 +442,27 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
         }
 
         // CAST to top-left
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(start = 16.dp, top = 16.dp)
-        ) {
-            SystemBtn("CAST", Icons.Default.Cast, Color(0xFF00E5FF)) { 
-                dev.seven_cgpalabs.mojosnap.CastingAdapter(context as Activity).openSystemCastMenu() 
+        if (isHost) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(start = 16.dp, top = 16.dp)
+            ) {
+                SystemBtn("CAST", Icons.Default.Cast, Color(0xFF00E5FF)) { 
+                    dev.seven_cgpalabs.mojosnap.CastingAdapter(context as Activity).openSystemCastMenu() 
+                }
             }
         }
 
         // MENU to top-right
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(end = 16.dp, top = 16.dp)
-        ) {
-            SystemBtn("MENU", Icons.Default.Menu, Color(0xFFFF2E93)) { showMenu = true; mainActivity?.togglePause() }
+        if (isHost) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(end = 16.dp, top = 16.dp)
+            ) {
+                SystemBtn("MENU", Icons.Default.Menu, Color(0xFFFF2E93)) { showMenu = true; mainActivity?.togglePause() }
+            }
         }
 
         Row(
@@ -475,7 +479,7 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
 @Composable
 fun ShoulderBtn(label: String, buttonId: Int, mainActivity: MainActivity?, modifier: Modifier) {
     val context = LocalContext.current
-    Box(modifier = modifier.size(48.dp, 80.dp).background(Color(0xFF1E1E38), RoundedCornerShape(16.dp)).border(2.dp, Color.White.copy(0.24f), RoundedCornerShape(16.dp)).pointerInput(Unit) { detectTapGestures(onPress = { triggerStrongVibration(context); mainActivity?.setButtonState(0, buttonId, true); tryAwaitRelease(); mainActivity?.setButtonState(0, buttonId, false) }) }, contentAlignment = Alignment.Center) {
+    Box(modifier = modifier.size(48.dp, 80.dp).background(Color.Black, RoundedCornerShape(16.dp)).border(2.dp, Color.White.copy(0.24f), RoundedCornerShape(16.dp)).pointerInput(Unit) { detectTapGestures(onPress = { triggerStrongVibration(context); mainActivity?.setButtonState(0, buttonId, true); tryAwaitRelease(); mainActivity?.setButtonState(0, buttonId, false) }) }, contentAlignment = Alignment.Center) {
         Text(label, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
     }
 }

@@ -61,7 +61,7 @@ fun RoleGateScreen(onNavigateToGamepad: (isHost: Boolean, romUri: Uri?, coreName
     if (showPlayerNameDialog) {
         AlertDialog(
             onDismissRequest = { showPlayerNameDialog = false },
-            containerColor = Color(0xFF1E1E38),
+            containerColor = Color.Black,
             title = { Text("Enter Your Player Name", color = Color.White) },
             text = {
                 OutlinedTextField(
@@ -96,7 +96,7 @@ fun RoleGateScreen(onNavigateToGamepad: (isHost: Boolean, romUri: Uri?, coreName
     if (showLoading) {
         AlertDialog(
             onDismissRequest = {},
-            containerColor = Color(0xFF1E1E38).copy(alpha = 0.9f),
+            containerColor = Color.Black.copy(alpha = 0.9f),
             title = { Text("Extracting core binaries...", color = Color.White, fontSize = 16.sp) },
             text = { CircularProgressIndicator(color = Color(0xFFFF2E93)) },
             confirmButton = {}
@@ -196,7 +196,7 @@ fun RoleGateScreen(onNavigateToGamepad: (isHost: Boolean, romUri: Uri?, coreName
                         isHostSelection = true
                         showPlayerNameDialog = true 
                     },
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF16162D).copy(alpha = 0.85f)),
+                colors = CardDefaults.cardColors(containerColor = Color.Black),
                 shape = RoundedCornerShape(20.dp),
                 border = androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFFFF2E93).copy(alpha = 0.25f))
             ) {
@@ -227,7 +227,7 @@ fun RoleGateScreen(onNavigateToGamepad: (isHost: Boolean, romUri: Uri?, coreName
                     .clickable {
                         onNavigateToGamepad(false, null, "client", "")
                     },
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF16162D).copy(alpha = 0.85f)),
+                colors = CardDefaults.cardColors(containerColor = Color.Black),
                 shape = RoundedCornerShape(20.dp),
                 border = androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFF00E5FF).copy(alpha = 0.25f))
             ) {
