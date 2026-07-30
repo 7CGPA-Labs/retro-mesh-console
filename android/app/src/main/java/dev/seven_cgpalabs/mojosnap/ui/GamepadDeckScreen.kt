@@ -285,17 +285,22 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
 
         // Analog toggle and Log UI
         Column(
-            modifier = Modifier.align(Alignment.Center),
+            modifier = Modifier.align(Alignment.Center).offset(y = (-35).dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
                 modifier = Modifier
                     .clickable { useAnalogStick = !useAnalogStick }
-                    .background(if (useAnalogStick) Color(0xFFFF2E93).copy(0.2f) else Color.White.copy(0.12f), RoundedCornerShape(20.dp))
-                    .border(2.dp, if (useAnalogStick) Color(0xFFFF2E93) else Color.White.copy(0.24f), RoundedCornerShape(20.dp))
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .background(if (useAnalogStick) Color(0xFFFF2E93).copy(0.2f) else Color.White.copy(0.12f), RoundedCornerShape(16.dp))
+                    .border(1.2.dp, if (useAnalogStick) Color(0xFFFF2E93) else Color.White.copy(0.24f), RoundedCornerShape(16.dp))
+                    .padding(horizontal = 10.dp, vertical = 4.dp)
             ) {
-                Text(if (useAnalogStick) "ANALOG ON" else "D-PAD ON", color = if (useAnalogStick) Color(0xFFFF2E93) else Color.White.copy(0.54f), fontWeight = FontWeight.Bold)
+                Text(
+                    text = if (useAnalogStick) "ANALOG ON" else "D-PAD ON", 
+                    color = if (useAnalogStick) Color(0xFFFF2E93) else Color.White.copy(0.54f), 
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 11.sp
+                )
             }
             if (dev.seven_cgpalabs.mojosnap.BuildConfig.DEBUG) {
                 Spacer(Modifier.height(10.dp))
