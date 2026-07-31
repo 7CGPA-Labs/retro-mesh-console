@@ -267,7 +267,7 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
             .padding(horizontal = 24.dp, vertical = 8.dp)
     ) {
         val baseSize = (maxHeight.value * 0.22f).coerceIn(40f, 100f).dp
-        val maxRadiusPx = with(LocalDensity.current) { (baseSize * 1.5f).toPx() - (baseSize * 0.3f).toPx() }
+        val maxRadiusPx = with(LocalDensity.current) { (baseSize * 1.25f).toPx() - (baseSize * 0.3f).toPx() }
         Text(
             text = "Player: $playerName" + if (isHost) " | PIN: $hostPin" else "",
             color = Color.White.copy(alpha = 0.5f),
@@ -336,7 +336,7 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
                 }
                 Box(modifier = Modifier.padding(start = 16.dp), contentAlignment = Alignment.CenterStart) {
                     if (useAnalogStick) {
-                        Box(modifier = Modifier.size(baseSize * 3).background(Color(0xFF1E1E38).copy(0.5f), CircleShape).border(2.dp, Color.White.copy(0.24f), CircleShape)
+                        Box(modifier = Modifier.size(baseSize * 2.5f).background(Color(0xFF1E1E38).copy(0.5f), CircleShape).border(2.dp, Color.White.copy(0.24f), CircleShape)
                             .pointerInput(Unit) {
                                 detectDragGestures(
                                     onDragEnd = { 
