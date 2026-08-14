@@ -330,8 +330,8 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.padding(end = 8.dp)
                     ) {
-                        ShoulderBtn("L" + if (isPs1) "1" else "", 10, mainActivity, Modifier) // RETRO_DEVICE_ID_JOYPAD_L
-                        if (isPs1) ShoulderBtn("L2", 12, mainActivity, Modifier) // RETRO_DEVICE_ID_JOYPAD_L2
+                        ShoulderBtn("L" + if (isPs1) "1" else "", 10, isHost, mainActivity, Modifier) // RETRO_DEVICE_ID_JOYPAD_L
+                        if (isPs1) ShoulderBtn("L2", 12, isHost, mainActivity, Modifier) // RETRO_DEVICE_ID_JOYPAD_L2
                     }
                 }
                 Box(modifier = Modifier.padding(start = 16.dp), contentAlignment = Alignment.CenterStart) {
@@ -342,8 +342,15 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
                                     onDragEnd = { 
                                         analogPos = Offset.Zero
                                         hasVibratedAtEdge = false
-                                        mainActivity?.setAnalogState(0, 0, 0, 0)
-                                        mainActivity?.setAnalogState(0, 0, 1, 0)
+                                        if (isHost) {
+                                            mainActivity?.setAnalogState(0, 0, 0, 0)
+                                            mainActivity?.setAnalogState(0, 0, 1, 0)
+                                        } else {
+                                            dev.seven_cgpalabs.mojosnap.NetworkManager.sendInput(4, false)
+                                            dev.seven_cgpalabs.mojosnap.NetworkManager.sendInput(5, false)
+                                            dev.seven_cgpalabs.mojosnap.NetworkManager.sendInput(6, false)
+                                            dev.seven_cgpalabs.mojosnap.NetworkManager.sendInput(7, false)
+                                        }
                                     },
                                     onDrag = { _, dragAmount -> 
                                         val newPos = analogPos + dragAmount
@@ -361,8 +368,15 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
                                         analogPos = if (dist > maxRadiusPx) newPos * (maxRadiusPx / dist) else newPos
                                         val scaledX = if (maxRadiusPx > 0) (analogPos.x / maxRadiusPx * 32767f).toInt().coerceIn(-32767, 32767) else 0
                                         val scaledY = if (maxRadiusPx > 0) (analogPos.y / maxRadiusPx * 32767f).toInt().coerceIn(-32767, 32767) else 0
-                                        mainActivity?.setAnalogState(0, 0, 0, scaledX)
-                                        mainActivity?.setAnalogState(0, 0, 1, scaledY)
+                                        if (isHost) {
+                                            mainActivity?.setAnalogState(0, 0, 0, scaledX)
+                                            mainActivity?.setAnalogState(0, 0, 1, scaledY)
+                                        } else {
+                                            dev.seven_cgpalabs.mojosnap.NetworkManager.sendInput(4, scaledY < -16000)
+                                            dev.seven_cgpalabs.mojosnap.NetworkManager.sendInput(5, scaledY > 16000)
+                                            dev.seven_cgpalabs.mojosnap.NetworkManager.sendInput(6, scaledX < -16000)
+                                            dev.seven_cgpalabs.mojosnap.NetworkManager.sendInput(7, scaledX > 16000)
+                                        }
                                     }
                                 )
                             }, contentAlignment = Alignment.Center) {
@@ -370,10 +384,10 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
                         }
                     } else {
                         Box(modifier = Modifier.size(baseSize * 3)) {
-                            GamepadBtn("▲", 4, baseSize, Modifier.align(Alignment.TopCenter), Color.White, mainActivity) // RETRO_DEVICE_ID_JOYPAD_UP
-                            GamepadBtn("▼", 5, baseSize, Modifier.align(Alignment.BottomCenter), Color.White, mainActivity) // RETRO_DEVICE_ID_JOYPAD_DOWN
-                            GamepadBtn("◀", 6, baseSize, Modifier.align(Alignment.CenterStart), Color.White, mainActivity) // RETRO_DEVICE_ID_JOYPAD_LEFT
-                            GamepadBtn("▶", 7, baseSize, Modifier.align(Alignment.CenterEnd), Color.White, mainActivity) // RETRO_DEVICE_ID_JOYPAD_RIGHT
+                            GamepadBtn("▲", 4, baseSize, Modifier.align(Alignment.TopCenter), Color.White, isHost, mainActivity) // RETRO_DEVICE_ID_JOYPAD_UP
+                            GamepadBtn("▼", 5, baseSize, Modifier.align(Alignment.BottomCenter), Color.White, isHost, mainActivity) // RETRO_DEVICE_ID_JOYPAD_DOWN
+                            GamepadBtn("◀", 6, baseSize, Modifier.align(Alignment.CenterStart), Color.White, isHost, mainActivity) // RETRO_DEVICE_ID_JOYPAD_LEFT
+                            GamepadBtn("▶", 7, baseSize, Modifier.align(Alignment.CenterEnd), Color.White, isHost, mainActivity) // RETRO_DEVICE_ID_JOYPAD_RIGHT
                         }
                     }
                 }
@@ -391,35 +405,35 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
                             isGenesis -> {
                                 Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
                                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.offset(x = (-12).dp)) {
-                                        GamepadBtn("X", 10, baseSize * 0.85f, Modifier, Color(0xFFEF5350), mainActivity) // Genesis X → Lighter Red
-                                        GamepadBtn("Y", 9, baseSize * 0.85f, Modifier, Color(0xFFFFCA28), mainActivity) // Genesis Y → Lighter Yellow
-                                        GamepadBtn("Z", 11, baseSize * 0.85f, Modifier, Color(0xFF42A5F5), mainActivity) // Genesis Z → Lighter Blue
+                                        GamepadBtn("X", 10, baseSize * 0.85f, Modifier, Color(0xFFEF5350), isHost, mainActivity) // Genesis X → L
+                                        GamepadBtn("Y", 9, baseSize * 0.85f, Modifier, Color(0xFFFFCA28), isHost, mainActivity) // Genesis Y → X
+                                        GamepadBtn("Z", 11, baseSize * 0.85f, Modifier, Color(0xFF42A5F5), isHost, mainActivity) // Genesis Z → R
                                     }
                                     Spacer(modifier = Modifier.height(12.dp))
                                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.offset(x = 12.dp)) {
-                                        GamepadBtn("A", 1, baseSize * 0.85f, Modifier, Color(0xFFE53935), mainActivity) // Genesis A → Red
-                                        GamepadBtn("B", 0, baseSize * 0.85f, Modifier, Color(0xFFFFB300), mainActivity) // Genesis B → Yellow/Orange
-                                        GamepadBtn("C", 8, baseSize * 0.85f, Modifier, Color(0xFF1E88E5), mainActivity) // Genesis C → Blue
+                                        GamepadBtn("A", 1, baseSize * 0.85f, Modifier, Color(0xFFE53935), isHost, mainActivity) // Genesis A → Y
+                                        GamepadBtn("B", 0, baseSize * 0.85f, Modifier, Color(0xFFFFB300), isHost, mainActivity) // Genesis B → B
+                                        GamepadBtn("C", 8, baseSize * 0.85f, Modifier, Color(0xFF1E88E5), isHost, mainActivity) // Genesis C → A
                                     }
                                 }
                             }
                             isPs1 -> {
-                                GamepadBtn("△", 9, baseSize, Modifier.align(Alignment.TopCenter), Color(0xFF4CAF50), mainActivity) // Triangle - Green
-                                GamepadBtn("✕", 0, baseSize, Modifier.align(Alignment.BottomCenter), Color(0xFF2196F3), mainActivity) // Cross - Blue
-                                GamepadBtn("□", 1, baseSize, Modifier.align(Alignment.CenterStart), Color(0xFFE91E63), mainActivity) // Square - Pink
-                                GamepadBtn("○", 8, baseSize, Modifier.align(Alignment.CenterEnd), Color(0xFFF44336), mainActivity) // Circle - Red
+                                GamepadBtn("△", 9, baseSize, Modifier.align(Alignment.TopCenter), Color(0xFF4CAF50), isHost, mainActivity) // Triangle - Top (X = 9)
+                                GamepadBtn("✕", 0, baseSize, Modifier.align(Alignment.BottomCenter), Color(0xFF2196F3), isHost, mainActivity) // Cross - Bottom (B = 0)
+                                GamepadBtn("□", 1, baseSize, Modifier.align(Alignment.CenterStart), Color(0xFFE91E63), isHost, mainActivity) // Square - Left (Y = 1)
+                                GamepadBtn("○", 8, baseSize, Modifier.align(Alignment.CenterEnd), Color(0xFFF44336), isHost, mainActivity) // Circle - Right (A = 8)
                             }
                             isSnes -> {
-                                GamepadBtn("X", 9, baseSize, Modifier.align(Alignment.TopCenter), Color(0xFF1E88E5), mainActivity) // SNES X - Blue
-                                GamepadBtn("B", 0, baseSize, Modifier.align(Alignment.BottomCenter), Color(0xFFFFEB3B), mainActivity) // SNES B - Yellow
-                                GamepadBtn("Y", 1, baseSize, Modifier.align(Alignment.CenterStart), Color(0xFF4CAF50), mainActivity) // SNES Y - Green
-                                GamepadBtn("A", 8, baseSize, Modifier.align(Alignment.CenterEnd), Color(0xFFE53935), mainActivity) // SNES A - Red
+                                GamepadBtn("X", 9, baseSize, Modifier.align(Alignment.TopCenter), Color(0xFF1E88E5), isHost, mainActivity) // SNES X - Top (X = 9)
+                                GamepadBtn("B", 0, baseSize, Modifier.align(Alignment.BottomCenter), Color(0xFFFFEB3B), isHost, mainActivity) // SNES B - Bottom (B = 0)
+                                GamepadBtn("Y", 1, baseSize, Modifier.align(Alignment.CenterStart), Color(0xFF4CAF50), isHost, mainActivity) // SNES Y - Left (Y = 1)
+                                GamepadBtn("A", 8, baseSize, Modifier.align(Alignment.CenterEnd), Color(0xFFE53935), isHost, mainActivity) // SNES A - Right (A = 8)
                             }
                             else -> {
                                 Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                                    GamepadBtn("B", 0, baseSize * 1.2f, Modifier.offset(y = 12.dp), Color(0xFFE53935), mainActivity) // NES B → Classic Red
+                                    GamepadBtn("B", 0, baseSize * 1.2f, Modifier.offset(y = 12.dp), Color(0xFFE53935), isHost, mainActivity) // NES B → B = 0
                                     Spacer(modifier = Modifier.width(24.dp))
-                                    GamepadBtn("A", 8, baseSize * 1.2f, Modifier.offset(y = (-12).dp), Color(0xFFE53935), mainActivity) // NES A → Classic Red
+                                    GamepadBtn("A", 8, baseSize * 1.2f, Modifier.offset(y = (-12).dp), Color(0xFFE53935), isHost, mainActivity) // NES A → A = 8
                                 }
                             }
                         }
@@ -431,8 +445,8 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.padding(start = 8.dp)
                     ) {
-                        ShoulderBtn("R" + if (isPs1) "1" else "", 11, mainActivity, Modifier) // RETRO_DEVICE_ID_JOYPAD_R
-                        if (isPs1) ShoulderBtn("R2", 13, mainActivity, Modifier) // RETRO_DEVICE_ID_JOYPAD_R2
+                        ShoulderBtn("R" + if (isPs1) "1" else "", 11, isHost, mainActivity, Modifier) // RETRO_DEVICE_ID_JOYPAD_R
+                        if (isPs1) ShoulderBtn("R2", 13, isHost, mainActivity, Modifier) // RETRO_DEVICE_ID_JOYPAD_R2
                     }
                 }
             }
@@ -445,7 +459,7 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
                     .align(Alignment.TopStart)
                     .padding(start = 16.dp, top = 16.dp)
             ) {
-                SystemBtn("CAST", Icons.Default.Cast, Color(0xFF00E5FF)) { 
+                SystemBtn("CAST", Icons.Default.Cast, Color(0xFF00E5FF), isHost) { 
                     dev.seven_cgpalabs.mojosnap.CastingAdapter(context as Activity).openSystemCastMenu() 
                 }
             }
@@ -458,7 +472,7 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
                     .align(Alignment.TopEnd)
                     .padding(end = 16.dp, top = 16.dp)
             ) {
-                SystemBtn("MENU", Icons.Default.Menu, Color(0xFFFF2E93)) { showMenu = true; mainActivity?.togglePause() }
+                SystemBtn("MENU", Icons.Default.Menu, Color(0xFFFF2E93), isHost) { showMenu = true; mainActivity?.togglePause() }
             }
         }
 
@@ -467,40 +481,85 @@ fun GamepadDeckScreen(isHost: Boolean, romUri: Uri?, coreName: String, playerNam
             horizontalArrangement = Arrangement.spacedBy(24.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            SystemBtn("SELECT", Icons.Default.SelectAll, Color.White.copy(0.7f), mainActivity, 2) // RETRO_DEVICE_ID_JOYPAD_SELECT
-            SystemBtn("START", Icons.Default.PlayArrow, Color.White, mainActivity, 3) // RETRO_DEVICE_ID_JOYPAD_START
+            SystemBtn("SELECT", Icons.Default.SelectAll, Color.White.copy(0.7f), isHost, mainActivity, 2) // RETRO_DEVICE_ID_JOYPAD_SELECT
+            SystemBtn("START", Icons.Default.PlayArrow, Color.White, isHost, mainActivity, 3) // RETRO_DEVICE_ID_JOYPAD_START
         }
     }
 }
 
+private fun routeButtonInput(buttonId: Int, pressed: Boolean, isHost: Boolean, mainActivity: MainActivity?) {
+    if (isHost) {
+        mainActivity?.setButtonState(0, buttonId, pressed)
+    } else {
+        dev.seven_cgpalabs.mojosnap.NetworkManager.sendInput(buttonId, pressed)
+    }
+}
+
 @Composable
-fun ShoulderBtn(label: String, buttonId: Int, mainActivity: MainActivity?, modifier: Modifier) {
+fun ShoulderBtn(label: String, buttonId: Int, isHost: Boolean, mainActivity: MainActivity?, modifier: Modifier) {
     val context = LocalContext.current
-    Box(modifier = modifier.size(48.dp, 80.dp).background(Color.Black, RoundedCornerShape(16.dp)).border(2.dp, Color.White.copy(0.24f), RoundedCornerShape(16.dp)).pointerInput(Unit) { detectTapGestures(onPress = { triggerStrongVibration(context); mainActivity?.setButtonState(0, buttonId, true); tryAwaitRelease(); mainActivity?.setButtonState(0, buttonId, false) }) }, contentAlignment = Alignment.Center) {
+    Box(
+        modifier = modifier
+            .size(48.dp, 80.dp)
+            .background(Color.Black, RoundedCornerShape(16.dp))
+            .border(2.dp, Color.White.copy(0.24f), RoundedCornerShape(16.dp))
+            .pointerInput(isHost) {
+                detectTapGestures(
+                    onPress = {
+                        triggerStrongVibration(context)
+                        routeButtonInput(buttonId, true, isHost, mainActivity)
+                        tryAwaitRelease()
+                        routeButtonInput(buttonId, false, isHost, mainActivity)
+                    }
+                )
+            },
+        contentAlignment = Alignment.Center
+    ) {
         Text(label, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
     }
 }
 
 @Composable
-fun GamepadBtn(label: String, buttonId: Int, size: androidx.compose.ui.unit.Dp, modifier: Modifier, color: Color, mainActivity: MainActivity?) {
+fun GamepadBtn(label: String, buttonId: Int, size: androidx.compose.ui.unit.Dp, modifier: Modifier, color: Color, isHost: Boolean, mainActivity: MainActivity?) {
     val context = LocalContext.current
-    Box(modifier = modifier.size(size).background(color.copy(0.12f), CircleShape).border(2.5.dp, color, CircleShape).pointerInput(Unit) { detectTapGestures(onPress = { triggerStrongVibration(context); mainActivity?.setButtonState(0, buttonId, true); tryAwaitRelease(); mainActivity?.setButtonState(0, buttonId, false) }) }, contentAlignment = Alignment.Center) {
+    Box(
+        modifier = modifier
+            .size(size)
+            .background(color.copy(0.12f), CircleShape)
+            .border(2.5.dp, color, CircleShape)
+            .pointerInput(isHost) {
+                detectTapGestures(
+                    onPress = {
+                        triggerStrongVibration(context)
+                        routeButtonInput(buttonId, true, isHost, mainActivity)
+                        tryAwaitRelease()
+                        routeButtonInput(buttonId, false, isHost, mainActivity)
+                    }
+                )
+            },
+        contentAlignment = Alignment.Center
+    ) {
         Text(label, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
     }
 }
 
 @Composable
-fun SystemBtn(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, color: Color, mainActivity: MainActivity? = null, buttonId: Int = -1, onClick: (() -> Unit)? = null) {
+fun SystemBtn(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, color: Color, isHost: Boolean = true, mainActivity: MainActivity? = null, buttonId: Int = -1, onClick: (() -> Unit)? = null) {
     val context = LocalContext.current
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.pointerInput(Unit) {
-        detectTapGestures(onPress = {
-            triggerStrongVibration(context)
-            if (buttonId != -1) mainActivity?.setButtonState(0, buttonId, true)
-            onClick?.invoke()
-            tryAwaitRelease()
-            if (buttonId != -1) mainActivity?.setButtonState(0, buttonId, false)
-        })
-    }) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.pointerInput(isHost) {
+            detectTapGestures(
+                onPress = {
+                    triggerStrongVibration(context)
+                    if (buttonId != -1) routeButtonInput(buttonId, true, isHost, mainActivity)
+                    onClick?.invoke()
+                    tryAwaitRelease()
+                    if (buttonId != -1) routeButtonInput(buttonId, false, isHost, mainActivity)
+                }
+            )
+        }
+    ) {
         Box(modifier = Modifier.size(64.dp, 32.dp).background(color.copy(0.1f), RoundedCornerShape(16.dp)).border(1.dp, color.copy(0.3f), RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
             Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
         }

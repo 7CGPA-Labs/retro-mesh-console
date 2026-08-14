@@ -34,6 +34,8 @@ static std::thread tvThread;
 static void TvRenderWorker() {
     ANativeWindow* lastTvWindow = nullptr;
     int lastFormat = -1;
+    int lastWidth = -1;
+    int lastHeight = -1;
     std::vector<uint8_t> localRawTvBuffer;
 
     while (tvThreadRunning) {
@@ -63,9 +65,11 @@ static void TvRenderWorker() {
         lock.unlock();
 
         if (currentTvWindow) {
-            if (currentTvWindow != lastTvWindow || lFormat != lastFormat) {
+            if (currentTvWindow != lastTvWindow || lFormat != lastFormat || lWidth != lastWidth || lHeight != lastHeight) {
                 lastTvWindow = currentTvWindow;
                 lastFormat = lFormat;
+                lastWidth = lWidth;
+                lastHeight = lHeight;
                 // Set native format: RGB_565 (4) for RGB565, RGBA_8888 (1) for XRGB8888 / 0RGB1555
                 int targetFormat = (lFormat == 2) ? WINDOW_FORMAT_RGB_565 : WINDOW_FORMAT_RGBA_8888;
                 ANativeWindow_setBuffersGeometry(currentTvWindow, lWidth, lHeight, targetFormat);
@@ -73,24 +77,26 @@ static void TvRenderWorker() {
 
             ANativeWindow_Buffer buffer;
             if (ANativeWindow_lock(currentTvWindow, &buffer, nullptr) == 0) {
-                
+                unsigned copyWidth = (buffer.width > 0 && (unsigned)buffer.width < (unsigned)lWidth) ? buffer.width : lWidth;
+                unsigned copyHeight = (buffer.height > 0 && (unsigned)buffer.height < (unsigned)lHeight) ? buffer.height : lHeight;
+
                 // Software pixel conversion and copy directly to NativeWindow buffer
                 if (lFormat == 2) { // RGB565
                     // Direct fast copy
-                    for (unsigned y = 0; y < lHeight; y++) {
+                    for (unsigned y = 0; y < copyHeight; y++) {
                         const uint8_t* rowSrc = localRawTvBuffer.data() + (y * lPitch);
                         uint8_t* rowDst = static_cast<uint8_t*>(buffer.bits) + (y * buffer.stride * 2);
-                        std::memcpy(rowDst, rowSrc, lWidth * 2);
+                        std::memcpy(rowDst, rowSrc, copyWidth * 2);
                     }
                 } else if (lFormat == 1) { // XRGB8888
                     // Fast optimized byte-swapping copy
-                    for (unsigned y = 0; y < lHeight; y++) {
+                    for (unsigned y = 0; y < copyHeight; y++) {
                         const uint8_t* rowSrc = localRawTvBuffer.data() + (y * lPitch);
                         uint8_t* rowDst = static_cast<uint8_t*>(buffer.bits) + (y * buffer.stride * 4);
                         
                         const uint32_t* src32 = reinterpret_cast<const uint32_t*>(rowSrc);
                         uint32_t* dst32 = reinterpret_cast<uint32_t*>(rowDst);
-                        for (unsigned x = 0; x < lWidth; x++) {
+                        for (unsigned x = 0; x < copyWidth; x++) {
                             uint32_t color = src32[x];
                             // Swapping R and B using __builtin_bswap32
                             dst32[x] = (__builtin_bswap32(color) >> 8) | 0xFF000000;
@@ -98,13 +104,13 @@ static void TvRenderWorker() {
                     }
                 } else if (lFormat == 0) { // 0RGB1555
                     // Keep original slow fallback format if needed
-                    for (unsigned y = 0; y < lHeight; y++) {
+                    for (unsigned y = 0; y < copyHeight; y++) {
                         const uint8_t* rowSrc = localRawTvBuffer.data() + (y * lPitch);
                         uint8_t* rowDst = static_cast<uint8_t*>(buffer.bits) + (y * buffer.stride * 4);
                         
                         const uint16_t* src16 = reinterpret_cast<const uint16_t*>(rowSrc);
                         uint32_t* dst32 = reinterpret_cast<uint32_t*>(rowDst);
-                        for (unsigned x = 0; x < lWidth; x++) {
+                        for (unsigned x = 0; x < copyWidth; x++) {
                             uint16_t color = src16[x];
                             uint32_t r = ((color >> 10) & 0x1F) << 3;
                             uint32_t g = ((color >> 5) & 0x1F) << 3;

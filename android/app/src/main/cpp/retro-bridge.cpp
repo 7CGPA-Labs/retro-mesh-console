@@ -157,6 +157,15 @@ bool native_environment_cb(unsigned cmd, void *data) {
             *dir = "/storage/emulated/0/Android/data/dev.seven_cgpalabs.mojosnap/files";
             return true;
         }
+    } else if (cmd == 8) { // RETRO_ENVIRONMENT_GET_CAN_DUPE
+        if (data) {
+            *static_cast<bool*>(data) = true;
+            return true;
+        }
+    } else if (cmd == 32) { // RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO
+        return true;
+    } else if (cmd == 37) { // RETRO_ENVIRONMENT_SET_GEOMETRY
+        return true;
     } else if (cmd == 17) { // GET_VARIABLE_UPDATE
         if (data) {
             *static_cast<bool*>(data) = false;
@@ -183,39 +192,75 @@ void native_input_poll_cb() {
 }
 
 int16_t native_input_state_cb(unsigned port, unsigned device, unsigned index, unsigned id) {
-    if (device == 1) { // RETRO_DEVICE_JOYPAD
-        int customId = -1;
-        switch (id) {
-            case 0: customId = 6; break; // B
-            case 1: customId = 8; break; // Y
-            case 2: customId = 10; break; // SELECT
-            case 3: customId = 9; break; // START
-            case 4: customId = 1; break; // UP
-            case 5: customId = 2; break; // DOWN
-            case 6: customId = 3; break; // LEFT
-            case 7: customId = 4; break; // RIGHT
-            case 8: customId = 5; break; // A
-            case 9: customId = 7; break; // X
-            case 10: customId = 12; break; // L (L1)
-            case 11: customId = 13; break; // R (R1)
-            case 12: customId = 14; break; // L2
-            case 13: customId = 15; break; // R2
-            case 14: customId = 16; break; // L3
-            case 15: customId = 17; break; // R3
+    if (port >= 2) return 0;
+    
+    unsigned device_type = device & 0xFF; // RETRO_DEVICE_MASK
+
+    if (device_type == 1) { // RETRO_DEVICE_JOYPAD
+        if (id == 256) { // RETRO_DEVICE_ID_JOYPAD_MASK
+            int16_t mask = 0;
+            for (int i = 0; i < 16; i++) {
+                if (button_states[port][i].load()) {
+                    mask |= (1 << i);
+                }
+            }
+            // Analog-to-digital fallback for D-Pad
+            int16_t lx = analog_states[port][0][0].load();
+            int16_t ly = analog_states[port][0][1].load();
+            if (ly < -16000) mask |= (1 << 4); // UP
+            if (ly > 16000)  mask |= (1 << 5); // DOWN
+            if (lx < -16000) mask |= (1 << 6); // LEFT
+            if (lx > 16000)  mask |= (1 << 7); // RIGHT
+            return mask;
         }
-        if (customId == -1 || port > 1) return 0;
-        return button_states[port][customId].load() ? 1 : 0;
+
+        if (id < 16) {
+            if (button_states[port][id].load()) {
+                return 1;
+            }
+            // Analog-to-digital fallback for D-Pad
+            if (id == 4) { // UP
+                return (analog_states[port][0][1].load() < -16000) ? 1 : 0;
+            } else if (id == 5) { // DOWN
+                return (analog_states[port][0][1].load() > 16000) ? 1 : 0;
+            } else if (id == 6) { // LEFT
+                return (analog_states[port][0][0].load() < -16000) ? 1 : 0;
+            } else if (id == 7) { // RIGHT
+                return (analog_states[port][0][0].load() > 16000) ? 1 : 0;
+            }
+        }
+        return 0;
     } 
-    else if (device == 5) { // RETRO_DEVICE_ANALOG
-        if (port > 1 || index > 1 || id > 1) return 0;
-        return analog_states[port][index][id].load();
+    else if (device_type == 5) { // RETRO_DEVICE_ANALOG
+        if (index == 2) { // RETRO_DEVICE_INDEX_ANALOG_BUTTON
+            if (id < 16) {
+                return button_states[port][id].load() ? 1 : 0;
+            }
+            return 0;
+        }
+        if (index < 2 && id < 2) {
+            int16_t val = analog_states[port][index][id].load();
+            if (val != 0) return val;
+            
+            // Digital-to-analog fallback for Left Analog (index 0)
+            if (index == 0) {
+                if (id == 0) { // X axis
+                    if (button_states[port][6].load()) return -32767; // LEFT
+                    if (button_states[port][7].load()) return 32767;  // RIGHT
+                } else if (id == 1) { // Y axis
+                    if (button_states[port][4].load()) return -32767; // UP
+                    if (button_states[port][5].load()) return 32767;  // DOWN
+                }
+            }
+            return 0;
+        }
     }
     return 0;
 }
 
-void set_player1_button(int customButtonId, bool pressed) {
-    if (customButtonId >= 0 && customButtonId < 16) {
-        button_states[0][customButtonId].store(pressed);
+void set_player1_button(int buttonId, bool pressed) {
+    if (buttonId >= 0 && buttonId < 16) {
+        button_states[0][buttonId].store(pressed);
     }
 }
 
@@ -224,8 +269,6 @@ void set_player1_analog(int index, int id, int16_t value) {
         analog_states[0][index][id].store(value);
     }
 }
-
-
 
 JNIEXPORT void JNICALL Java_dev_seven_1cgpalabs_mojosnap_NetworkManager_updatePlayer2Button(JNIEnv* env, jobject thiz, jint buttonId, jboolean pressed) {
     if (buttonId >= 0 && buttonId < 16) {
@@ -262,23 +305,15 @@ JNIEXPORT jboolean JNICALL Java_dev_seven_1cgpalabs_mojosnap_MainActivity_loadGa
     return result;
 }
 
-JNIEXPORT void JNICALL Java_dev_seven_1cgpalabs_mojosnap_MainActivity_setButtonState(JNIEnv* env, jobject thiz, jint port, jint customButtonId, jboolean pressed) {
-    if (port == 0) {
-        set_player1_button(customButtonId, pressed);
-    } else if (port == 1) {
-        if (customButtonId >= 0 && customButtonId < 16) {
-            button_states[1][customButtonId].store(pressed);
-        }
+JNIEXPORT void JNICALL Java_dev_seven_1cgpalabs_mojosnap_MainActivity_setButtonState(JNIEnv* env, jobject thiz, jint port, jint buttonId, jboolean pressed) {
+    if (port >= 0 && port < 2 && buttonId >= 0 && buttonId < 16) {
+        button_states[port][buttonId].store(pressed);
     }
 }
 
 JNIEXPORT void JNICALL Java_dev_seven_1cgpalabs_mojosnap_MainActivity_setAnalogState(JNIEnv* env, jobject thiz, jint port, jint index, jint id, jint value) {
-    if (port == 0) {
-        set_player1_analog(index, id, value);
-    } else if (port == 1) {
-        if (index >= 0 && index < 2 && id >= 0 && id < 2) {
-            analog_states[1][index][id].store(value);
-        }
+    if (port >= 0 && port < 2 && index >= 0 && index < 2 && id >= 0 && id < 2) {
+        analog_states[port][index][id].store(static_cast<int16_t>(value));
     }
 }
 
